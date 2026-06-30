@@ -36,6 +36,18 @@ async function getDb() {
     if (!hasEmail) {
       await dbConnection.run('ALTER TABLE users ADD COLUMN email TEXT');
     }
+    if (!columns.some(col => col.name === 'name')) {
+      await dbConnection.run('ALTER TABLE users ADD COLUMN name TEXT');
+    }
+    if (!columns.some(col => col.name === 'zipcode')) {
+      await dbConnection.run('ALTER TABLE users ADD COLUMN zipcode TEXT');
+    }
+    if (!columns.some(col => col.name === 'temp_unit')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN temp_unit TEXT DEFAULT 'imperial'");
+    }
+    if (!columns.some(col => col.name === 'weather_api_key')) {
+      await dbConnection.run('ALTER TABLE users ADD COLUMN weather_api_key TEXT');
+    }
 
     // Migrate user_settings to add local_key column if missing
     const settingsColumns = await dbConnection.all('PRAGMA table_info(user_settings)');

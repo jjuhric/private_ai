@@ -1,0 +1,222 @@
+const cheerio = require('cheerio');
+const { extractFirst100Words } = require('../utils/helpers');
+
+// Web search tool operations (supports deep searches & weather)
+async function handleWebSearchTool(db, userId, query) {
+  if (!query) return 'Error: Query is required';
+
+  const isWeatherQuery = /weather|temperature|forecast|wind|humidity|rain|snow/i.test(query);
+  
+  if (isWeatherQuery) {
+    try {
+      let profile = null;
+      if (db && userId) {
+        profile = await db.get('SELECT name, zipcode, temp_unit, weather_api_key FROM users WHERE id = ?', [userId]);
+      }
+      
+      const zipMatch = query.match(/\b\d{5}\b/);
+      const zipcode = zipMatch ? zipMatch[0] : (profile ? profile.zipcode : null);
+      const apiKey = profile ? profile.weather_api_key : null;
+      const units = profile ? profile.temp_unit : 'imperial'; // 'imperial', 'metric', 'standard'
+
+      if (zipcode && apiKey) {
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?zip=${zipcode}&units=${units}&appid=${apiKey}`;
+        const weatherRes = await fetch(weatherUrl);
+        if (weatherRes.ok) {
+          const data = await weatherRes.json();
+          const unitSymbol = units === 'imperial' ? '°F' : (units === 'metric' ? '°C' : 'K');
+          const speedUnit = units === 'imperial' ? 'mph' : 'm/s';
+          
+          const temp = data.main.temp;
+          const feelsLike = data.main.feels_like;
+          const desc = data.weather[0].description;
+          const humidity = data.main.humidity;
+          const wind = data.wind.speed;
+          const cityName = data.name;
+
+          return `### 🌦️ Local Weather Report for **${cityName}** (${zipcode})
+
+| Parameter | Value |
+| --- | --- |
+| **Current Weather** | ${desc.charAt(0).toUpperCase() + desc.slice(1)} |
+| **Temperature** | ${temp}${unitSymbol} |
+| **Feels Like** | ${feelsLike}${unitSymbol} |
+| **Humidity** | ${humidity}% |
+| **Wind Speed** | ${wind} ${speedUnit} |
+`;
+        }
+      }
+    } catch (weatherErr) {
+      console.error('Failed to fetch weather from OpenWeatherMap:', weatherErr.message);
+    }
+  }
+
+  const results = [];
+
+  // 1. Try DuckDuckGo HTML Search (Highly resilient, avoids CAPTCHAs)
+  try {
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    if (response.ok) {
+      const html = await response.text();
+      const $ = cheerio.load(html);
+      
+      $('.result__body').each((i, el) => {
+        if (results.length >= 5) return;
+        const titleEl = $(el).find('.result__a');
+        const snippetEl = $(el).find('.result__snippet');
+        let link = titleEl.attr('href');
+        const title = titleEl.text().trim();
+        const snippet = snippetEl.text().trim();
+        
+        if (link && title) {
+          // Resolve DuckDuckGo redirect link
+          let cleanLink = link;
+          if (link.startsWith('//')) {
+            cleanLink = 'https:' + link;
+          }
+          if (cleanLink.includes('uddg=')) {
+            try {
+              const urlObj = new URL(cleanLink);
+              const uddg = urlObj.searchParams.get('uddg');
+              if (uddg) cleanLink = decodeURIComponent(uddg);
+            } catch (urlErr) {
+              // fallback to original link
+            }
+          }
+          results.push({ link: cleanLink, title, snippet });
+        }
+      });
+    }
+  } catch (err) {
+    console.error('DuckDuckGo search failed:', err.message);
+  }
+
+  // 2. Fallback to Google Search if DuckDuckGo returned 0 results
+  if (results.length === 0) {
+    try {
+      const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5'
+        }
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        const $ = cheerio.load(html);
+        
+        $('a').each((i, el) => {
+          if (results.length >= 5) return;
+          const link = $(el).attr('href');
+          const h3 = $(el).find('h3');
+          if (link && h3.length > 0) {
+            if (link.startsWith('/url?') || link.includes('google.com')) return;
+            
+            const title = h3.text().trim();
+            const parentResult = $(el).closest('.g, .MjjYud, .tF2Cxc, .kvH3rc');
+            let snippet = '';
+            if (parentResult.length > 0) {
+              snippet = parentResult.find('.VwiC3b, .BNeawe, .yD3nu, .wM6W7d').text().trim();
+            }
+            if (!snippet) {
+              snippet = $(el).parent().parent().text().trim().substring(0, 150);
+            }
+            results.push({ title, link, snippet });
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Google search failed:', err.message);
+    }
+  }
+
+  // 3. Fallback to Wikipedia API if both failed
+  if (results.length === 0) {
+    try {
+      const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+      const res = await fetch(wikiUrl, {
+        headers: {
+          'User-Agent': 'PrivateAIAssistant/1.1 (contact@privateai.assistant; mailto:support@privateai.assistant)'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.query && data.query.search) {
+          const wikiResults = data.query.search.slice(0, 3);
+          
+          let md = `## 🔍 Wikipedia Search Fallback Report for: *"${query}"*\n\n`;
+          wikiResults.forEach((r, idx) => {
+            const link = `https://en.wikipedia.org/wiki/${encodeURIComponent(r.title)}`;
+            md += `### ${idx + 1}. [${r.title}](${link})\n`;
+            md += `> ${r.snippet.replace(/<span class="searchmatch">|<\/span>/g, '')}\n\n`;
+          });
+          return md;
+        }
+      }
+    } catch (wikiErr) {
+      console.error('Wikipedia fallback failed:', wikiErr.message);
+    }
+    return 'Error: Web search failed completely (DuckDuckGo, Google, and Wikipedia returned no results).';
+  }
+
+  // Deep scrape the top search result pages
+  const scrapedResults = [];
+  for (const res of results.slice(0, 3)) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const pageRes = await fetch(res.link, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      const pageHtml = await pageRes.text();
+      const $page = cheerio.load(pageHtml);
+      
+      // Remove interactive, media, and layout elements
+      $page('script, style, head, nav, footer, header, iframe, noscript, svg, img').remove();
+      
+      const cleanText = $page('body').text().replace(/\s+/g, ' ').trim();
+      const fullContent = cleanText.substring(0, 1500); // 1500 characters of clean content
+      
+      scrapedResults.push({
+        title: res.title,
+        link: res.link,
+        snippet: res.snippet,
+        scraped_content: fullContent || 'No text content available.'
+      });
+    } catch (err) {
+      console.error(`Deep search scrape failed for ${res.link}:`, err.message);
+      scrapedResults.push({
+        title: res.title,
+        link: res.link,
+        snippet: res.snippet,
+        scraped_content: 'Could not scrape live contents. Falling back to search snippet.'
+      });
+    }
+  }
+  
+  // Compile results into structured Markdown format
+  let markdownReport = `## 🔍 Deep Web Search Report for: *"${query}"*\n\n`;
+  scrapedResults.forEach((item, index) => {
+    markdownReport += `### ${index + 1}. [${item.title}](${item.link})\n`;
+    markdownReport += `* **Snippet**: ${item.snippet}\n`;
+    markdownReport += `* **Scraped Live Content**:\n> ${item.scraped_content}\n\n---\n\n`;
+  });
+  
+  return markdownReport;
+}
+
+module.exports = { handleWebSearchTool };

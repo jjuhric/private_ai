@@ -95,6 +95,31 @@ app.get('/api/version', (req, res) => {
   }
 });
 
+// Profile Routes
+app.get('/api/profile', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const user = await db.get('SELECT name, zipcode, temp_unit, weather_api_key FROM users WHERE id = ?', [req.user.id]);
+    res.json(user || { name: '', zipcode: '', temp_unit: 'imperial', weather_api_key: '' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/profile', authenticateToken, async (req, res) => {
+  const { name, zipcode, temp_unit, weather_api_key } = req.body;
+  try {
+    const db = await getDb();
+    await db.run(
+      `UPDATE users SET name = ?, zipcode = ?, temp_unit = ?, weather_api_key = ? WHERE id = ?`,
+      [name || '', zipcode || '', temp_unit || 'imperial', weather_api_key || '', req.user.id]
+    );
+    res.json({ success: true, message: 'Profile updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Settings Routes
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
@@ -185,6 +210,81 @@ app.get('/api/settings/local-models', authenticateToken, async (req, res) => {
     ]);
   }
 });
+
+app.get('/api/settings/online-models', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const settings = await db.get('SELECT online_url, online_key, online_provider FROM user_settings WHERE user_id = ?', [req.user.id]);
+    const provider = settings?.online_provider || 'gemini';
+    const key = settings?.online_key;
+    const url = settings?.online_url;
+
+    if (!key) {
+      return res.json(getDefaultOnlineModels(provider));
+    }
+
+    if (provider === 'gemini') {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+      if (!response.ok) throw new Error(`Gemini API error: ${response.statusText}`);
+      const data = await response.json();
+      const models = data.models
+        ? data.models
+          .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => m.name.replace(/^models\//, ''))
+          .filter(name => {
+            // 1. Exclude checkpoint versions like -001, -002, -003
+            if (/-\d{3}$/.test(name)) return false;
+            // 2. Exclude tuning, embedding, specialized QA, or other non-chat models
+            if (name.includes('tuning') || name.includes('-ft') || name.includes('aqa') || name.includes('embedding') || name.includes('chat')) return false;
+            // 3. Exclude deprecated 1.0 models
+            if (name.startsWith('gemini-1.0') || name.startsWith('gemini-pro-vision')) return false;
+            return true;
+          })
+        : [];
+      return res.json(models.length > 0 ? models : getDefaultOnlineModels('gemini'));
+    } else if (provider === 'openai') {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${key}` }
+      });
+      if (!response.ok) throw new Error(`OpenAI API error: ${response.statusText}`);
+      const data = await response.json();
+      const models = data.data ? data.data.map(m => m.id) : [];
+      return res.json(models.length > 0 ? models : getDefaultOnlineModels('openai'));
+    } else if (provider === 'custom' && url) {
+      let endpoint = `${url.replace(/\/$/, '')}/models`;
+      const response = await fetch(endpoint, {
+        headers: { 'Authorization': `Bearer ${key}` }
+      });
+      if (!response.ok) throw new Error(`Custom API error: ${response.statusText}`);
+      const data = await response.json();
+      const models = data.data ? data.data.map(m => m.id) : [];
+      return res.json(models);
+    } else {
+      return res.json(getDefaultOnlineModels(provider));
+    }
+  } catch (err) {
+    console.error('Failed to fetch online models:', err.message);
+    const db = await getDb().catch(() => null);
+    let provider = 'gemini';
+    if (db) {
+      const settings = await db.get('SELECT online_provider FROM user_settings WHERE user_id = ?', [req.user.id]);
+      provider = settings?.online_provider || 'gemini';
+    }
+    res.json(getDefaultOnlineModels(provider));
+  }
+});
+
+function getDefaultOnlineModels(provider) {
+  if (provider === 'gemini') {
+    return ['gemini-2.5-flash'];
+  } else if (provider === 'openai') {
+    return ['gpt-4o', 'gpt-4o-mini', 'o1-mini'];
+  } else if (provider === 'anthropic') {
+    return ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest'];
+  }
+  return [];
+}
+
 
 // Calendar Routes
 app.get('/api/calendar', authenticateToken, async (req, res) => {
@@ -311,7 +411,7 @@ app.post('/api/chat/stream', authenticateToken, async (req, res) => {
     'SELECT role, content FROM messages WHERE chat_id = ? ORDER BY created_at ASC LIMIT 20',
     [chatId]
   );
-  
+
   // Format for AI client loop
   const history = dbHistory.map(m => ({ role: m.role, content: m.content }));
 
