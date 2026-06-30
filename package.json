@@ -13,7 +13,10 @@
     "test:backend": "npm run test --prefix backend",
     "test:frontend": "npm run test --prefix frontend",
     "test": "npm run test:backend && npm run test:frontend",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "coverage:backend": "npm run test:coverage --prefix backend",
+    "coverage:frontend": "npm run test:coverage --prefix frontend",
+    "coverage": "npm run coverage:backend && npm run coverage:frontend"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

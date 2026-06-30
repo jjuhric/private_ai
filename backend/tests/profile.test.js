@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 
 // Mock db.js to use an in-memory database
 let mockTestDb = null;
+let mockDbError = false;
 jest.mock('../db', () => {
   const { open } = require('sqlite');
   const sqlite3 = require('sqlite3');
@@ -12,6 +13,7 @@ jest.mock('../db', () => {
 
   return {
     getDb: async () => {
+      if (mockDbError) throw new Error('Database error');
       if (mockTestDb) return mockTestDb;
       mockTestDb = await open({
         filename: ':memory:',
@@ -62,6 +64,10 @@ describe('Profile Router Tests', () => {
     }
   });
 
+  beforeEach(() => {
+    mockDbError = false;
+  });
+
   test('GET /api/profile - returns empty profile initially', async () => {
     const res = await request(app)
       .get('/api/profile')
@@ -101,5 +107,20 @@ describe('Profile Router Tests', () => {
 
     expect(getRes.statusCode).toBe(200);
     expect(getRes.body).toEqual(payload);
+  });
+
+  test('error paths - database failure catches', async () => {
+    mockDbError = true;
+
+    const getRes = await request(app)
+      .get('/api/profile')
+      .set('Authorization', `Bearer ${token}`);
+    expect(getRes.statusCode).toBe(500);
+
+    const putRes = await request(app)
+      .put('/api/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Error Name' });
+    expect(putRes.statusCode).toBe(500);
   });
 });

@@ -1,4 +1,8 @@
 const { handleWeatherTool } = require('../tools/weather_tool');
+const { open } = require('sqlite');
+const sqlite3 = require('sqlite3');
+const fs = require('fs');
+const path = require('path');
 
 // Mock db.js
 let mockTestDb = null;
@@ -177,5 +181,57 @@ describe('Weather Tool Tests', () => {
     expect(result).toContain('Daily Weather Forecast for **Calhoun County**');
     expect(result).toContain('80°F');
     expect(result).toContain('clear sky');
+  });
+
+  test('error path - geocoding fails', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' });
+    const result = await handleWeatherTool(db, userId, 'current', { zipcode: '00000' });
+    expect(result).toContain('Error: Failed to resolve coordinates');
+  });
+
+  test('error path - hourly fallback fails', async () => {
+    // Mock 1: Geocoding succeeds
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lat: 10, lon: 10, name: 'FailedCity' })
+    });
+    // Mock 2: Pro API fails
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    // Mock 3: Standard fallback fails too
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Bad Request' });
+
+    const result = await handleWeatherTool(db, userId, 'hourly', {});
+    expect(result).toContain('Failed to fetch hourly forecast');
+  });
+
+  test('error path - daily fallback fails', async () => {
+    // Mock 1: Geocoding succeeds
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lat: 10, lon: 10, name: 'FailedCity' })
+    });
+    // Mock 2: Daily API fails
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    // Mock 3: Standard fallback fails
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+    const result = await handleWeatherTool(db, userId, 'daily', {});
+    expect(result).toContain('Failed to fetch daily forecast');
+  });
+
+  test('error path - missing api key', async () => {
+    const userRes = await db.run("INSERT INTO users (username, password_hash) VALUES ('nokeyuser', 'hashed')");
+    const noKeyId = userRes.lastID;
+
+    const result = await handleWeatherTool(db, noKeyId, 'current', {});
+    expect(result).toContain('OpenWeatherMap API Key is not configured');
+  });
+
+  test('error path - missing zipcode but has key', async () => {
+    const userRes = await db.run("INSERT INTO users (username, password_hash, weather_api_key) VALUES ('nozipuser', 'hashed', 'test_key')");
+    const noZipId = userRes.lastID;
+
+    const result = await handleWeatherTool(db, noZipId, 'current', {});
+    expect(result).toContain('Zipcode is not configured');
   });
 });

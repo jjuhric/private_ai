@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 
 // Mock db.js
 let mockTestDb = null;
+let mockDbError = false;
 jest.mock('../db', () => {
   const { open } = require('sqlite');
   const sqlite3 = require('sqlite3');
@@ -12,6 +13,7 @@ jest.mock('../db', () => {
 
   return {
     getDb: async () => {
+      if (mockDbError) throw new Error('Database error');
       if (mockTestDb) return mockTestDb;
       mockTestDb = await open({
         filename: ':memory:',
@@ -59,6 +61,10 @@ describe('Calendar Router & Tool Tests', () => {
       await mockTestDb.close();
       mockTestDb = null;
     }
+  });
+
+  beforeEach(() => {
+    mockDbError = false;
   });
 
   test('POST /api/calendar - add calendar event', async () => {
@@ -133,5 +139,25 @@ describe('Calendar Router & Tool Tests', () => {
     // Unknown action error
     const errResult = await handleCalendarTool(db, userId, 'unknown', {});
     expect(JSON.parse(errResult)).toHaveProperty('error');
+  });
+
+  test('error paths - database failure catches', async () => {
+    mockDbError = true;
+
+    const listRes = await request(app)
+      .get('/api/calendar')
+      .set('Authorization', `Bearer ${token}`);
+    expect(listRes.statusCode).toBe(500);
+
+    const addRes = await request(app)
+      .post('/api/calendar')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Fail Event', start_time: '2026-06-30 10:00' });
+    expect(addRes.statusCode).toBe(500);
+
+    const delRes = await request(app)
+      .delete('/api/calendar/999')
+      .set('Authorization', `Bearer ${token}`);
+    expect(delRes.statusCode).toBe(500);
   });
 });

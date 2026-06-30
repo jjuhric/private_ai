@@ -45,7 +45,7 @@ describe('ProfileModal Component Tests', () => {
     const mockSaveProfile = vi.fn();
     const mockSetIsProfileOpen = vi.fn();
 
-    render(
+    const { container } = render(
       <ProfileModal 
         isProfileOpen={true} 
         setIsProfileOpen={mockSetIsProfileOpen} 
@@ -62,7 +62,17 @@ describe('ProfileModal Component Tests', () => {
     fireEvent.change(zipInput, { target: { value: '90210' } });
 
     const countryInput = screen.getByPlaceholderText('US');
-    fireEvent.change(countryInput, { target: { value: 'gb' } }); // Will be converted to upper case automatically
+    fireEvent.change(countryInput, { target: { value: 'gb' } });
+
+    const tempSelect = screen.getByRole('combobox');
+    fireEvent.change(tempSelect, { target: { value: 'metric' } });
+
+    // Show/hide API key toggle
+    const toggleBtn = container.querySelector('button[type="button"]');
+    fireEvent.click(toggleBtn);
+
+    const apiKeyInput = screen.getByPlaceholderText('Enter OpenWeatherMap API key');
+    fireEvent.change(apiKeyInput, { target: { value: 'new_key' } });
 
     // Submit form
     const saveButton = screen.getByText('Save Profile');
@@ -72,8 +82,30 @@ describe('ProfileModal Component Tests', () => {
       name: 'New Name',
       zipcode: '90210',
       country: 'GB',
-      temp_unit: 'imperial',
-      weather_api_key: 'test_key_123'
+      temp_unit: 'metric',
+      weather_api_key: 'new_key'
     });
+  });
+
+  test('modal close triggers', () => {
+    const mockSetIsProfileOpen = vi.fn();
+    const { container } = render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={mockSetIsProfileOpen} 
+        profile={defaultProfile} 
+        saveProfile={vi.fn()} 
+      />
+    );
+
+    // Click overlay
+    const overlay = container.querySelector('.modal-overlay');
+    fireEvent.click(overlay);
+    expect(mockSetIsProfileOpen).toHaveBeenCalledWith(false);
+
+    // Click header close button
+    const closeBtn = container.querySelector('.modal-header button');
+    fireEvent.click(closeBtn);
+    expect(mockSetIsProfileOpen).toHaveBeenCalledTimes(2);
   });
 });

@@ -15,7 +15,8 @@
     "sqlite3": "^6.0.1"
   },
   "scripts": {
-    "test": "jest --runInBand --forceExit"
+    "test": "jest --runInBand --forceExit",
+    "test:coverage": "jest --coverage --runInBand --forceExit"
   },
   "devDependencies": {
     "jest": "^29.7.0",

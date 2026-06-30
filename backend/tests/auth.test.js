@@ -3,6 +3,7 @@ const express = require('express');
 
 // Mock db.js to use an in-memory database
 let mockTestDb = null;
+let mockDbError = false;
 jest.mock('../db', () => {
   const { open } = require('sqlite');
   const sqlite3 = require('sqlite3');
@@ -11,6 +12,7 @@ jest.mock('../db', () => {
 
   return {
     getDb: async () => {
+      if (mockDbError) throw new Error('Database error');
       if (mockTestDb) return mockTestDb;
       mockTestDb = await open({
         filename: ':memory:',
@@ -30,6 +32,7 @@ app.use('/api/auth', authRouter);
 
 describe('Auth Router Tests', () => {
   beforeEach(async () => {
+    mockDbError = false;
     // Reset DB for each test by truncating users and settings
     if (mockTestDb) {
       await mockTestDb.run('DELETE FROM users');
@@ -136,5 +139,21 @@ describe('Auth Router Tests', () => {
   test('GET /api/auth/me - unauthenticated (missing token)', async () => {
     const res = await request(app).get('/api/auth/me');
     expect(res.statusCode).toBe(401);
+  });
+
+  test('error paths - database failure catches', async () => {
+    mockDbError = true;
+
+    // Register route db error
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'dbfail', password: 'password123' });
+    expect(regRes.statusCode).toBe(500);
+
+    // Login route db error
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'dbfail', password: 'password123' });
+    expect(loginRes.statusCode).toBe(500);
   });
 });

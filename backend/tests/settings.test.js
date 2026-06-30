@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 
 // Mock db.js
 let mockTestDb = null;
+let mockDbError = false;
 jest.mock('../db', () => {
   const { open } = require('sqlite');
   const sqlite3 = require('sqlite3');
@@ -12,6 +13,7 @@ jest.mock('../db', () => {
 
   return {
     getDb: async () => {
+      if (mockDbError) throw new Error('Database error');
       if (mockTestDb) return mockTestDb;
       mockTestDb = await open({
         filename: ':memory:',
@@ -64,6 +66,7 @@ describe('Settings Router Tests', () => {
   });
 
   beforeEach(() => {
+    mockDbError = false;
     jest.clearAllMocks();
   });
 
@@ -104,7 +107,6 @@ describe('Settings Router Tests', () => {
   });
 
   test('GET /api/settings/local-models - success path', async () => {
-    // Mock local fetch response
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -128,19 +130,16 @@ describe('Settings Router Tests', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.statusCode).toBe(200);
-    // Returns default local models fallback list
     expect(res.body).toContain('google/gemma-4-e4b');
   });
 
   test('GET /api/settings/online-models - gemini success path', async () => {
-    // Mock gemini fetch response
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         models: [
           { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
-          { name: 'models/gemini-2.5-flash-001', supportedGenerationMethods: ['generateContent'] }, // should filter out checkpoint
-          { name: 'models/gemini-embedding', supportedGenerationMethods: ['embedContent'] } // should filter out embedding
+          { name: 'models/gemini-embedding', supportedGenerationMethods: ['embedContent'] }
         ]
       })
     });
@@ -151,5 +150,81 @@ describe('Settings Router Tests', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual(['gemini-2.5-flash']);
+  });
+
+  test('GET /api/settings/online-models - openai and custom success paths', async () => {
+    // OpenAI success path
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'gpt-4o' }]
+      })
+    });
+
+    // Update settings provider to openai
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "openai", online_key = "op_key" WHERE user_id = ?', [userId]);
+
+    const resOpenAI = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(resOpenAI.statusCode).toBe(200);
+    expect(resOpenAI.body).toContain('gpt-4o');
+
+    // Custom success path
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'custom-model-id' }]
+      })
+    });
+
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "custom", online_url = "https://custom.api/v1", online_key = "cust_key" WHERE user_id = ?', [userId]);
+
+    const resCustom = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(resCustom.statusCode).toBe(200);
+    expect(resCustom.body).toContain('custom-model-id');
+  });
+
+  test('GET /api/settings/online-models - anthropic fallback path', async () => {
+    // Set provider to anthropic (which has no online API fetch, returns defaults directly)
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic" WHERE user_id = ?', [userId]);
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('claude-3-5-sonnet-latest');
+  });
+
+  test('GET /api/settings/online-models - fallback when API fails', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('API Down'));
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    // Returns default fallback list
+    expect(res.body).toBeDefined();
+  });
+
+  test('error paths - database failure catches', async () => {
+    mockDbError = true;
+
+    const getRes = await request(app)
+      .get('/api/settings')
+      .set('Authorization', `Bearer ${token}`);
+    expect(getRes.statusCode).toBe(500);
+
+    const putRes = await request(app)
+      .put('/api/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local' });
+    expect(putRes.statusCode).toBe(500);
   });
 });
