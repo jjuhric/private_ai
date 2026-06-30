@@ -19,15 +19,21 @@
   font-family: 'Outfit', sans-serif;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, var(--bg-primary) 80%);
   color: var(--text-primary);
   min-height: 100vh;
-  overflow: hidden;
+  min-height: 100dvh;
 }
 
 #root {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -54,6 +60,7 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   padding: 20px;
 }
 
@@ -187,6 +194,7 @@ select.form-control option {
   display: grid;
   grid-template-columns: 280px 1fr;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 
@@ -335,6 +343,7 @@ select.form-control option {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   position: relative;
 }
 
@@ -566,6 +575,7 @@ select.form-control option {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   z-index: 1000;
@@ -582,6 +592,7 @@ select.form-control option {
   width: 90%;
   max-width: 500px;
   max-height: 85vh;
+  max-height: 85dvh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
@@ -663,6 +674,7 @@ select.form-control option {
     left: 0;
     width: 280px;
     height: 100vh;
+    height: 100dvh;
     z-index: 100;
     background: rgba(10, 15, 30, 0.96) !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
