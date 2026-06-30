@@ -207,9 +207,12 @@ async function handleWebSearchTool(query) {
 }
 
 // Google News tool operations
-async function handleGoogleNewsTool() {
+async function handleGoogleNewsTool(query) {
   try {
-    const rssUrl = 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en';
+    const rssUrl = query
+      ? `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`
+      : 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en';
+      
     const response = await fetch(rssUrl);
     if (!response.ok) throw new Error('Failed to fetch news RSS feed');
     const xml = await response.text();
@@ -218,7 +221,7 @@ async function handleGoogleNewsTool() {
     let match;
     const articles = [];
 
-    while ((match = itemRegex.exec(xml)) !== null && articles.length < 5) {
+    while ((match = itemRegex.exec(xml)) !== null && articles.length < 30) {
       const block = match[1];
       const title = block.match(/<title>([\s\S]*?)<\/title>/)?.[1];
       const link = block.match(/<link>([\s\S]*?)<\/link>/)?.[1];
@@ -231,46 +234,59 @@ async function handleGoogleNewsTool() {
     }
 
     const decoder = new GoogleDecoder();
-    const scrapedArticles = [];
-    
-    for (const art of articles) {
-      try {
-        let destinationLink = art.link;
-        const decoded = await decoder.decode(art.link);
-        if (decoded && decoded.status) {
-          destinationLink = decoded.decoded_url;
+    const scrapedArticles = await Promise.all(
+      articles.map(async (art, index) => {
+        try {
+          let destinationLink = art.link;
+          try {
+            const decoded = await decoder.decode(art.link);
+            if (decoded && decoded.status) {
+              destinationLink = decoded.decoded_url;
+            }
+          } catch (decodeErr) {
+            console.warn(`Failed to decode URL for "${art.headline}":`, decodeErr.message);
+          }
+
+          // Limit intensive web scraping to the top 10 articles to protect performance and bandwidth
+          if (index >= 10) {
+            return {
+              headline: art.headline,
+              link: destinationLink,
+              content: 'Headline and link only (content not scraped to save bandwidth/time).'
+            };
+          }
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          
+          const destRes = await fetch(destinationLink, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          const destHtml = await destRes.text();
+          const snippet = extractFirst100Words(destHtml);
+          return {
+            headline: art.headline,
+            link: destinationLink,
+            content: snippet
+          };
+        } catch (err) {
+          console.error(`Failed to scrape article "${art.headline}":`, err.message);
+          return {
+            headline: art.headline,
+            link: art.link,
+            content: 'Failed to scrape full text from destination server.'
+          };
         }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        
-        const destRes = await fetch(destinationLink, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          },
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const destHtml = await destRes.text();
-        const snippet = extractFirst100Words(destHtml);
-        scrapedArticles.push({
-          headline: art.headline,
-          link: destinationLink,
-          content: snippet
-        });
-      } catch (err) {
-        console.error(`Failed to scrape article "${art.headline}":`, err.message);
-        scrapedArticles.push({
-          headline: art.headline,
-          link: art.link,
-          content: 'Failed to scrape full text from destination server.'
-        });
-      }
-    }
+      })
+    );
 
     return JSON.stringify({
-      source: 'Google News (Your Topics)',
+      source: query ? `Google News (Search: "${query}")` : 'Google News (Top Stories)',
       articles: scrapedArticles
     });
   } catch (err) {
@@ -455,7 +471,7 @@ You have access to the following tools:
 1. "calendar": Manage meetings/tasks. Action values: 'list' (params: {date: "YYYY-MM-DD"}), 'add' (params: {title, start_time: "YYYY-MM-DD HH:MM", end_time: "YYYY-MM-DD HH:MM", description}), 'delete' (params: {eventId}).
 2. "github": Access GitHub details. Action values: 'list_repos', 'get_repo' (params: {owner, repo}), 'list_issues' (params: {owner, repo}).
 3. "search_web": Search current info/Google (params: {query}).
-4. "google_news": Fetch top news headlines and content from news.google.com (params: {}). Use this whenever the user asks for general news, current news, latest breaking news, or what is happening today.
+4. "google_news": Fetch news headlines and content from Google News (params: {query?: string}). Use this whenever the user asks for general news, topic-specific news, breaking news, or latest events. Pass the specific topic of interest as the query parameter if the user is asking about a particular subject.
 5. "none": If no tool is needed.
 
 Determine if you need a tool. Your output MUST be in this JSON format:
@@ -623,7 +639,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
       const q = decision.params?.query || userMessage;
       toolOutput = await handleWebSearchTool(q);
     } else if (decision.tool === 'google_news') {
-      toolOutput = await handleGoogleNewsTool();
+      toolOutput = await handleGoogleNewsTool(decision.params?.query);
     }
 
     onThought(`Tool Response received: ${toolOutput.substring(0, 300)}...\n`);
@@ -688,4 +704,4 @@ Make sure to answer the user query directly and clearly.`;
   }
 }
 
-module.exports = { runAgentLoop };
+module.exports = { runAgentLoop, handleGoogleNewsTool };
