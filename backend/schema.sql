@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT,
   name TEXT,
   zipcode TEXT,
+  country TEXT DEFAULT 'US',
   temp_unit TEXT DEFAULT 'imperial',
   weather_api_key TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP

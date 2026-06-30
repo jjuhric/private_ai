@@ -45,7 +45,7 @@ function App() {
   const [showOnlineKey, setShowOnlineKey] = useState(false);
   const [showGithubToken, setShowGithubToken] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profile, setProfile] = useState({ name: '', zipcode: '', temp_unit: 'imperial', weather_api_key: '' });
+  const [profile, setProfile] = useState({ name: '', zipcode: '', country: 'US', temp_unit: 'imperial', weather_api_key: '' });
 
   // Calendar
   const [calendarEvents, setCalendarEvents] = useState([]);

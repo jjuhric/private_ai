@@ -5,6 +5,47 @@ const { extractFirst100Words } = require('../utils/helpers');
 async function handleWebSearchTool(db, userId, query) {
   if (!query) return 'Error: Query is required';
 
+  // Check if query is or contains a URL
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  const urlMatch = query.match(urlRegex);
+  
+  if (urlMatch) {
+    const targetUrl = urlMatch[0];
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seconds timeout for direct scrape
+      
+      const pageRes = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!pageRes.ok) {
+        throw new Error(`Direct scrape failed: status ${pageRes.status}`);
+      }
+      
+      const pageHtml = await pageRes.text();
+      const $page = cheerio.load(pageHtml);
+      
+      // Remove interactive, media, and layout elements
+      $page('script, style, head, nav, footer, header, iframe, noscript, svg, img').remove();
+      
+      const cleanText = $page('body').text().replace(/\s+/g, ' ').trim();
+      const fullContent = cleanText.substring(0, 3000); // Larger chunk for direct URL scraping (up to 3000 chars)
+
+      return `## 📄 Direct Page Scrape: [${$page('title').text().trim() || targetUrl}](${targetUrl})\n\n> ${fullContent || 'No text content available.'}`;
+    } catch (err) {
+      console.error(`Direct scraping of ${targetUrl} failed, falling back to search:`, err.message);
+      // Fallback: If direct scrape fails, remove the URL from the query and proceed to standard search
+      query = query.replace(targetUrl, '').trim() || query;
+    }
+  }
+
   const isWeatherQuery = /weather|temperature|forecast|wind|humidity|rain|snow/i.test(query);
   
   if (isWeatherQuery) {

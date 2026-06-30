@@ -48,6 +48,9 @@ async function getDb() {
     if (!columns.some(col => col.name === 'weather_api_key')) {
       await dbConnection.run('ALTER TABLE users ADD COLUMN weather_api_key TEXT');
     }
+    if (!columns.some(col => col.name === 'country')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN country TEXT DEFAULT 'US'");
+    }
 
     // Migrate user_settings to add local_key column if missing
     const settingsColumns = await dbConnection.all('PRAGMA table_info(user_settings)');

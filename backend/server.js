@@ -99,20 +99,20 @@ app.get('/api/version', (req, res) => {
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
-    const user = await db.get('SELECT name, zipcode, temp_unit, weather_api_key FROM users WHERE id = ?', [req.user.id]);
-    res.json(user || { name: '', zipcode: '', temp_unit: 'imperial', weather_api_key: '' });
+    const user = await db.get('SELECT name, zipcode, country, temp_unit, weather_api_key FROM users WHERE id = ?', [req.user.id]);
+    res.json(user || { name: '', zipcode: '', country: 'US', temp_unit: 'imperial', weather_api_key: '' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 app.put('/api/profile', authenticateToken, async (req, res) => {
-  const { name, zipcode, temp_unit, weather_api_key } = req.body;
+  const { name, zipcode, country, temp_unit, weather_api_key } = req.body;
   try {
     const db = await getDb();
     await db.run(
-      `UPDATE users SET name = ?, zipcode = ?, temp_unit = ?, weather_api_key = ? WHERE id = ?`,
-      [name || '', zipcode || '', temp_unit || 'imperial', weather_api_key || '', req.user.id]
+      `UPDATE users SET name = ?, zipcode = ?, country = ?, temp_unit = ?, weather_api_key = ? WHERE id = ?`,
+      [name || '', zipcode || '', country || 'US', temp_unit || 'imperial', weather_api_key || '', req.user.id]
     );
     res.json({ success: true, message: 'Profile updated successfully.' });
   } catch (err) {

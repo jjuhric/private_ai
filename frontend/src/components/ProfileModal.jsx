@@ -10,6 +10,7 @@ export default function ProfileModal({
   const [formData, setFormData] = useState({
     name: '',
     zipcode: '',
+    country: 'US',
     temp_unit: 'imperial',
     weather_api_key: ''
   });
@@ -20,6 +21,7 @@ export default function ProfileModal({
       setFormData({
         name: profile.name || '',
         zipcode: profile.zipcode || '',
+        country: profile.country || 'US',
         temp_unit: profile.temp_unit || 'imperial',
         weather_api_key: profile.weather_api_key || ''
       });
@@ -63,6 +65,18 @@ export default function ProfileModal({
               placeholder="e.g. 32421"
               value={formData.zipcode}
               onChange={e => setFormData(prev => ({ ...prev, zipcode: e.target.value }))}
+            />
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label>Country Code (e.g. US, GB, CA, IT)</label>
+            <input 
+              type="text" 
+              className="form-control" 
+              placeholder="US"
+              maxLength={3}
+              value={formData.country}
+              onChange={e => setFormData(prev => ({ ...prev, country: e.target.value.toUpperCase().trim() }))}
             />
           </div>
 

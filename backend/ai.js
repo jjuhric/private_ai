@@ -3,6 +3,7 @@ const { handleCalendarTool } = require('./tools/calendar_tool');
 const { handleGitHubTool } = require('./tools/github_tool');
 const { handleWebSearchTool } = require('./tools/web_search_tool');
 const { handleGoogleNewsTool } = require('./tools/google_news_tool');
+const { handleWeatherTool } = require('./tools/weather_tool');
 
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
 async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk) {
@@ -169,14 +170,15 @@ You have access to the following tools:
 2. "github": Access GitHub details. Action values: 'list_repos', 'get_repo' (params: {owner, repo}), 'list_issues' (params: {owner, repo}).
 3. "search_web": Search current info/Google (params: {query}).
 4. "google_news": Fetch news headlines and content from Google News (params: {query?: string}). Use this whenever the user asks for general news, topic-specific news, breaking news, or latest events. Pass the specific topic of interest as the query parameter if the user is asking about a particular subject.
-5. "none": If no tool is needed.
+5. "weather": Fetch weather forecast/conditions. Action values: 'current' (params: {zipcode?: string, country?: string}), 'hourly' (params: {zipcode?: string, country?: string}), 'daily' (params: {zipcode?: string, country?: string, cnt?: number}). Use this whenever the user asks for current conditions, hourly forecasts, or 7-16 day daily outlooks. If the query specifies a location, pass the zipcode and/or country.
+6. "none": If no tool is needed.
 
 You can invoke tools sequentially to gather necessary information. If the results of a tool call indicate you should search a different query, location, or source, you can issue another tool call. When you have gathered all required information, set tool to "none".
 
 Determine if you need a tool. Your output MUST be in this JSON format:
 {
   "thought": "your step-by-step reasoning here",
-  "tool": "calendar" | "github" | "search_web" | "google_news" | "none",
+  "tool": "calendar" | "github" | "search_web" | "google_news" | "weather" | "none",
   "action": "action_name_if_any",
   "params": {}
 }
@@ -186,7 +188,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
   let currentHistory = [...history];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
-  const maxToolCalls = 3;
+  const maxToolCalls = 10;
 
   while (toolCallsCount < maxToolCalls) {
     let decision = null;
@@ -345,6 +347,8 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
       toolOutput = await handleWebSearchTool(db, userId, q);
     } else if (decision.tool === 'google_news') {
       toolOutput = await handleGoogleNewsTool(decision.params?.query);
+    } else if (decision.tool === 'weather') {
+      toolOutput = await handleWeatherTool(db, userId, decision.action, decision.params);
     }
 
     onThought(`Tool Response received (length: ${toolOutput.length})\n`);
