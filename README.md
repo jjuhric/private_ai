@@ -41,7 +41,27 @@ DB_PATH=backend/database.db
 
 ## Deployment on Raspberry Pi 5 (Port 5173)
 
-To deploy the app in production on a Raspberry Pi 5 using a single port (5173) for maximum performance:
+We provide an automated setup and update script that manages dependencies, builds the application, and configures a systemd background service.
+
+### Automated Setup & Update
+
+You can run the unified `setup.sh` script to perform a clean installation or update an existing deployment. It automatically handles pulling the latest code, installing dependencies, building the application, and configuring a systemd background service:
+
+```bash
+# Run the setup/update script (prompts for sudo for system package/service installation)
+./setup.sh
+```
+
+Once running, the background service will start automatically on boot. You can manage it using standard systemd commands:
+- **Check Status**: `sudo systemctl status private-ai`
+- **View Logs**: `journalctl -u private-ai -f`
+- **Restart**: `sudo systemctl restart private-ai`
+
+---
+
+### Manual Deployment
+
+To deploy the app manually in production on a Raspberry Pi 5 using a single port (5173):
 
 1. **Build the Frontend**:
    Compile the optimized frontend React files into static HTML/CSS/JS assets:
