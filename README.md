@@ -87,3 +87,40 @@ If you want to run the frontend and backend servers as separate hot-reloading de
    npm run dev
    ```
 2. The frontend Vite server runs on `http://localhost:5173` (proxying `/api` requests to the Express server running on `http://localhost:3000`).
+
+---
+
+## Project Structure
+
+The codebase is organized into a clean, modular, and professional design layout:
+
+```text
+private_ai/
+├── backend/
+│   ├── middleware/
+│   │   └── auth.js         # JWT Authentication Middleware
+│   ├── routes/
+│   │   ├── auth.js         # Authentication endpoints (/api/auth)
+│   │   ├── profile.js      # User profile endpoints (/api/profile)
+│   │   ├── settings.js     # User settings endpoints (/api/settings)
+│   │   ├── calendar.js     # Calendar event CRUD endpoints (/api/calendar)
+│   │   └── chat.js         # Chat sessions and SSE streaming coordinator
+│   ├── tools/
+│   │   ├── calendar_tool.js# SQLite calendar operations
+│   │   ├── github_tool.js  # Github API operations
+│   │   ├── google_news_tool.js # NewsRSS scraping operations
+│   │   ├── weather_tool.js # OpenWeatherMap weather actions (current, hourly, daily)
+│   │   └── web_search_tool.js # DuckDuckGo / Google / Wiki deep scraper
+│   ├── db.js               # SQLite database client & migration runner
+│   ├── ai.js               # Sequential ReAct agent coordinator loop
+│   ├── schema.sql          # SQLite table schemas
+│   └── server.js           # Express App initialization and server startup
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # UI Modals, Sidebars, and Components
+│   │   ├── App.jsx         # State orchestrator & layout template
+│   │   └── main.jsx        # App entrypoint
+│   └── vite.config.js      # Vite build & development proxy config
+└── setup.sh                # Automated deploy/update script
+```
+

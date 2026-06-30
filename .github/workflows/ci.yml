@@ -1,0 +1,39 @@
+name: CI Build & Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Project Dependencies
+      run: npm run install:all
+
+    - name: Build Frontend Application
+      run: npm run build
+
+    - name: Run Backend Unit & Integration Tests
+      run: npm run test:backend
+
+    - name: Run Frontend Component Tests
+      run: npm run test:frontend
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Run Playwright E2E Tests
+      run: npm run test:e2e

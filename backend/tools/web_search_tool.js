@@ -31,6 +31,7 @@ async function handleWebSearchTool(db, userId, query) {
       
       const pageHtml = await pageRes.text();
       const $page = cheerio.load(pageHtml);
+      const pageTitle = $page('title').text().trim();
       
       // Remove interactive, media, and layout elements
       $page('script, style, head, nav, footer, header, iframe, noscript, svg, img').remove();
@@ -38,7 +39,7 @@ async function handleWebSearchTool(db, userId, query) {
       const cleanText = $page('body').text().replace(/\s+/g, ' ').trim();
       const fullContent = cleanText.substring(0, 3000); // Larger chunk for direct URL scraping (up to 3000 chars)
 
-      return `## 📄 Direct Page Scrape: [${$page('title').text().trim() || targetUrl}](${targetUrl})\n\n> ${fullContent || 'No text content available.'}`;
+      return `## 📄 Direct Page Scrape: [${pageTitle || targetUrl}](${targetUrl})\n\n> ${fullContent || 'No text content available.'}`;
     } catch (err) {
       console.error(`Direct scraping of ${targetUrl} failed, falling back to search:`, err.message);
       // Fallback: If direct scrape fails, remove the URL from the query and proceed to standard search

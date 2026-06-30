@@ -1,0 +1,61 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { getDb } = require('../db');
+const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
+
+router.post('/register', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password || username.trim() === '' || password.length < 4) {
+    return res.status(400).json({ error: 'Username and password (min 4 characters) are required.' });
+  }
+  try {
+    const db = await getDb();
+    const existing = await db.get('SELECT id FROM users WHERE username = ?', [username.trim()]);
+    if (existing) return res.status(400).json({ error: 'Username is already taken.' });
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const result = await db.run(
+      'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+      [username.trim(), passwordHash]
+    );
+
+    // Initialize default user settings
+    await db.run(
+      'INSERT INTO user_settings (user_id, provider, model_name) VALUES (?, ?, ?)',
+      [result.lastID, 'local', 'google/gemma-4-e4b']
+    );
+
+    res.json({ success: true, userId: result.lastID });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Username and password are required.' });
+
+  try {
+    const db = await getDb();
+    const user = await db.get('SELECT * FROM users WHERE username = ?', [username.trim()]);
+    if (!user) return res.status(400).json({ error: 'Invalid username or password.' });
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) return res.status(400).json({ error: 'Invalid username or password.' });
+
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user: { id: user.id, username: user.username } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/me', authenticateToken, (req, res) => {
+  res.json({ user: req.user });
+});
+
+module.exports = router;

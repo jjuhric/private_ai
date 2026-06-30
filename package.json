@@ -9,11 +9,18 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "npm run build --prefix frontend",
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "test:backend": "npm run test --prefix backend",
+    "test:frontend": "npm run test --prefix frontend",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "concurrently": "^8.2.2",
     "google-news-url-decoder": "^1.2.2",
     "node-html-parser": "^8.0.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.1"
   }
 }
