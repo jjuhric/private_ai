@@ -12,7 +12,7 @@ export default function CalendarPane({
 }) {
   return (
     <div className="chat-pane" style={{ overflowY: 'auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', height: '100%' }}>
+      <div className="calendar-layout">
         <div>
           <h3 style={{ marginBottom: 16 }}>Schedule for {calendarDate}</h3>
           <div style={{ display: 'flex', gap: '8px', marginBottom: 16 }}>

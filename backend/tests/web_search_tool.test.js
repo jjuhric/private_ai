@@ -236,4 +236,93 @@ describe('Web Search Tool Tests', () => {
     expect(result).toContain('Falling back to search snippet.');
     expect(result).toContain('Snippet fallback text.');
   });
+
+  test('error path - DuckDuckGo fetch fails, fallbacks trigger Google, then Wikipedia', async () => {
+    // DDG fails
+    global.fetch.mockRejectedValueOnce(new Error('DDG Timeout'));
+    // Google succeeds but returns 0 results
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => '<html><body>No results</body></html>'
+    });
+    // Wiki succeeds
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: { search: [{ title: 'Wiki Fallback', snippet: 'A snippet' }] }
+      })
+    });
+
+    const result = await handleWebSearchTool(db, userId, 'ddg error query');
+    expect(result).toContain('Wiki Fallback');
+  });
+
+  test('error path - Google fetch fails, fallback triggers Wikipedia', async () => {
+    // DDG returns 0 results
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => '<html></html>'
+    });
+    // Google fails
+    global.fetch.mockRejectedValueOnce(new Error('Google block'));
+    // Wiki succeeds
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        query: { search: [{ title: 'Wiki Google Fallback', snippet: 'Another snippet' }] }
+      })
+    });
+
+    const result = await handleWebSearchTool(db, userId, 'google error query');
+    expect(result).toContain('Wiki Google Fallback');
+  });
+
+  test('error path - Wikipedia fallback fails when all search engines return empty', async () => {
+    // DDG returns 0 results
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => '<html></html>'
+    });
+    // Google returns 0 results
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => '<html></html>'
+    });
+    // Wiki fails
+    global.fetch.mockRejectedValueOnce(new Error('Wiki Down'));
+
+    const result = await handleWebSearchTool(db, userId, 'all failed query');
+    expect(result).toContain('Web search failed completely');
+  });
+
+  test('Google search snippet fallback when parent classes are missing', async () => {
+    // DDG returns 0 results
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => '<html></html>'
+    });
+    // Google returns result with link but no snippet classes
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => `
+        <div>
+          <span>
+            <a href="https://fallback.com"><h3>Title without classes</h3></a>
+          </span>
+        </div>
+      `
+    });
+
+    const result = await handleWebSearchTool(db, userId, 'custom snippet query');
+    expect(result).toContain('Title without classes');
+  });
+
+  test('weather redirection error handling', async () => {
+    const brokenDb = {
+      get: jest.fn().mockRejectedValueOnce(new Error('Weather Profile DB Fail'))
+    };
+    const result = await handleWebSearchTool(brokenDb, userId, 'weather in Miami');
+    // Redirection should trigger weather tool and catch the db failure gracefully, falling through to search
+    expect(result).toContain('Web search failed completely');
+  });
 });

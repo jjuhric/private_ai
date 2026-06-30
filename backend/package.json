@@ -1,8 +1,16 @@
 {
   "name": "private-ai-backend",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
   "main": "server.js",
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "statements": 95,
+        "lines": 95
+      }
+    }
+  },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",

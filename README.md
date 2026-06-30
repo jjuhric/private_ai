@@ -1,9 +1,10 @@
-# Private AI — V1.0.0
+# Private AI — V2.0
 
 A secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Features multi-agent orchestration, live deep internet scraping, real-time Google News summaries, local database storage, calendar task management, and GitHub client integrations.
 
 ## Features
 - **Dual AI Core (Local & Online)**: Connects to local LLMs (LM Studio, Ollama, etc.) and online providers (Gemini, Anthropic, OpenAI) with a visual model selector.
+- **Responsive & Mobile Friendly**: A fully adaptive layout with collapsible sidebar menus (hamburger menu enabled on mobile viewports, hidden on desktop), opaque side overlays, optimized text inputs, and vertically stackable panels (such as the Schedule Manager) tailored for mobile and tablet sizes.
 - **Smart Router & Tools**: The coordinator routing agent dynamically triggers tools:
   - **Google Live Search with Deep Scraper**: Scrapes the top Google search result pages and extracts raw text context for the AI to summarize findings.
   - **Google NewsRSS Scraper**: Resolves and parses news.google.com top articles using internal protobuf decoder APIs to deep-scrape real-time article text.
@@ -11,6 +12,7 @@ A secure, private personal AI assistant dashboard built with React (Vite) and No
   - **GitHub Client**: Retrieve repos, branches, and issue details.
 - **Secure Password View**: Toggle password inputs to eye/eye-closed status for sensitive API keys.
 - **Raspberry Pi 5 Deployable**: Single-port Express production engine serving built React static pages.
+- **Strict Quality Gate**: Integrated GitHub Actions CI testing suite that enforces a minimum **95% code coverage** threshold (statements and lines) on both backend routes/tools and frontend React components.
 
 ---
 

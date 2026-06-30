@@ -234,4 +234,37 @@ describe('Weather Tool Tests', () => {
     const result = await handleWeatherTool(db, noZipId, 'current', {});
     expect(result).toContain('Zipcode is not configured');
   });
+
+  test('error path - db or userId missing', async () => {
+    const res1 = await handleWeatherTool(null, userId, 'current', {});
+    expect(res1).toContain('Database connection and User ID are required');
+
+    const res2 = await handleWeatherTool(db, null, 'current', {});
+    expect(res2).toContain('Database connection and User ID are required');
+  });
+
+  test('error path - db query failure', async () => {
+    const brokenDb = {
+      get: jest.fn().mockRejectedValueOnce(new Error('Query error'))
+    };
+    const result = await handleWeatherTool(brokenDb, userId, 'current', {});
+    expect(result).toContain('Failed to query user profile details: Query error');
+  });
+
+  test('error path - current weather fetch fails', async () => {
+    // Geocode succeeds
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ lat: 10, lon: 10, name: 'FailedFetchCity' })
+    });
+    // Weather fetch returns ok: false
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request'
+    });
+
+    const result = await handleWeatherTool(db, userId, 'current', {});
+    expect(result).toContain('Failed to query current weather: Current weather API returned status 400');
+  });
 });

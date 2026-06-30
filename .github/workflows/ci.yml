@@ -27,10 +27,10 @@ jobs:
       run: npm run build
 
     - name: Run Backend Unit & Integration Tests
-      run: npm run test:backend
+      run: npm run coverage:backend
 
     - name: Run Frontend Component Tests
-      run: npm run test:frontend
+      run: npm run coverage:frontend
 
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium

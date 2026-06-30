@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1782810043983" clover="3.2.0">
-  <project timestamp="1782810043983" name="All files">
+<coverage generated="1782810881650" clover="3.2.0">
+  <project timestamp="1782810881650" name="All files">
     <metrics statements="135" coveredstatements="133" conditionals="214" coveredconditionals="175" methods="106" coveredmethods="105" elements="455" coveredelements="413" complexity="0" loc="135" ncloc="135" packages="1" files="7" classes="7"/>
     <file name="Auth.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\Auth.jsx">
       <metrics statements="6" coveredstatements="6" conditionals="14" coveredconditionals="14" methods="8" coveredmethods="8"/>

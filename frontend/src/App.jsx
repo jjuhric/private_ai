@@ -39,7 +39,7 @@ function App() {
   });
   const [localModels, setLocalModels] = useState([]);
   const [onlineModels, setOnlineModels] = useState([]);
-  const [appVersion, setAppVersion] = useState('1.0.0');
+  const [appVersion, setAppVersion] = useState('2.0');
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
@@ -578,11 +578,11 @@ function App() {
         <header className="panel-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button 
-              className="btn-icon" 
+              className="btn-icon mobile-menu-toggle" 
               onClick={() => setIsMobileSidebarOpen(true)} 
-              style={{ display: 'block', transform: 'scale(1.2)' }}
+              style={{ transform: 'scale(1.2)' }}
             >
-              <Menu size={22} className="md:hidden" />
+              <Menu size={22} />
             </button>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>
               {activeTab === 'chat' ? 'Private AI Assistant' : 'Schedule Manager'}

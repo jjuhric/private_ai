@@ -226,5 +226,41 @@ describe('Settings Router Tests', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ provider: 'local' });
     expect(putRes.statusCode).toBe(500);
+
+    const localModelsRes = await request(app)
+      .get('/api/settings/local-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(localModelsRes.statusCode).toBe(200); // Route catch block returns defaults on failure
+
+    const onlineModelsRes = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(onlineModelsRes.statusCode).toBe(200); // Route catch block returns defaults on failure
+  });
+
+  test('GET /api/settings/online-models - defaults when keys are null', async () => {
+    // OpenAI no key
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "openai", online_key = NULL WHERE user_id = ?', [userId]);
+    const resOpenAI = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(resOpenAI.statusCode).toBe(200);
+    expect(resOpenAI.body).toContain('gpt-4o');
+
+    // Anthropic no key
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic", online_key = NULL WHERE user_id = ?', [userId]);
+    const resAnth = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(resAnth.statusCode).toBe(200);
+    expect(resAnth.body).toContain('claude-3-5-sonnet-latest');
+
+    // Unknown provider
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "unknown_prov", online_key = NULL WHERE user_id = ?', [userId]);
+    const resUnknown = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(resUnknown.statusCode).toBe(200);
+    expect(resUnknown.body).toEqual([]);
   });
 });

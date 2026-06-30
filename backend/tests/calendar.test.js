@@ -160,4 +160,24 @@ describe('Calendar Router & Tool Tests', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(delRes.statusCode).toBe(500);
   });
+
+  test('handleCalendarTool - validation errors', async () => {
+    const db = await mockTestDb;
+
+    // Add with missing title
+    const addResultNoTitle = await handleCalendarTool(db, userId, 'add', {
+      start_time: '2026-07-01 09:00'
+    });
+    expect(JSON.parse(addResultNoTitle)).toHaveProperty('error', 'Title and start_time are required');
+
+    // Add with missing start_time
+    const addResultNoTime = await handleCalendarTool(db, userId, 'add', {
+      title: 'No Time Meeting'
+    });
+    expect(JSON.parse(addResultNoTime)).toHaveProperty('error', 'Title and start_time are required');
+
+    // Delete with missing eventId
+    const delResultNoId = await handleCalendarTool(db, userId, 'delete', {});
+    expect(JSON.parse(delResultNoId)).toHaveProperty('error', 'eventId is required');
+  });
 });
