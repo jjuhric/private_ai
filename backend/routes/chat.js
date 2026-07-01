@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb } = require('../db');
 const { runAgentLoop, generateGreetingAndSave } = require('../ai');
 const { authenticateToken } = require('../middleware/auth');
+const { getEmbedding } = require('../utils/embeddings');
 
 router.get('/chats', authenticateToken, async (req, res) => {
   try {
@@ -196,16 +197,21 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       [chatId, 'assistant', finalContent, finalThoughts]
     );
 
+    const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
+    const chatMemContent = `User asked: "${message.trim()}"\nAssistant replied: "${finalContent.trim()}"`;
+    const chatMemEmbedding = await getEmbedding(chatMemContent, userSettings);
+
     // Save Q&A to short-term memory vault for 24 hours
     const expires24h = new Date();
     expires24h.setDate(expires24h.getDate() + 1);
     await db.run(
-      'INSERT INTO memories (user_id, content, level, expires_at) VALUES (?, ?, ?, ?)',
+      'INSERT INTO memories (user_id, content, level, expires_at, embedding) VALUES (?, ?, ?, ?, ?)',
       [
         req.user.id,
-        `User asked: "${message.trim()}"\nAssistant replied: "${finalContent.trim()}"`,
+        chatMemContent,
         'short-term',
-        expires24h.toISOString()
+        expires24h.toISOString(),
+        chatMemEmbedding ? JSON.stringify(chatMemEmbedding) : null
       ]
     );
 

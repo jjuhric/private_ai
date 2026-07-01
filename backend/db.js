@@ -74,6 +74,13 @@ async function getDb() {
     if (!settingsColumns.some(col => col.name === 'online_provider')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN online_provider TEXT DEFAULT 'gemini'");
     }
+
+    // Migrate memories to add embedding column if missing
+    const memoriesColumns = await dbConnection.all('PRAGMA table_info(memories)');
+    const hasEmbedding = memoriesColumns.some(col => col.name === 'embedding');
+    if (!hasEmbedding) {
+      await dbConnection.run('ALTER TABLE memories ADD COLUMN embedding TEXT');
+    }
     
     console.log('Database initialized successfully.');
   } catch (error) {

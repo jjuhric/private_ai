@@ -361,5 +361,34 @@ describe('Memory Capabilities Tests', () => {
       expect(events[0].title).toBe(`Reminder: Vacation on ${todayISO}`);
       expect(events[0].start_time).toContain(todayISO);
     });
+
+    describe('Semantic Similarity & Deduplication Tests', () => {
+      test('getKeywordSimilarity calculates exact, partial, and subset similarities correctly', () => {
+        const { getKeywordSimilarity } = require('../utils/embeddings');
+        expect(getKeywordSimilarity('I love eating fresh apples', 'I love eating fresh apples')).toBe(1.0);
+        expect(getKeywordSimilarity('fresh apples', 'I love eating fresh apples')).toBe(0.5); // substring fallback
+        expect(getKeywordSimilarity('blueberries', 'bananas')).toBe(0.0);
+      });
+
+      test('getSemanticSimilarity falls back to keyword similarity if vectors are missing', () => {
+        const { getSemanticSimilarity } = require('../utils/embeddings');
+        const score1 = getSemanticSimilarity('Hiking is fun', null, 'Hiking is fun', null);
+        expect(score1).toBe(1.0);
+        const score2 = getSemanticSimilarity('Hiking', null, 'Hiking is fun', null);
+        expect(score2).toBe(0.5);
+      });
+
+      test('remember action prevents duplicate active memory semantically (using keyword overlap fallback)', async () => {
+        await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'My favorite color is green' });
+        
+        // Duplicate check
+        const duplicateRes = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'My favorite color is green' });
+        expect(duplicateRes).toContain('Already remembered');
+        expect(duplicateRes).toContain('Updated existing memory');
+
+        const rows = await mockTestDb.all('SELECT * FROM memories WHERE user_id = ?', [userId]);
+        expect(rows.length).toBe(1);
+      });
+    });
   });
 });
