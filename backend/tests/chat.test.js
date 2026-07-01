@@ -192,6 +192,44 @@ describe('Chat Router Tests', () => {
     expect(lastMsg.thoughts).toBe('Extracted channel thoughts');
   });
 
+  test('POST /api/chat/stream - unclosed XML thinking tag parsing', async () => {
+    const db = await mockTestDb;
+    const insertRes = await db.run('INSERT INTO chats (user_id, title) VALUES (?, ?)', [userId, 'Stream Chat Unclosed XML']);
+    const chatId = insertRes.lastID;
+
+    mockRunAgentLoop.mockImplementation(async (options) => {
+      options.onContent('<think>Extracted unclosed XML thoughts but no end tag');
+    });
+
+    await request(app)
+      .post('/api/chat/stream')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ chatId, message: 'Hello' });
+
+    const lastMsg = await db.get('SELECT * FROM messages WHERE chat_id = ? AND role = ? ORDER BY id DESC LIMIT 1', [chatId, 'assistant']);
+    expect(lastMsg.content).toBe('');
+    expect(lastMsg.thoughts).toBe('Extracted unclosed XML thoughts but no end tag');
+  });
+
+  test('POST /api/chat/stream - unclosed channel thinking tag parsing', async () => {
+    const db = await mockTestDb;
+    const insertRes = await db.run('INSERT INTO chats (user_id, title) VALUES (?, ?)', [userId, 'Stream Chat Unclosed Channel']);
+    const chatId = insertRes.lastID;
+
+    mockRunAgentLoop.mockImplementation(async (options) => {
+      options.onContent('<|channel>thoughtExtracted unclosed channel thoughts but no end tag');
+    });
+
+    await request(app)
+      .post('/api/chat/stream')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ chatId, message: 'Hello' });
+
+    const lastMsg = await db.get('SELECT * FROM messages WHERE chat_id = ? AND role = ? ORDER BY id DESC LIMIT 1', [chatId, 'assistant']);
+    expect(lastMsg.content).toBe('');
+    expect(lastMsg.thoughts).toBe('Extracted unclosed channel thoughts but no end tag');
+  });
+
   test('error paths - database failure catches', async () => {
     mockDbError = true;
 
