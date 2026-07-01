@@ -169,7 +169,12 @@ async function runAgentLoop({
   onContent,
   onToolCall
 }) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
   const systemPrompt = `You are the main coordinator agent of the Private AI system.
+Current Date and Time: ${dateStr} ${timeStr} (ISO: ${now.toISOString()})
 
 ### CRITICAL RUNTIME RULES (MUST OBEY):
 1. ALWAYS recall memory FIRST (using the 'memory' tool with the 'recall' action) before selecting any other tool or giving up, if:
@@ -187,7 +192,7 @@ async function runAgentLoop({
      c) Save each parsed and retrieved fact as separate individual entries in long-term memory (using 'memory' with the 'remember' action and level 'long-term'). Save separate entries for First Name, Last Name, Address, County, Coordinates, and Timezone.
 4. DO NOT default to 'none' or ask the user for details before querying the memory tool to see if you already know them.
 5. AUTOMATICALLY store details: When the user shares personal details (name, address, preferences, plans), you MUST immediately call 'memory' with the 'remember' action.
-6. UP-TO-DATE INFORMATION (MANDATORY): You MUST use the 'search_web' and 'time' tools whenever a question requires up-to-date information, news, current events, or modern facts. Do NOT rely on your internal training data for current information, as it is often outdated.
+6. UP-TO-DATE INFORMATION (MANDATORY): You MUST use the 'search_web' and 'time' tools whenever a question requires up-to-date information, news, current events, or modern facts. Do NOT rely on your internal training data for current information, as it is often outdated. Always use the current date and time: ${dateStr} ${timeStr} to determine the correct reference frames for dates (e.g. today, tomorrow, yesterday, this week).
 
 You have access to the following tools:
 1. "calendar": Manage meetings/tasks. Action values: 'list' (params: {date: "YYYY-MM-DD"}), 'add' (params: {title, start_time: "YYYY-MM-DD HH:MM", end_time: "YYYY-MM-DD HH:MM", description}), 'delete' (params: {eventId}).
@@ -432,6 +437,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
   onThought('Generating final response...\n');
 
   const responderInstruction = `You are a helpful, smart AI Personal Assistant.
+Current Date and Time: ${dateStr} ${timeStr} (ISO: ${now.toISOString()})
 If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 CRITICAL: Avoid going in loops or repeating analysis. Keep any thinking process concise and make a clear decision quickly, then close the </think> tag and output your final response immediately.
 Here is the user request: "${userMessage}".
@@ -488,4 +494,110 @@ Make sure to answer the user query directly and clearly.`;
   }
 }
 
-module.exports = { runAgentLoop, handleGoogleNewsTool };
+async function generateGreetingAndSave(db, userId, chatId) {
+  let userName = '';
+  try {
+    const user = await db.get('SELECT name FROM users WHERE id = ?', [userId]);
+    userName = user?.name || '';
+  } catch (err) {
+    console.error('Failed to fetch user name for greeting:', err);
+  }
+
+  let settings;
+  try {
+    settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [userId]);
+  } catch (err) {
+    console.error('Failed to fetch user settings for greeting:', err);
+  }
+  if (!settings) {
+    settings = { provider: 'local', model_name: 'google/gemma-4-e4b' };
+  }
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const greetingPrompt = `Write a warm, concise welcome greeting to the user${userName ? ' (' + userName + ')' : ''} to start a new chat session. Mention today's date and time (${dateStr} ${timeStr}) naturally, and ask what can be done next. Keep it friendly and short.`;
+
+  const responderInstruction = `You are a helpful, smart AI Personal Assistant.
+Current Date and Time: ${now.toString()} (ISO: ${now.toISOString()})
+You must write a warm, brief greeting to the user ${userName ? 'named ' + userName : ''} to start a new chat, mentioning the current date and time. Keep it clean and output ONLY the final markdown message. Do not include any thinking tags.`;
+
+  let generatedGreeting = '';
+  const onChunk = (chunk) => {
+    generatedGreeting += chunk;
+  };
+
+  try {
+    const provider = settings.provider;
+    const modelName = settings.model_name;
+    const isGemini = provider === 'gemini' || (provider === 'online' && settings.online_provider === 'gemini');
+
+    if (isGemini) {
+      const activeKey = provider === 'gemini' ? (settings.gemini_key || settings.online_key) : settings.online_key;
+      if (!activeKey) throw new Error('Gemini API key is not configured.');
+      await callGeminiStream(
+        activeKey,
+        modelName,
+        responderInstruction,
+        [],
+        greetingPrompt,
+        onChunk
+      );
+    } else {
+      let targetUrl = '';
+      let targetKey = '';
+      let targetStyle = '';
+
+      if (provider === 'local') {
+        targetUrl = settings.local_url || 'http://192.168.1.42:1234/v1';
+        targetKey = settings.local_key;
+        targetStyle = settings.local_api_style || 'openai';
+      } else {
+        targetUrl = settings.online_url;
+        targetKey = settings.online_key;
+        targetStyle = settings.online_provider || 'openai';
+      }
+
+      const messages = [
+        { role: 'system', content: responderInstruction },
+        { role: 'user', content: greetingPrompt }
+      ];
+
+      await callLocalLLMStream(
+        targetUrl,
+        targetKey,
+        modelName,
+        messages,
+        targetStyle,
+        onChunk
+      );
+    }
+
+    generatedGreeting = generatedGreeting.trim();
+    // Strip any thinking tags if the model outputted them despite instructions
+    generatedGreeting = generatedGreeting
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '')
+      .trim();
+
+    if (!generatedGreeting) {
+      throw new Error('Empty greeting generated.');
+    }
+  } catch (err) {
+    console.warn('Failed to generate greeting via LLM, using fallback:', err.message);
+    generatedGreeting = `Hello${userName ? ' ' + userName : ''}! Today is ${dateStr} ${timeStr}. How can I assist you today?`;
+  }
+
+  // Save to database
+  try {
+    await db.run(
+      'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+      [chatId, 'assistant', generatedGreeting]
+    );
+  } catch (dbErr) {
+    console.error('Failed to save generated greeting to database:', dbErr);
+  }
+}
+
+module.exports = { runAgentLoop, handleGoogleNewsTool, generateGreetingAndSave };

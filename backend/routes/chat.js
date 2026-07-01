@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db');
-const { runAgentLoop } = require('../ai');
+const { runAgentLoop, generateGreetingAndSave } = require('../ai');
 const { authenticateToken } = require('../middleware/auth');
 
 router.get('/chats', authenticateToken, async (req, res) => {
@@ -19,7 +19,11 @@ router.post('/chats', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
     const result = await db.run('INSERT INTO chats (user_id, title) VALUES (?, ?)', [req.user.id, title || 'New Chat']);
-    res.json({ success: true, chatId: result.lastID, title: title || 'New Chat' });
+    const chatId = result.lastID;
+    
+    await generateGreetingAndSave(db, req.user.id, chatId);
+    
+    res.json({ success: true, chatId, title: title || 'New Chat' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

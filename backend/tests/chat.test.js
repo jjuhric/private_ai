@@ -26,11 +26,18 @@ jest.mock('../db', () => {
   };
 });
 
-// Mock runAgentLoop from ai.js
+// Mock runAgentLoop and generateGreetingAndSave from ai.js
 const mockRunAgentLoop = jest.fn();
+const mockGenerateGreetingAndSave = jest.fn().mockImplementation(async (db, userId, chatId) => {
+  await db.run(
+    'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+    [chatId, 'assistant', 'Mock Greeting Message']
+  );
+});
 jest.mock('../ai', () => ({
   runAgentLoop: (...args) => mockRunAgentLoop(...args),
-  handleGoogleNewsTool: jest.fn()
+  handleGoogleNewsTool: jest.fn(),
+  generateGreetingAndSave: (...args) => mockGenerateGreetingAndSave(...args)
 }));
 
 const chatRouter = require('../routes/chat');
