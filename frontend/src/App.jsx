@@ -26,6 +26,7 @@ function App() {
   const [editingTitle, setEditingTitle] = useState('');
 
   const hasInitializedRef = useRef(false);
+  const abortControllerRef = useRef(null);
 
   // Settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -195,10 +196,7 @@ function App() {
         if (hasInitializedRef.current) return;
         hasInitializedRef.current = true;
         
-        if (data.length === 0) {
-          // No chats exist, create a fresh one
-          await createChat();
-        } else {
+        if (data.length > 0) {
           // Load the last active chat
           setActiveChatId(data[0].id);
           setActiveTab('chat');
@@ -490,6 +488,9 @@ function App() {
     let accumulatedRawContent = '';
     let coordinatorThoughts = '';
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -497,6 +498,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
+        signal: controller.signal,
         body: JSON.stringify({ chatId: activeChatId, message: currentMsg })
       });
 
@@ -588,10 +590,21 @@ function App() {
       // Sync memories in case the AI learned something new
       fetchMemories();
     } catch (err) {
-      console.error(err);
-      alert('Communication failed. Is LM Studio or backend active?');
+      if (err.name === 'AbortError') {
+        console.log('Stream aborted by user.');
+      } else {
+        console.error(err);
+        alert('Communication failed. Is LM Studio or backend active?');
+      }
     } finally {
       setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
@@ -681,6 +694,7 @@ function App() {
             inputText={inputText}
             setInputText={setInputText}
             handleSendMessage={handleSendMessage}
+            handleStop={handleStop}
             messagesEndRef={messagesEndRef}
           />
         )}

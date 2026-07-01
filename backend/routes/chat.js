@@ -23,7 +23,7 @@ router.post('/chats', authenticateToken, async (req, res) => {
     
     await generateGreetingAndSave(db, req.user.id, chatId);
     
-    res.json({ success: true, chatId, title: title || 'New Chat' });
+    res.json({ success: true, chatId, id: chatId, title: title || 'New Chat' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -131,6 +131,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       onlineUrl: settings.online_url,
       onlineKey: settings.online_key,
       onlineProvider: settings.online_provider || 'gemini',
+      isAborted: () => req.destroyed,
       onThought: (thoughtChunk) => {
         accumulatedThoughts += thoughtChunk;
         sendEvent('thought', thoughtChunk);

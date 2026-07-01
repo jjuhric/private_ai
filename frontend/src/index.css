@@ -556,6 +556,25 @@ select.form-control option {
   box-shadow: 0 4px 15px var(--accent-glow);
 }
 
+.btn-stop {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-stop:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+}
+
 /* Typing Effect Cursor */
 .typing-cursor::after {
   content: '▋';

@@ -167,7 +167,8 @@ async function runAgentLoop({
   onlineProvider,
   onThought,
   onContent,
-  onToolCall
+  onToolCall,
+  isAborted
 }) {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -229,6 +230,10 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
   const maxToolCalls = 50;
 
   while (toolCallsCount < maxToolCalls) {
+    if (isAborted && isAborted()) {
+      onThought("Stream aborted by user.\n");
+      break;
+    }
     let decision = null;
     onThought(`Deciding strategy (turn ${toolCallsCount + 1}/${maxToolCalls})...\n`);
 
@@ -434,6 +439,10 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
   }
 
   // Now, call the Responder Agent to output the streamed response
+  if (isAborted && isAborted()) {
+    onThought("Stream aborted by user.\n");
+    return;
+  }
   onThought('Generating final response...\n');
 
   const responderInstruction = `You are a helpful, smart AI Personal Assistant.
@@ -503,97 +512,16 @@ async function generateGreetingAndSave(db, userId, chatId) {
     console.error('Failed to fetch user name for greeting:', err);
   }
 
-  let settings;
-  try {
-    settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [userId]);
-  } catch (err) {
-    console.error('Failed to fetch user settings for greeting:', err);
-  }
-  if (!settings) {
-    settings = { provider: 'local', model_name: 'google/gemma-4-e4b' };
-  }
-
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-  const greetingPrompt = `Write a warm, concise welcome greeting to the user${userName ? ' (' + userName + ')' : ''} to start a new chat session. Mention today's date and time (${dateStr} ${timeStr}) naturally, and ask what can be done next. Keep it friendly and short.`;
+  const greeting = `Hello${userName ? ' ' + userName : ''}! Today is ${dateStr} ${timeStr}. What can I do for you next?`;
 
-  const responderInstruction = `You are a helpful, smart AI Personal Assistant.
-Current Date and Time: ${now.toString()} (ISO: ${now.toISOString()})
-You must write a warm, brief greeting to the user ${userName ? 'named ' + userName : ''} to start a new chat, mentioning the current date and time. Keep it clean and output ONLY the final markdown message. Do not include any thinking tags.`;
-
-  let generatedGreeting = '';
-  const onChunk = (chunk) => {
-    generatedGreeting += chunk;
-  };
-
-  try {
-    const provider = settings.provider;
-    const modelName = settings.model_name;
-    const isGemini = provider === 'gemini' || (provider === 'online' && settings.online_provider === 'gemini');
-
-    if (isGemini) {
-      const activeKey = provider === 'gemini' ? (settings.gemini_key || settings.online_key) : settings.online_key;
-      if (!activeKey) throw new Error('Gemini API key is not configured.');
-      await callGeminiStream(
-        activeKey,
-        modelName,
-        responderInstruction,
-        [],
-        greetingPrompt,
-        onChunk
-      );
-    } else {
-      let targetUrl = '';
-      let targetKey = '';
-      let targetStyle = '';
-
-      if (provider === 'local') {
-        targetUrl = settings.local_url || 'http://192.168.1.42:1234/v1';
-        targetKey = settings.local_key;
-        targetStyle = settings.local_api_style || 'openai';
-      } else {
-        targetUrl = settings.online_url;
-        targetKey = settings.online_key;
-        targetStyle = settings.online_provider || 'openai';
-      }
-
-      const messages = [
-        { role: 'system', content: responderInstruction },
-        { role: 'user', content: greetingPrompt }
-      ];
-
-      await callLocalLLMStream(
-        targetUrl,
-        targetKey,
-        modelName,
-        messages,
-        targetStyle,
-        onChunk
-      );
-    }
-
-    generatedGreeting = generatedGreeting.trim();
-    // Strip any thinking tags if the model outputted them despite instructions
-    generatedGreeting = generatedGreeting
-      .replace(/<think>[\s\S]*?<\/think>/g, '')
-      .replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '')
-      .trim();
-
-    if (!generatedGreeting) {
-      throw new Error('Empty greeting generated.');
-    }
-  } catch (err) {
-    console.warn('Failed to generate greeting via LLM, using fallback:', err.message);
-    generatedGreeting = `Hello${userName ? ' ' + userName : ''}! Today is ${dateStr} ${timeStr}. How can I assist you today?`;
-  }
-
-  // Save to database
   try {
     await db.run(
       'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
-      [chatId, 'assistant', generatedGreeting]
+      [chatId, 'assistant', greeting]
     );
   } catch (dbErr) {
     console.error('Failed to save generated greeting to database:', dbErr);
