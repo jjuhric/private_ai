@@ -88,8 +88,18 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
     [chatId]
   );
 
-  // Format for AI client loop
-  const history = dbHistory.map(m => ({ role: m.role, content: m.content }));
+  // Format for AI client loop: filter out empty messages and merge consecutive roles
+  const history = [];
+  for (const msg of dbHistory) {
+    const content = msg.content ? msg.content.trim() : '';
+    if (!content) continue;
+
+    if (history.length > 0 && history[history.length - 1].role === msg.role) {
+      history[history.length - 1].content += "\n" + content;
+    } else {
+      history.push({ role: msg.role, content });
+    }
+  }
 
   // Set up SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
