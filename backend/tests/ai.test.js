@@ -420,6 +420,60 @@ describe('Agent Loop & LLM Stream Unit Tests', () => {
     expect(contents.length).toBe(0);
   });
 
+  test('runAgentLoop - filters out leading assistant messages (greeting) from history', async () => {
+    routerDecisions = [
+      {
+        thought: 'No tool.',
+        tool: 'none',
+        action: '',
+        params: {}
+      }
+    ];
+
+    const thoughts = [];
+    const contents = [];
+    const history = [
+      { role: 'assistant', content: 'Hello! I am your greeting assistant.' },
+      { role: 'user', content: 'Actually I have a question.' },
+      { role: 'assistant', content: 'Sure, what is it?' }
+    ];
+
+    await runAgentLoop({
+      db,
+      userId,
+      provider: 'local',
+      modelName: 'qwen/qwen3.5-9b',
+      userMessage: 'What is the capital of France?',
+      history,
+      localApiKey: 'test_key',
+      onThought: (t) => thoughts.push(t),
+      onContent: (c) => contents.push(c),
+      onToolCall: jest.fn()
+    });
+
+    const streamingCall = global.fetch.mock.calls.find(call => {
+      if (!call[1] || !call[1].body) return false;
+      try {
+        const body = JSON.parse(call[1].body);
+        return body.stream === true;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    expect(streamingCall).toBeDefined();
+    const payload = JSON.parse(streamingCall[1].body);
+    
+    expect(payload.messages.length).toBe(4);
+    expect(payload.messages[0].role).toBe('system');
+    expect(payload.messages[1].role).toBe('user');
+    expect(payload.messages[1].content).toBe('Actually I have a question.');
+    expect(payload.messages[2].role).toBe('assistant');
+    expect(payload.messages[2].content).toBe('Sure, what is it?');
+    expect(payload.messages[3].role).toBe('user');
+    expect(payload.messages[3].content).toBe('What is the capital of France?');
+  });
+
   test('generateGreetingAndSave - successfully saves personalized greeting', async () => {
     const chatResult = await db.run("INSERT INTO chats (user_id, title) VALUES (?, ?)", [userId, 'Greeting Chat']);
     const chatId = chatResult.lastID;
