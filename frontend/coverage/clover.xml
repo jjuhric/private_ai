@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1782890128533" clover="3.2.0">
-  <project timestamp="1782890128533" name="All files">
-    <metrics statements="176" coveredstatements="176" conditionals="246" coveredconditionals="210" methods="119" coveredmethods="119" elements="541" coveredelements="505" complexity="0" loc="176" ncloc="176" packages="1" files="8" classes="8"/>
+<coverage generated="1782893792131" clover="3.2.0">
+  <project timestamp="1782893792131" name="All files">
+    <metrics statements="176" coveredstatements="176" conditionals="244" coveredconditionals="208" methods="119" coveredmethods="119" elements="539" coveredelements="503" complexity="0" loc="176" ncloc="176" packages="1" files="8" classes="8"/>
     <file name="Auth.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\Auth.jsx">
       <metrics statements="6" coveredstatements="6" conditionals="14" coveredconditionals="14" methods="8" coveredmethods="8"/>
       <line num="15" count="6" type="stmt"/>
@@ -23,7 +23,7 @@
       <line num="110" count="1" type="stmt"/>
     </file>
     <file name="ChatPane.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\ChatPane.jsx">
-      <metrics statements="5" coveredstatements="5" conditionals="26" coveredconditionals="26" methods="5" coveredmethods="5"/>
+      <metrics statements="5" coveredstatements="5" conditionals="24" coveredconditionals="24" methods="5" coveredmethods="5"/>
       <line num="18" count="9" type="stmt"/>
       <line num="27" count="1" type="stmt"/>
       <line num="37" count="8" type="stmt"/>
