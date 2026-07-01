@@ -11,7 +11,7 @@ SERVICE_NAME="private-ai"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 echo "===================================================="
-echo "          Private AI Setup & Update Utility         "
+echo "     Private AI Assistant Setup & Update Utility    "
 echo "===================================================="
 
 # Helper function to print logs
