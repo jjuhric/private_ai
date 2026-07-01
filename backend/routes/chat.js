@@ -173,6 +173,19 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       [chatId, 'assistant', finalContent, finalThoughts]
     );
 
+    // Save Q&A to short-term memory vault for 24 hours
+    const expires24h = new Date();
+    expires24h.setDate(expires24h.getDate() + 1);
+    await db.run(
+      'INSERT INTO memories (user_id, content, level, expires_at) VALUES (?, ?, ?, ?)',
+      [
+        req.user.id,
+        `User asked: "${message.trim()}"\nAssistant replied: "${finalContent.trim()}"`,
+        'short-term',
+        expires24h.toISOString()
+      ]
+    );
+
     sendEvent('done', { success: true });
   } catch (err) {
     console.error('Stream processing error:', err);

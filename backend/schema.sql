@@ -54,3 +54,13 @@ CREATE TABLE IF NOT EXISTS user_settings (
   online_provider TEXT DEFAULT 'gemini', -- 'gemini', 'openai', 'anthropic', 'custom'
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS memories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  level TEXT NOT NULL, -- 'short-term' or 'long-term'
+  expires_at DATETIME, -- NULL for long-term, timestamp for short-term
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

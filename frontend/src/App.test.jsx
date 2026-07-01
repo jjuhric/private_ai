@@ -16,7 +16,7 @@ const mockLocalStorage = {
 global.localStorage = mockLocalStorage;
 
 // Mock global fetch in Vitest
-global.fetch = vi.fn().mockImplementation((url) => {
+global.fetch = vi.fn().mockImplementation((url, options) => {
   const urlStr = String(url);
 
   if (urlStr.includes('/api/auth/me')) {
@@ -58,7 +58,7 @@ global.fetch = vi.fn().mockImplementation((url) => {
     });
   }
 
-  if (urlStr.includes('/api/chats/1/messages')) {
+  if (urlStr.includes('/messages')) {
     return Promise.resolve({
       ok: true,
       json: async () => []
@@ -66,6 +66,12 @@ global.fetch = vi.fn().mockImplementation((url) => {
   }
 
   if (urlStr.includes('/api/chats')) {
+    if (options && options.method === 'POST') {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ id: 2, title: 'Chat 12:00 AM', chatId: 2 })
+      });
+    }
     return Promise.resolve({
       ok: true,
       json: async () => [{ id: 1, title: 'App Chat One' }]

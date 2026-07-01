@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, Plus, Edit2, X, Calendar, Settings, LogOut } from 'lucide-react';
+import { MessageSquare, Plus, Edit2, X, Calendar, Settings, LogOut, Brain } from 'lucide-react';
 
 export default function Sidebar({
   user,
@@ -115,7 +115,7 @@ export default function Sidebar({
         ))}
       </nav>
 
-      <div className="sidebar-footer">
+      <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <button 
           className={`btn-new-chat ${activeTab === 'calendar' ? 'active' : ''}`} 
           onClick={() => { setActiveTab('calendar'); setIsMobileSidebarOpen(false); }} 
@@ -123,6 +123,15 @@ export default function Sidebar({
         >
           <Calendar size={18} />
           <span>My Calendar</span>
+        </button>
+
+        <button 
+          className={`btn-new-chat ${activeTab === 'memory' ? 'active' : ''}`} 
+          onClick={() => { setActiveTab('memory'); setIsMobileSidebarOpen(false); }} 
+          style={{ margin: 0 }}
+        >
+          <Brain size={18} />
+          <span>AI Memory</span>
         </button>
         
         <div className="user-profile">

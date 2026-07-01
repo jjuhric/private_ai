@@ -4,6 +4,7 @@ import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import ChatPane from './components/ChatPane';
 import CalendarPane from './components/CalendarPane';
+import MemoryPane from './components/MemoryPane';
 import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
 
@@ -23,6 +24,8 @@ function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
+
+  const hasInitializedRef = useRef(false);
 
   // Settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -64,12 +67,14 @@ function App() {
   // Load user data & chats if token is present
   useEffect(() => {
     if (token) {
+      hasInitializedRef.current = false;
       localStorage.setItem('token', token);
       fetchUserProfile();
       fetchChats();
       fetchSettings();
       fetchCalendarEvents();
       fetchProfile();
+      fetchMemories();
     } else {
       localStorage.removeItem('token');
       setUser(null);
@@ -156,23 +161,6 @@ function App() {
   };
 
   // Chats operations
-  const fetchChats = async () => {
-    try {
-      const res = await fetch('/api/chats', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setChats(data);
-        if (data.length > 0 && !activeChatId) {
-          setActiveChatId(data[0].id);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const createChat = async () => {
     try {
       const res = await fetch('/api/chats', {
@@ -189,6 +177,51 @@ function App() {
         setActiveChatId(data.chatId);
         setActiveTab('chat');
         setIsMobileSidebarOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchChats = async () => {
+    try {
+      const res = await fetch('/api/chats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChats(data);
+        
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
+        
+        if (data.length === 0) {
+          // No chats exist, create a fresh one
+          await createChat();
+        } else {
+          // Check if the most recent chat is empty
+          const mostRecentChatId = data[0].id;
+          const msgRes = await fetch(`/api/chats/${mostRecentChatId}/messages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          let isEmpty = true;
+          if (msgRes.ok) {
+            const msgs = await msgRes.json();
+            if (msgs && msgs.length > 0) {
+              isEmpty = false;
+            }
+          }
+          
+          if (isEmpty) {
+            // Select the existing empty chat
+            setActiveChatId(mostRecentChatId);
+            setActiveTab('chat');
+          } else {
+            // Start a new chat since the recent one has messages
+            await createChat();
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -352,6 +385,54 @@ function App() {
       if (res.ok) {
         setProfile(newProfile);
         setIsProfileOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const [memories, setMemories] = useState([]);
+
+  const fetchMemories = async () => {
+    try {
+      const res = await fetch('/api/memories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMemories(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddMemory = async ({ content, level }) => {
+    try {
+      const res = await fetch('/api/memories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ content, level })
+      });
+      if (res.ok) {
+        fetchMemories();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteMemory = async (id) => {
+    try {
+      const res = await fetch(`/api/memories/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchMemories();
       }
     } catch (err) {
       console.error(err);
@@ -523,6 +604,8 @@ function App() {
       fetchMessages(activeChatId);
       // Sync calendar events in case the AI modified schedule
       fetchCalendarEvents();
+      // Sync memories in case the AI learned something new
+      fetchMemories();
     } catch (err) {
       console.error(err);
       alert('Communication failed. Is LM Studio or backend active?');
@@ -597,7 +680,7 @@ function App() {
           </div>
         </header>
 
-        {activeTab === 'chat' ? (
+        {activeTab === 'chat' && (
           <ChatPane
             messages={messages}
             activeChatId={activeChatId}
@@ -610,7 +693,8 @@ function App() {
             handleSendMessage={handleSendMessage}
             messagesEndRef={messagesEndRef}
           />
-        ) : (
+        )}
+        {activeTab === 'calendar' && (
           <CalendarPane
             calendarEvents={calendarEvents}
             calendarForm={calendarForm}
@@ -619,6 +703,13 @@ function App() {
             setCalendarDate={setCalendarDate}
             handleAddCalendarEvent={handleAddCalendarEvent}
             handleDeleteCalendarEvent={handleDeleteCalendarEvent}
+          />
+        )}
+        {activeTab === 'memory' && (
+          <MemoryPane
+            memories={memories}
+            onAddMemory={handleAddMemory}
+            onDeleteMemory={handleDeleteMemory}
           />
         )}
       </main>

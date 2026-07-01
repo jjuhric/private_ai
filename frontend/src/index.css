@@ -701,3 +701,18 @@ select.form-control option {
     width: 95% !important;
   }
 }
+
+/* Memory layout grid base style (desktop) */
+.memory-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .memory-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+}

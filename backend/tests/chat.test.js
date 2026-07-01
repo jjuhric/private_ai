@@ -163,6 +163,14 @@ describe('Chat Router Tests', () => {
     expect(lastMsg).toBeDefined();
     expect(lastMsg.content).toBe('This is the final response.');
     expect(lastMsg.thoughts).toBe('Thinking chunk...\nExtracted XML thoughts');
+
+    // Confirm Q&A stored in memories
+    const lastMemory = await db.get('SELECT * FROM memories ORDER BY id DESC LIMIT 1');
+    expect(lastMemory).toBeDefined();
+    expect(lastMemory.user_id).toBe(userId);
+    expect(lastMemory.content).toBe('User asked: "What is the weather?"\nAssistant replied: "This is the final response."');
+    expect(lastMemory.level).toBe('short-term');
+    expect(lastMemory.expires_at).not.toBeNull();
   });
 
   test('POST /api/chat/stream - channel thinking tag parsing fallback', async () => {

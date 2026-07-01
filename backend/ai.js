@@ -4,6 +4,8 @@ const { handleGitHubTool } = require('./tools/github_tool');
 const { handleWebSearchTool } = require('./tools/web_search_tool');
 const { handleGoogleNewsTool } = require('./tools/google_news_tool');
 const { handleWeatherTool } = require('./tools/weather_tool');
+const { handleMemoryTool } = require('./tools/memory_tool');
+const { handleTimeTool } = require('./tools/time_tool');
 
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
 async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk) {
@@ -165,20 +167,47 @@ async function runAgentLoop({
   onToolCall
 }) {
   const systemPrompt = `You are the main coordinator agent of the Private AI system.
+
+### CRITICAL RUNTIME RULES (MUST OBEY):
+1. ALWAYS recall memory FIRST (using the 'memory' tool with the 'recall' action) before selecting any other tool or giving up, if:
+   - The user asks about personal details, name, address, or location (e.g., "where I live", "my address", "my name").
+   - You need a parameter (like location, zipcode, or date) to perform an action (like checking weather or news) and it is not provided in the current user message. You MUST search memory first to see if the zipcode/location is stored.
+2. TIMEZONES & DATES:
+   - When scheduling calendar events or discussing times, ALWAYS convert all times from UTC to the user's local timezone.
+   - If the user's timezone, latitude, or longitude is not in the current context/history, check memory FIRST.
+   - If they are not in memory but you have the user's address/zipcode, call the 'time' tool with the 'lookup_timezone' action to find their timezone, latitude, and longitude.
+   - Once you discover the user's timezone offset, latitude, or longitude, you MUST immediately call the 'memory' tool with the 'remember' action to save these details (timezone, latitude, longitude) permanently (long-term) in memory.
+3. PERSONAL DATA BREAKDOWN & ENRICHMENT:
+   - When the user shares a sentence containing their name and/or address (e.g., "My name is Jeffery Uhrick and I live at 18833 NE County Rd 274, Altha, FL"), you MUST:
+     a) Parse and break it down into distinct parts: First Name, Last Name, and Home Address.
+     b) Automatically use the search tools (like 'search_web') or time tools (like 'lookup_timezone') to look up valuable contextual details such as the County they live in, the zipcode, and the exact latitude/longitude coordinates.
+     c) Save each parsed and retrieved fact as separate individual entries in long-term memory (using 'memory' with the 'remember' action and level 'long-term'). Save separate entries for First Name, Last Name, Address, County, Coordinates, and Timezone.
+4. DO NOT default to 'none' or ask the user for details before querying the memory tool to see if you already know them.
+5. AUTOMATICALLY store details: When the user shares personal details (name, address, preferences, plans), you MUST immediately call 'memory' with the 'remember' action.
+
 You have access to the following tools:
 1. "calendar": Manage meetings/tasks. Action values: 'list' (params: {date: "YYYY-MM-DD"}), 'add' (params: {title, start_time: "YYYY-MM-DD HH:MM", end_time: "YYYY-MM-DD HH:MM", description}), 'delete' (params: {eventId}).
 2. "github": Access GitHub details. Action values: 'list_repos', 'get_repo' (params: {owner, repo}), 'list_issues' (params: {owner, repo}).
 3. "search_web": Search current info/Google (params: {query}).
 4. "google_news": Fetch news headlines and content from Google News (params: {query?: string}). Use this whenever the user asks for general news, topic-specific news, breaking news, or latest events. Pass the specific topic of interest as the query parameter if the user is asking about a particular subject.
 5. "weather": Fetch weather forecast/conditions. Action values: 'current' (params: {zipcode?: string, country?: string}), 'hourly' (params: {zipcode?: string, country?: string}), 'daily' (params: {zipcode?: string, country?: string, cnt?: number}). Use this whenever the user asks for current conditions, hourly forecasts, or 7-16 day daily outlooks. If the query specifies a location, pass the zipcode and/or country.
-6. "none": If no tool is needed.
+6. "memory": Store or retrieve user details, facts, preferences, and conversations to persist information between sessions. Action values:
+   - 'recall' (params: {query?: string}): Search for active memories matching query, or retrieve recent active memories. You MUST use this FIRST before other tools if:
+     a) The user asks about previous conversations, preferences, name, or facts from past interactions.
+     b) You need location, address, zipcode, or other missing personal details to perform a tool action (like weather or calendar). Query 'recall' first to see if those details are stored in memory before failing or asking the user.
+   - 'remember' (params: {content: string, level: "short-term" | "long-term", expiresAt?: string, days?: number}): Store new facts, details, or context learned about the user. Whenever the user shares personal details (like name, address, location, preferences, or upcoming dates), you MUST automatically call 'remember' to save them. Set level to 'short-term' if only relevant short-term (like temporary plans, trip dates, current tasks, or temporary details from previous conversations), otherwise 'long-term'. Short-term memories default to 30 days retention. If the user mentions a specific upcoming event or date (e.g., "going on vacation July 15th"), calculate the day after the event (e.g., "2026-07-16T00:00:00.000Z") and pass it as "expiresAt" so it is remembered until the event has passed. Alternatively, pass "days" for a custom relative duration.
+   - 'forget' (params: {memoryId: number}): Delete/forget a memory by its ID. Use this when the user corrects you or asks you to forget/remove a memory.
+7. "time": Get current time and timezone details. Action values:
+   - 'current_time': Returns the current year, month, day, weekday, and time in UTC.
+   - 'lookup_timezone' (params: {zipcode: string, country?: string}): Uses geocoding/weather API to resolve a zipcode/country, returning its latitude, longitude, and timezone offset from UTC (in seconds and hours).
+8. "none": If no tool is needed.
 
 You can invoke tools sequentially to gather necessary information. If the results of a tool call indicate you should search a different query, location, or source, you can issue another tool call. When you have gathered all required information, set tool to "none".
 
 Determine if you need a tool. Your output MUST be in this JSON format:
 {
   "thought": "your step-by-step reasoning here",
-  "tool": "calendar" | "github" | "search_web" | "google_news" | "weather" | "none",
+  "tool": "calendar" | "github" | "search_web" | "google_news" | "weather" | "memory" | "time" | "none",
   "action": "action_name_if_any",
   "params": {}
 }
@@ -196,6 +225,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
 
     try {
       const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
+      let respText = '';
 
       if (isGemini) {
         const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
@@ -207,8 +237,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
         });
         const prompt = `${systemPrompt}\n\nUser Message: ${userMessage}\nChat History: ${JSON.stringify(currentHistory.slice(-5))}`;
         const result = await model.generateContent(prompt);
-        const respText = result.response.text();
-        decision = JSON.parse(respText);
+        respText = result.response.text();
       } else {
         let targetUrl = '';
         let targetKey = '';
@@ -296,27 +325,47 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
         }
 
         const data = await res.json();
-        let text = '';
         if (targetStyle === 'anthropic') {
-          text = data.content?.[0]?.text || '';
+          respText = data.content?.[0]?.text || '';
         } else {
-          text = data.choices?.[0]?.message?.content || '';
+          respText = data.choices?.[0]?.message?.content || '';
         }
+      }
 
-        text = text
-          .replace(/<think>[\s\S]*?<\/think>/g, '')
-          .replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '')
-          .trim();
+      respText = respText
+        .replace(/<think>[\s\S]*?<\/think>/g, '')
+        .replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '')
+        .trim();
 
+      let jsonParsed = false;
+      try {
+        decision = JSON.parse(respText);
+        jsonParsed = true;
+      } catch (jsonErr) {
+        // Attempt to extract JSON substring from the first { to the last }
+        const firstBrace = respText.indexOf('{');
+        const lastBrace = respText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          try {
+            const candidate = respText.substring(firstBrace, lastBrace + 1);
+            decision = JSON.parse(candidate);
+            jsonParsed = true;
+          } catch (innerErr) {
+            // Ignore
+          }
+        }
+      }
+
+      if (!jsonParsed) {
         try {
-          decision = JSON.parse(text);
-        } catch (jsonErr) {
-          const codeBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
+          const codeBlockMatch = respText.match(/```json\s*([\s\S]*?)\s*```/) || respText.match(/```\s*([\s\S]*?)\s*```/);
           if (codeBlockMatch && codeBlockMatch[1]) {
             decision = JSON.parse(codeBlockMatch[1].trim());
           } else {
-            throw jsonErr;
+            throw new Error("Could not parse JSON from model output.");
           }
+        } catch (codeBlockErr) {
+          throw new Error(`Failed to parse response JSON. Original text: ${respText}`);
         }
       }
     } catch (err) {
@@ -349,6 +398,10 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
       toolOutput = await handleGoogleNewsTool(decision.params?.query);
     } else if (decision.tool === 'weather') {
       toolOutput = await handleWeatherTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'memory') {
+      toolOutput = await handleMemoryTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'time') {
+      toolOutput = await handleTimeTool(db, userId, decision.action, decision.params);
     }
 
     onThought(`Tool Response received (length: ${toolOutput.length})\n`);
