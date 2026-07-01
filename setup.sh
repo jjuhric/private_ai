@@ -47,16 +47,16 @@ fi
 
 # Verify Node.js
 if ! command -v node &> /dev/null; then
-    log "Node.js is not installed. Installing Node.js (v24)..."
-    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    log "Node.js is not installed. Installing Node.js (v25)..."
+    curl -fsSL https://deb.nodesource.com/setup_25.x | sudo -E bash -
     sudo apt-get install -y nodejs
 else
     NODE_VERSION=$(node -v | cut -d'v' -f2)
     NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d'.' -f1)
     log "Node.js v$NODE_VERSION is installed."
-    if [ "$NODE_MAJOR" -lt 24 ]; then
-        log "Node.js version is less than 24. Upgrading Node.js to v24..."
-        curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    if [ "$NODE_MAJOR" -lt 25 ]; then
+        log "Node.js version is less than 25. Upgrading Node.js to v25..."
+        curl -fsSL https://deb.nodesource.com/setup_25.x | sudo -E bash -
         sudo apt-get install -y nodejs
     fi
 fi
