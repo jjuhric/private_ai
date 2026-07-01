@@ -19,7 +19,7 @@ A secure, private personal AI assistant dashboard built with React (Vite) and No
 ## Installation & Setup
 
 ### Prerequisites
-- **Node.js**: Version 18.0.0 or higher (required for native `fetch` support).
+- **Node.js**: Version 24.0.0 or higher (required for full compatibility).
 
 ### 1. Install Dependencies
 Run the install script from the root directory to automatically resolve all backend and frontend NPM packages:
