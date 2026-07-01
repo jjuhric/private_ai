@@ -153,6 +153,10 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
         const extractedThoughts = finalContent.substring(startIdx + startTag.length, endIdx).trim();
         finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
         finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTag.length)).trim();
+      } else {
+        const extractedThoughts = finalContent.substring(startIdx + startTag.length).trim();
+        finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+        finalContent = finalContent.substring(0, startIdx).trim();
       }
     }
 
@@ -165,6 +169,10 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
         const extractedThoughts = finalContent.substring(startIdx + startTagXml.length, endIdx).trim();
         finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
         finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTagXml.length)).trim();
+      } else {
+        const extractedThoughts = finalContent.substring(startIdx + startTagXml.length).trim();
+        finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+        finalContent = finalContent.substring(0, startIdx).trim();
       }
     }
 

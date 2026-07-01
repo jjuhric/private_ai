@@ -199,28 +199,9 @@ function App() {
           // No chats exist, create a fresh one
           await createChat();
         } else {
-          // Check if the most recent chat is empty
-          const mostRecentChatId = data[0].id;
-          const msgRes = await fetch(`/api/chats/${mostRecentChatId}/messages`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          let isEmpty = true;
-          if (msgRes.ok) {
-            const msgs = await msgRes.json();
-            if (msgs && msgs.length > 0) {
-              isEmpty = false;
-            }
-          }
-          
-          if (isEmpty) {
-            // Select the existing empty chat
-            setActiveChatId(mostRecentChatId);
-            setActiveTab('chat');
-          } else {
-            // Start a new chat since the recent one has messages
-            await createChat();
-          }
+          // Load the last active chat
+          setActiveChatId(data[0].id);
+          setActiveTab('chat');
         }
       }
     } catch (err) {

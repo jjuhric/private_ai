@@ -66,6 +66,9 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       model: modelName,
       messages: messages,
       temperature: 0.7,
+      frequency_penalty: 0.3,
+      presence_penalty: 0.1,
+      max_tokens: 4096,
       stream: true
     };
   }
@@ -297,7 +300,8 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
           body = {
             model: modelName,
             messages,
-            temperature: 0.1
+            temperature: 0.1,
+            max_tokens: 2048
           };
           if (targetStyle === 'openai' || targetStyle === 'custom') {
             body.response_format = { type: "json_object" };
@@ -429,6 +433,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
 
   const responderInstruction = `You are a helpful, smart AI Personal Assistant.
 If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
+CRITICAL: Avoid going in loops or repeating analysis. Keep any thinking process concise and make a clear decision quickly, then close the </think> tag and output your final response immediately.
 Here is the user request: "${userMessage}".
 ${accumulatedToolOutputs.length > 0 ? `We queried tools to gather context. Here are the search/action results:\n${accumulatedToolOutputs.map(t => `--- [Tool: ${t.tool}] ---\n${t.output}`).join('\n\n')}` : ''}
 Formulate a rich, helpful final response. Format in beautiful markdown. Fully support emojis.
