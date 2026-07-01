@@ -9,6 +9,11 @@ describe('ExpandableThoughts Component Tests', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  test('returns null if thoughts prop is missing or falsy', () => {
+    const { container } = render(<ExpandableThoughts thoughts={null} />);
+    expect(container.firstChild).toBeNull();
+  });
+
   test('renders thoughts and collapses/expands correctly', () => {
     render(<ExpandableThoughts thoughts="<think>Deep plan details</think>" />);
     expect(screen.getByText(/Agent Plan & Internal Thoughts/)).toBeInTheDocument();

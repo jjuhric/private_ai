@@ -113,7 +113,7 @@ describe('Main App Component Tests', () => {
     });
 
     // Sidebar renders app logo title and username
-    expect(screen.getByText('Private AI')).toBeInTheDocument();
+    expect(screen.getAllByText('Private AI Assistant').length).toBeGreaterThan(0);
     expect(screen.getByText('👤 appuser')).toBeInTheDocument();
     expect(screen.getByText('App Chat One')).toBeInTheDocument();
   });

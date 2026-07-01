@@ -217,7 +217,7 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
   let currentHistory = [...history];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
-  const maxToolCalls = 10;
+  const maxToolCalls = 50;
 
   while (toolCallsCount < maxToolCalls) {
     let decision = null;

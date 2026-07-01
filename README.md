@@ -1,4 +1,4 @@
-# Private AI — V2.0
+# Private AI Assistant — V2.2.0
 
 A secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Features multi-agent orchestration, live deep internet scraping, real-time Google News summaries, local database storage, calendar task management, and GitHub client integrations.
 
@@ -19,7 +19,7 @@ A secure, private personal AI assistant dashboard built with React (Vite) and No
 ## Installation & Setup
 
 ### Prerequisites
-- **Node.js**: Version 18.0.0 or higher (required for native `fetch` support).
+- **Node.js**: Version 25.5.0 or higher (required for full compatibility).
 
 ### 1. Install Dependencies
 Run the install script from the root directory to automatically resolve all backend and frontend NPM packages:

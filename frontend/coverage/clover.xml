@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1782810881650" clover="3.2.0">
-  <project timestamp="1782810881650" name="All files">
-    <metrics statements="135" coveredstatements="133" conditionals="214" coveredconditionals="175" methods="106" coveredmethods="105" elements="455" coveredelements="413" complexity="0" loc="135" ncloc="135" packages="1" files="7" classes="7"/>
+<coverage generated="1782890128533" clover="3.2.0">
+  <project timestamp="1782890128533" name="All files">
+    <metrics statements="176" coveredstatements="176" conditionals="246" coveredconditionals="210" methods="119" coveredmethods="119" elements="541" coveredelements="505" complexity="0" loc="176" ncloc="176" packages="1" files="8" classes="8"/>
     <file name="Auth.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\Auth.jsx">
       <metrics statements="6" coveredstatements="6" conditionals="14" coveredconditionals="14" methods="8" coveredmethods="8"/>
       <line num="15" count="6" type="stmt"/>
@@ -23,36 +23,79 @@
       <line num="110" count="1" type="stmt"/>
     </file>
     <file name="ChatPane.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\ChatPane.jsx">
-      <metrics statements="5" coveredstatements="5" conditionals="26" coveredconditionals="23" methods="5" coveredmethods="5"/>
-      <line num="18" count="8" type="stmt"/>
+      <metrics statements="5" coveredstatements="5" conditionals="26" coveredconditionals="26" methods="5" coveredmethods="5"/>
+      <line num="18" count="9" type="stmt"/>
       <line num="27" count="1" type="stmt"/>
-      <line num="37" count="6" type="stmt"/>
+      <line num="37" count="8" type="stmt"/>
       <line num="51" count="3" type="stmt"/>
       <line num="80" count="1" type="stmt"/>
     </file>
     <file name="ExpandableThoughts.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\ExpandableThoughts.jsx">
-      <metrics statements="8" coveredstatements="8" conditionals="9" coveredconditionals="8" methods="3" coveredmethods="3"/>
-      <line num="5" count="12" type="stmt"/>
-      <line num="7" count="12" type="stmt"/>
-      <line num="8" count="8" type="stmt"/>
-      <line num="11" count="12" type="cond" truecount="1" falsecount="1"/>
-      <line num="14" count="12" type="stmt"/>
-      <line num="22" count="12" type="cond" truecount="2" falsecount="0"/>
-      <line num="24" count="11" type="stmt"/>
+      <metrics statements="8" coveredstatements="8" conditionals="9" coveredconditionals="9" methods="3" coveredmethods="3"/>
+      <line num="5" count="15" type="stmt"/>
+      <line num="7" count="15" type="stmt"/>
+      <line num="8" count="11" type="stmt"/>
+      <line num="11" count="15" type="cond" truecount="2" falsecount="0"/>
+      <line num="14" count="14" type="stmt"/>
+      <line num="22" count="14" type="cond" truecount="2" falsecount="0"/>
+      <line num="24" count="13" type="stmt"/>
       <line num="26" count="2" type="stmt"/>
     </file>
+    <file name="MemoryPane.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\MemoryPane.jsx">
+      <metrics statements="40" coveredstatements="40" conditionals="30" coveredconditionals="23" methods="12" coveredmethods="12"/>
+      <line num="5" count="15" type="stmt"/>
+      <line num="6" count="15" type="stmt"/>
+      <line num="7" count="15" type="stmt"/>
+      <line num="9" count="15" type="stmt"/>
+      <line num="10" count="3" type="stmt"/>
+      <line num="11" count="3" type="cond" truecount="1" falsecount="1"/>
+      <line num="13" count="3" type="stmt"/>
+      <line num="14" count="3" type="stmt"/>
+      <line num="15" count="3" type="stmt"/>
+      <line num="17" count="3" type="cond" truecount="2" falsecount="0"/>
+      <line num="18" count="2" type="stmt"/>
+      <line num="19" count="2" type="cond" truecount="1" falsecount="1"/>
+      <line num="20" count="2" type="cond" truecount="1" falsecount="1"/>
+      <line num="21" count="2" type="cond" truecount="1" falsecount="1"/>
+      <line num="22" count="2" type="cond" truecount="2" falsecount="0"/>
+      <line num="23" count="1" type="cond" truecount="1" falsecount="1"/>
+      <line num="24" count="1" type="cond" truecount="3" falsecount="1"/>
+      <line num="25" count="1" type="stmt"/>
+      <line num="29" count="3" type="stmt"/>
+      <line num="30" count="3" type="stmt"/>
+      <line num="31" count="3" type="stmt"/>
+      <line num="34" count="28" type="stmt"/>
+      <line num="35" count="28" type="stmt"/>
+      <line num="37" count="15" type="stmt"/>
+      <line num="38" count="15" type="cond" truecount="1" falsecount="1"/>
+      <line num="39" count="15" type="stmt"/>
+      <line num="40" count="15" type="stmt"/>
+      <line num="41" count="15" type="stmt"/>
+      <line num="42" count="15" type="cond" truecount="2" falsecount="0"/>
+      <line num="44" count="14" type="stmt"/>
+      <line num="45" count="14" type="cond" truecount="2" falsecount="0"/>
+      <line num="46" count="13" type="stmt"/>
+      <line num="49" count="15" type="stmt"/>
+      <line num="103" count="13" type="stmt"/>
+      <line num="118" count="1" type="stmt"/>
+      <line num="173" count="15" type="stmt"/>
+      <line num="197" count="1" type="stmt"/>
+      <line num="242" count="3" type="stmt"/>
+      <line num="251" count="3" type="stmt"/>
+      <line num="271" count="1" type="stmt"/>
+    </file>
     <file name="ProfileModal.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\ProfileModal.jsx">
-      <metrics statements="19" coveredstatements="19" conditionals="18" coveredconditionals="15" methods="17" coveredmethods="17"/>
-      <line num="10" count="19" type="stmt"/>
-      <line num="17" count="19" type="stmt"/>
-      <line num="19" count="19" type="stmt"/>
-      <line num="20" count="6" type="cond" truecount="1" falsecount="1"/>
-      <line num="21" count="6" type="stmt"/>
-      <line num="31" count="19" type="cond" truecount="2" falsecount="0"/>
-      <line num="33" count="12" type="stmt"/>
+      <metrics statements="19" coveredstatements="19" conditionals="18" coveredconditionals="18" methods="17" coveredmethods="17"/>
+      <line num="10" count="22" type="stmt"/>
+      <line num="17" count="22" type="stmt"/>
+      <line num="19" count="22" type="stmt"/>
+      <line num="20" count="8" type="cond" truecount="2" falsecount="0"/>
+      <line num="21" count="7" type="stmt"/>
+      <line num="31" count="22" type="cond" truecount="2" falsecount="0"/>
+      <line num="33" count="15" type="stmt"/>
       <line num="34" count="1" type="stmt"/>
       <line num="35" count="1" type="stmt"/>
-      <line num="38" count="12" type="stmt"/>
+      <line num="38" count="15" type="stmt"/>
       <line num="39" count="1" type="stmt"/>
       <line num="40" count="3" type="stmt"/>
       <line num="43" count="1" type="stmt"/>
@@ -64,9 +107,9 @@
       <line num="109" count="1" type="stmt"/>
     </file>
     <file name="SettingsModal.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\SettingsModal.jsx">
-      <metrics statements="69" coveredstatements="68" conditionals="127" coveredconditionals="97" methods="47" coveredmethods="47"/>
-      <line num="19" count="19" type="cond" truecount="2" falsecount="0"/>
-      <line num="21" count="14" type="stmt"/>
+      <metrics statements="69" coveredstatements="69" conditionals="127" coveredconditionals="101" methods="47" coveredmethods="47"/>
+      <line num="19" count="20" type="cond" truecount="2" falsecount="0"/>
+      <line num="21" count="15" type="stmt"/>
       <line num="22" count="1" type="stmt"/>
       <line num="23" count="9" type="stmt"/>
       <line num="26" count="1" type="stmt"/>
@@ -108,15 +151,15 @@
       <line num="179" count="1" type="cond" truecount="3" falsecount="1"/>
       <line num="182" count="2" type="stmt"/>
       <line num="203" count="1" type="stmt"/>
-      <line num="210" count="8" type="stmt"/>
-      <line num="211" count="8" type="cond" truecount="1" falsecount="1"/>
-      <line num="212" count="8" type="cond" truecount="4" falsecount="0"/>
-      <line num="213" count="3" type="stmt"/>
-      <line num="214" count="6" type="cond" truecount="2" falsecount="0"/>
-      <line num="215" count="9" type="stmt"/>
-      <line num="217" count="3" type="cond" truecount="4" falsecount="0"/>
-      <line num="218" count="2" type="cond" truecount="3" falsecount="1"/>
-      <line num="219" count="0" type="cond" truecount="0" falsecount="4"/>
+      <line num="210" count="9" type="stmt"/>
+      <line num="211" count="9" type="cond" truecount="1" falsecount="1"/>
+      <line num="212" count="9" type="cond" truecount="4" falsecount="0"/>
+      <line num="213" count="4" type="stmt"/>
+      <line num="214" count="8" type="cond" truecount="2" falsecount="0"/>
+      <line num="215" count="12" type="stmt"/>
+      <line num="217" count="4" type="cond" truecount="4" falsecount="0"/>
+      <line num="218" count="3" type="cond" truecount="4" falsecount="0"/>
+      <line num="219" count="1" type="cond" truecount="3" falsecount="1"/>
       <line num="222" count="5" type="cond" truecount="2" falsecount="0"/>
       <line num="223" count="1" type="stmt"/>
       <line num="224" count="4" type="cond" truecount="2" falsecount="0"/>
@@ -124,10 +167,10 @@
       <line num="226" count="3" type="cond" truecount="2" falsecount="0"/>
       <line num="227" count="1" type="stmt"/>
       <line num="229" count="2" type="stmt"/>
-      <line num="232" count="8" type="stmt"/>
-      <line num="234" count="8" type="cond" truecount="2" falsecount="0"/>
+      <line num="232" count="9" type="stmt"/>
+      <line num="234" count="9" type="cond" truecount="2" falsecount="0"/>
       <line num="238" count="1" type="stmt"/>
-      <line num="241" count="17" type="stmt"/>
+      <line num="241" count="20" type="stmt"/>
       <line num="250" count="1" type="stmt"/>
       <line num="264" count="1" type="stmt"/>
       <line num="268" count="1" type="stmt"/>
@@ -136,11 +179,11 @@
       <line num="329" count="1" type="stmt"/>
     </file>
     <file name="Sidebar.jsx" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\frontend\src\components\Sidebar.jsx">
-      <metrics statements="20" coveredstatements="19" conditionals="16" coveredconditionals="14" methods="14" coveredmethods="13"/>
-      <line num="25" count="11" type="stmt"/>
-      <line num="33" count="0" type="stmt"/>
+      <metrics statements="21" coveredstatements="21" conditionals="18" coveredconditionals="15" methods="15" coveredmethods="15"/>
+      <line num="25" count="12" type="stmt"/>
+      <line num="33" count="1" type="stmt"/>
       <line num="39" count="1" type="stmt"/>
-      <line num="53" count="16" type="stmt"/>
+      <line num="53" count="18" type="stmt"/>
       <line num="57" count="1" type="cond" truecount="1" falsecount="1"/>
       <line num="58" count="1" type="stmt"/>
       <line num="59" count="1" type="stmt"/>
@@ -156,7 +199,8 @@
       <line num="106" count="1" type="stmt"/>
       <line num="121" count="1" type="stmt"/>
       <line num="130" count="1" type="stmt"/>
-      <line num="137" count="1" type="stmt"/>
+      <line num="139" count="1" type="stmt"/>
+      <line num="146" count="1" type="stmt"/>
     </file>
   </project>
 </coverage>

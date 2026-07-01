@@ -11,7 +11,7 @@ SERVICE_NAME="private-ai"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 echo "===================================================="
-echo "          Private AI Setup & Update Utility         "
+echo "     Private AI Assistant Setup & Update Utility    "
 echo "===================================================="
 
 # Helper function to print logs
@@ -47,16 +47,16 @@ fi
 
 # Verify Node.js
 if ! command -v node &> /dev/null; then
-    log "Node.js is not installed. Installing Node.js (current LTS v20)..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    log "Node.js is not installed. Installing Node.js (v25)..."
+    curl -fsSL https://deb.nodesource.com/setup_25.x | sudo -E bash -
     sudo apt-get install -y nodejs
 else
     NODE_VERSION=$(node -v | cut -d'v' -f2)
     NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d'.' -f1)
     log "Node.js v$NODE_VERSION is installed."
-    if [ "$NODE_MAJOR" -lt 18 ]; then
-        log "Node.js version is less than 18. Upgrading Node.js to v20..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    if [ "$NODE_MAJOR" -lt 25 ]; then
+        log "Node.js version is less than 25. Upgrading Node.js to v25..."
+        curl -fsSL https://deb.nodesource.com/setup_25.x | sudo -E bash -
         sudo apt-get install -y nodejs
     fi
 fi
