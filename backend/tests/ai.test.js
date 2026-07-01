@@ -1,4 +1,4 @@
-const { runAgentLoop } = require('../ai');
+const { runAgentLoop, generateGreetingAndSave } = require('../ai');
 
 // Mock SQLite db.js
 let mockTestDb = null;
@@ -382,5 +382,96 @@ describe('Agent Loop & LLM Stream Unit Tests', () => {
         onToolCall: jest.fn()
       })
     ).rejects.toThrow('Service Unavailable');
+  });
+
+  test('runAgentLoop - aborts execution mid-loop if isAborted returns true', async () => {
+    routerDecisions = [
+      {
+        thought: 'Run weather tool.',
+        tool: 'weather',
+        action: 'current',
+        params: { zipcode: '32421', country: 'US' }
+      }
+    ];
+
+    const thoughts = [];
+    const contents = [];
+    
+    let callCount = 0;
+    const isAborted = () => {
+      callCount++;
+      return callCount > 1;
+    };
+
+    await runAgentLoop({
+      db,
+      userId,
+      provider: 'local',
+      modelName: 'gemma',
+      userMessage: 'Weather please',
+      history: [],
+      isAborted,
+      onThought: (t) => thoughts.push(t),
+      onContent: (c) => contents.push(c),
+      onToolCall: jest.fn()
+    });
+
+    expect(thoughts.join('')).toContain("Stream aborted by user.");
+    expect(contents.length).toBe(0);
+  });
+
+  test('generateGreetingAndSave - successfully saves personalized greeting', async () => {
+    const chatResult = await db.run("INSERT INTO chats (user_id, title) VALUES (?, ?)", [userId, 'Greeting Chat']);
+    const chatId = chatResult.lastID;
+
+    await generateGreetingAndSave(db, userId, chatId);
+
+    const messages = await db.all("SELECT * FROM messages WHERE chat_id = ?", [chatId]);
+    expect(messages.length).toBe(1);
+    expect(messages[0].role).toBe('assistant');
+    expect(messages[0].content).toContain("Hello!");
+    expect(messages[0].content).toContain("Today is");
+    expect(messages[0].content).toContain("What can I do for you next?");
+  });
+
+  test('generateGreetingAndSave - successfully saves greeting with name', async () => {
+    const userRes = await db.run("INSERT INTO users (username, password_hash, name) VALUES ('nameduser', 'hashed', 'Alice')");
+    const testUserId = userRes.lastID;
+
+    const chatResult = await db.run("INSERT INTO chats (user_id, title) VALUES (?, ?)", [testUserId, 'Greeting Chat 2']);
+    const chatId = chatResult.lastID;
+
+    await generateGreetingAndSave(db, testUserId, chatId);
+
+    const messages = await db.all("SELECT * FROM messages WHERE chat_id = ?", [chatId]);
+    expect(messages.length).toBe(1);
+    expect(messages[0].role).toBe('assistant');
+    expect(messages[0].content).toContain("Hello Alice!");
+    expect(messages[0].content).toContain("Today is");
+    expect(messages[0].content).toContain("What can I do for you next?");
+  });
+
+  test('generateGreetingAndSave - handles database/user query failure gracefully', async () => {
+    const mockDb = {
+      get: jest.fn().mockRejectedValue(new Error("Query failed")),
+      run: jest.fn().mockResolvedValue({})
+    };
+
+    await generateGreetingAndSave(mockDb, 9999, 9999);
+
+    expect(mockDb.get).toHaveBeenCalled();
+    expect(mockDb.run).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO messages'),
+      expect.any(Array)
+    );
+  });
+
+  test('generateGreetingAndSave - handles insert failure gracefully', async () => {
+    const mockDb = {
+      get: jest.fn().mockResolvedValue({ name: 'Bob' }),
+      run: jest.fn().mockRejectedValue(new Error("Insert failed"))
+    };
+
+    await expect(generateGreetingAndSave(mockDb, 9999, 9999)).resolves.not.toThrow();
   });
 });
