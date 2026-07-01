@@ -147,6 +147,12 @@ describe('Chat Router Tests', () => {
     const insertRes = await db.run('INSERT INTO chats (user_id, title) VALUES (?, ?)', [userId, 'Stream Chat']);
     const chatId = insertRes.lastID;
 
+    // Seed history to verify the history formatter (consecutive role merges and empty skips)
+    await db.run("INSERT INTO messages (chat_id, role, content) VALUES (?, 'user', 'My Interests')", [chatId]);
+    await db.run("INSERT INTO messages (chat_id, role, content) VALUES (?, 'user', 'are programming')", [chatId]);
+    await db.run("INSERT INTO messages (chat_id, role, content) VALUES (?, 'assistant', '')", [chatId]);
+    await db.run("INSERT INTO messages (chat_id, role, content) VALUES (?, 'assistant', 'How interesting!')", [chatId]);
+
     // Mock agent loop behavior to call callbacks
     mockRunAgentLoop.mockImplementation(async (options) => {
       // Call thoughts callback
