@@ -131,7 +131,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       onlineUrl: settings.online_url,
       onlineKey: settings.online_key,
       onlineProvider: settings.online_provider || 'gemini',
-      isAborted: () => req.destroyed,
+      isAborted: () => res.destroyed,
       onThought: (thoughtChunk) => {
         accumulatedThoughts += thoughtChunk;
         sendEvent('thought', thoughtChunk);
