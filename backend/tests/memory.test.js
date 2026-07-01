@@ -134,6 +134,25 @@ describe('Memory Capabilities Tests', () => {
       expect(res.statusCode).toBe(400);
     });
 
+    test('POST /api/memories - prevents duplicate active memory', async () => {
+      await request(app)
+        .post('/api/memories')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ content: 'Likes strawberries', level: 'long-term' });
+
+      const res = await request(app)
+        .post('/api/memories')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ content: 'Likes strawberries', level: 'long-term' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.isDuplicate).toBe(true);
+      
+      const dbRows = await mockTestDb.all('SELECT * FROM memories WHERE content = ?', ['Likes strawberries']);
+      expect(dbRows.length).toBe(1);
+    });
+
     test('DELETE /api/memories/:id - deletes existing memory', async () => {
       // Create memory first
       const createRes = await request(app)
@@ -194,6 +213,17 @@ describe('Memory Capabilities Tests', () => {
       const output = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'test content', level: 'short-term' });
       expect(output).toContain('Level: short-term');
       expect(output).toContain('Expires at');
+    });
+
+    test('handleMemoryTool remember - prevents duplicate active memory', async () => {
+      const outputFirst = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'test duplicates' });
+      expect(outputFirst).toContain('Successfully remembered');
+
+      const outputSecond = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'test duplicates' });
+      expect(outputSecond).toContain('Already remembered');
+
+      const rows = await mockTestDb.all('SELECT * FROM memories WHERE content = ?', ['test duplicates']);
+      expect(rows.length).toBe(1);
     });
 
     test('handleMemoryTool recall - filters out expired memories', async () => {
