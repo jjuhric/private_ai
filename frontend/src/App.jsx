@@ -667,8 +667,17 @@ function App() {
             >
               <Menu size={22} />
             </button>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 600 }}>
-              {activeTab === 'chat' ? 'Private AI Assistant' : 'Schedule Manager'}
+            <h2 
+              style={{ fontSize: '1.2rem', fontWeight: 600, cursor: activeTab !== 'chat' ? 'pointer' : 'default' }}
+              onClick={() => {
+                if (activeTab !== 'chat') {
+                  if (!activeChatId && chats.length > 0) setActiveChatId(chats[0].id);
+                  setActiveTab('chat');
+                }
+              }}
+              title={activeTab !== 'chat' ? "Return to Chat" : ""}
+            >
+              {activeTab === 'chat' ? 'Private AI Assistant' : (activeTab === 'calendar' ? 'Schedule Manager' : 'AI Memory Vault')}
             </h2>
           </div>
 

@@ -184,6 +184,7 @@ async function runAgentLoop({
      c) Save each parsed and retrieved fact as separate individual entries in long-term memory (using 'memory' with the 'remember' action and level 'long-term'). Save separate entries for First Name, Last Name, Address, County, Coordinates, and Timezone.
 4. DO NOT default to 'none' or ask the user for details before querying the memory tool to see if you already know them.
 5. AUTOMATICALLY store details: When the user shares personal details (name, address, preferences, plans), you MUST immediately call 'memory' with the 'remember' action.
+6. UP-TO-DATE INFORMATION (MANDATORY): You MUST use the 'search_web' and 'time' tools whenever a question requires up-to-date information, news, current events, or modern facts. Do NOT rely on your internal training data for current information, as it is often outdated.
 
 You have access to the following tools:
 1. "calendar": Manage meetings/tasks. Action values: 'list' (params: {date: "YYYY-MM-DD"}), 'add' (params: {title, start_time: "YYYY-MM-DD HH:MM", end_time: "YYYY-MM-DD HH:MM", description}), 'delete' (params: {eventId}).
