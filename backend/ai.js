@@ -170,6 +170,11 @@ async function runAgentLoop({
   onToolCall,
   isAborted
 }) {
+  // Filter history to ensure it starts with a user message, removing any leading assistant messages
+  // (like the initial greeting) to prevent prompt rendering exceptions in local models like Qwen.
+  const firstUserIdx = (history || []).findIndex(msg => msg.role === 'user');
+  const cleanedHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
+
   const systemPrompt = `You are the main coordinator agent of the Private AI system.
 
 ### CRITICAL RUNTIME RULES (MUST OBEY):
@@ -223,7 +228,7 @@ Determine if you need a tool. Your output MUST be in this JSON format:
 
 If no tool is needed, set tool to "none". Do NOT output anything else but valid JSON.`;
 
-  let currentHistory = [...history];
+  let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
   const maxToolCalls = 50;
@@ -460,7 +465,7 @@ Make sure to answer the user query directly and clearly.`;
       activeKey,
       modelName,
       responderInstruction,
-      history,
+      cleanedHistory,
       userMessage,
       onContent
     );
@@ -482,7 +487,7 @@ Make sure to answer the user query directly and clearly.`;
     const messages = [
       { role: 'system', content: responderInstruction }
     ];
-    for (const msg of history) {
+    for (const msg of cleanedHistory) {
       messages.push({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content
