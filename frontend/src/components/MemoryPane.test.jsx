@@ -110,5 +110,8 @@ describe('MemoryPane Component Tests', () => {
 
     fireEvent.click(deleteButtons[0]);
     expect(defaultProps.onDeleteMemory).toHaveBeenCalledWith(1);
+
+    fireEvent.click(deleteButtons[1]);
+    expect(defaultProps.onDeleteMemory).toHaveBeenCalledWith(2);
   });
 });

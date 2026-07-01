@@ -108,4 +108,26 @@ describe('ProfileModal Component Tests', () => {
     fireEvent.click(closeBtn);
     expect(mockSetIsProfileOpen).toHaveBeenCalledTimes(2);
   });
+
+  test('handles missing profile or empty properties in profile', () => {
+    const { rerender } = render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={vi.fn()} 
+        profile={null} 
+        saveProfile={vi.fn()} 
+      />
+    );
+    expect(screen.getByPlaceholderText('Your preferred name').value).toBe('');
+
+    rerender(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={vi.fn()} 
+        profile={{ name: 'No Country' }} 
+        saveProfile={vi.fn()} 
+      />
+    );
+    expect(screen.getByPlaceholderText('US').value).toBe('US');
+  });
 });

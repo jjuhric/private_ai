@@ -149,4 +149,26 @@ describe('Sidebar Component Tests', () => {
     fireEvent.click(userButtons[1]);
     expect(mockHandleLogout).toHaveBeenCalled();
   });
+
+  test('covers logo image error and AI Memory click', () => {
+    const mockSetIsMobileSidebarOpen = vi.fn();
+    const { container } = render(
+      <Sidebar 
+        {...defaultProps} 
+        isMobileSidebarOpen={true}
+        setIsMobileSidebarOpen={mockSetIsMobileSidebarOpen}
+      />
+    );
+
+    // 1. Logo onError
+    const logoImg = container.querySelector('.sidebar-logo');
+    fireEvent.error(logoImg);
+    expect(logoImg.src).toContain('placehold.co');
+
+    // 2. AI Memory click
+    const memoryBtn = screen.getByText('AI Memory');
+    fireEvent.click(memoryBtn);
+    expect(defaultProps.setActiveTab).toHaveBeenCalledWith('memory');
+    expect(mockSetIsMobileSidebarOpen).toHaveBeenCalledWith(false);
+  });
 });

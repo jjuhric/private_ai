@@ -356,4 +356,22 @@ describe('SettingsModal Component Tests', () => {
     fireEvent.click(closeBtn);
     expect(mockSetIsSettingsOpen).toHaveBeenCalledTimes(2);
   });
+
+  test('renders Online LLM panel when provider is online and online_provider is anthropic', () => {
+    const settingsOnlineAnthropic = {
+      ...defaultSettings,
+      provider: 'online',
+      online_provider: 'anthropic'
+    };
+
+    render(
+      <SettingsModal 
+        {...defaultProps} 
+        settings={settingsOnlineAnthropic}
+      />
+    );
+
+    const selectEl = screen.getByDisplayValue('Anthropic');
+    expect(selectEl).toBeInTheDocument();
+  });
 });

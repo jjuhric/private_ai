@@ -80,4 +80,16 @@ describe('ChatPane Component Tests', () => {
     fireEvent.submit(form);
     expect(mockHandleSendMessage).toHaveBeenCalled();
   });
+
+  test('renders streaming state with empty streamContent (Thinking...)', () => {
+    render(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        streamThoughts="thinking..." 
+        streamContent=""
+      />
+    );
+    expect(screen.getByText('Thinking...')).toBeInTheDocument();
+  });
 });
