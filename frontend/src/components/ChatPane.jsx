@@ -78,7 +78,7 @@ export default function ChatPane({
             placeholder={activeChatId ? "Send a message..." : "Select or create a chat to begin"}
             value={inputText}
             onChange={e => setInputText(e.target.value)}
-            disabled={!activeChatId || isStreaming}
+            disabled={!activeChatId}
           />
         </div>
         <button type="submit" className="btn-send" disabled={!activeChatId || isStreaming}>
