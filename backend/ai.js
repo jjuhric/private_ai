@@ -170,18 +170,15 @@ async function runAgentLoop({
   onToolCall,
   isAborted
 }) {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
   const systemPrompt = `You are the main coordinator agent of the Private AI system.
-Current Date and Time: ${dateStr} ${timeStr} (ISO: ${now.toISOString()})
 
 ### CRITICAL RUNTIME RULES (MUST OBEY):
 1. ALWAYS recall memory FIRST (using the 'memory' tool with the 'recall' action) before selecting any other tool or giving up, if:
    - The user asks about personal details, name, address, or location (e.g., "where I live", "my address", "my name").
    - You need a parameter (like location, zipcode, or date) to perform an action (like checking weather or news) and it is not provided in the current user message. You MUST search memory first to see if the zipcode/location is stored.
 2. TIMEZONES & DATES:
+   - You do NOT know the current date and time by default. To find today's date and time, you MUST call the 'time' tool with the 'current_time' action.
+   - When scheduling calendar events, checking weather, or performing web/news searches that require a date or reference frame (e.g., "today", "tomorrow", "this week", "top stories"), you MUST first call the 'time' tool to get the current date and time. Use the returned date/time to calculate the target date or context.
    - When scheduling calendar events or discussing times, ALWAYS convert all times from UTC to the user's local timezone.
    - If the user's timezone, latitude, or longitude is not in the current context/history, check memory FIRST.
    - If they are not in memory but you have the user's address/zipcode, call the 'time' tool with the 'lookup_timezone' action to find their timezone, latitude, and longitude.
@@ -193,7 +190,9 @@ Current Date and Time: ${dateStr} ${timeStr} (ISO: ${now.toISOString()})
      c) Save each parsed and retrieved fact as separate individual entries in long-term memory (using 'memory' with the 'remember' action and level 'long-term'). Save separate entries for First Name, Last Name, Address, County, Coordinates, and Timezone.
 4. DO NOT default to 'none' or ask the user for details before querying the memory tool to see if you already know them.
 5. AUTOMATICALLY store details: When the user shares personal details (name, address, preferences, plans), you MUST immediately call 'memory' with the 'remember' action.
-6. UP-TO-DATE INFORMATION (MANDATORY): You MUST use the 'search_web' and 'time' tools whenever a question requires up-to-date information, news, current events, or modern facts. Do NOT rely on your internal training data for current information, as it is often outdated. Always use the current date and time: ${dateStr} ${timeStr} to determine the correct reference frames for dates (e.g. today, tomorrow, yesterday, this week).
+6. UP-TO-DATE INFORMATION (MANDATORY): You MUST use the 'search_web' and 'time' tools whenever a question requires up-to-date information, news, current events, or modern facts. Do NOT rely on your internal training data for current information, as it is often outdated.
+   - To get up-to-date information, you must call the 'time' tool to discover the current date/time first.
+   - Example: If the user asks for "top stories" or "news", you MUST first call the 'time' tool to get the current date, call the 'memory' tool to recall the user's interests, and then call 'search_web' or 'google_news' with a query designed using both the current date and recalled interests as context.
 
 You have access to the following tools:
 1. "calendar": Manage meetings/tasks. Action values: 'list' (params: {date: "YYYY-MM-DD"}), 'add' (params: {title, start_time: "YYYY-MM-DD HH:MM", end_time: "YYYY-MM-DD HH:MM", description}), 'delete' (params: {eventId}).
@@ -446,7 +445,6 @@ If no tool is needed, set tool to "none". Do NOT output anything else but valid 
   onThought('Generating final response...\n');
 
   const responderInstruction = `You are a helpful, smart AI Personal Assistant.
-Current Date and Time: ${dateStr} ${timeStr} (ISO: ${now.toISOString()})
 If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 CRITICAL: Avoid going in loops or repeating analysis. Keep any thinking process concise and make a clear decision quickly, then close the </think> tag and output your final response immediately.
 Here is the user request: "${userMessage}".
