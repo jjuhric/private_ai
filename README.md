@@ -1,4 +1,4 @@
-# Private AI Assistant — V2.2.0
+# Private AI Assistant — V2.3.0
 
 A secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Features multi-agent orchestration, live deep internet scraping, real-time Google News summaries, local database storage, calendar task management, and GitHub client integrations.
 
