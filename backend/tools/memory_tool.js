@@ -46,6 +46,16 @@ async function handleMemoryTool(db, userId, action, params = {}) {
           }
         }
 
+        // Check for existing active memory with the same content
+        const existing = await db.get(
+          'SELECT id, expires_at FROM memories WHERE user_id = ? AND LOWER(content) = LOWER(?) AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
+          [userId, cleanContent]
+        );
+
+        if (existing) {
+          return `Already remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${existing.id}${existing.expires_at ? `, Expires at: ${existing.expires_at}` : ''}).`;
+        }
+
         const result = await db.run(
           'INSERT INTO memories (user_id, content, level, expires_at) VALUES (?, ?, ?, ?)',
           [userId, cleanContent, memLevel, finalExpiresAt]

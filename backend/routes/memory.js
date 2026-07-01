@@ -50,6 +50,21 @@ router.post('/', authenticateToken, async (req, res) => {
 
   try {
     const db = await getDb();
+    
+    // Check for existing active memory with the same content
+    const existing = await db.get(
+      'SELECT * FROM memories WHERE user_id = ? AND LOWER(content) = LOWER(?) AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
+      [req.user.id, content.trim()]
+    );
+
+    if (existing) {
+      return res.json({
+        success: true,
+        memory: existing,
+        isDuplicate: true
+      });
+    }
+
     const result = await db.run(
       'INSERT INTO memories (user_id, content, level, expires_at) VALUES (?, ?, ?, ?)',
       [req.user.id, content.trim(), memLevel, finalExpiresAt]
