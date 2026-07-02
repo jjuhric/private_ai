@@ -169,7 +169,8 @@ async function runAgentLoop({
   onThought,
   onContent,
   onToolCall,
-  isAborted
+  isAborted,
+  forceMemoryAgent = false
 }) {
   const { AGENT_PROMPTS, runAgentTurn, runWorkerAgent } = require('./utils/agents');
 
@@ -186,10 +187,24 @@ async function runAgentLoop({
     localBaseUrl,
     localApiKey,
     localApiStyle,
-    onlineUrl
+    onlineUrl,
+    forceMemoryAgent
   };
 
-  const systemPrompt = AGENT_PROMPTS.supervisor;
+  // Query memories using the Memory Agent before routing
+  let memoriesResult = 'No relevant memories found.';
+  const skipMemoryAgent = (process.env.NODE_ENV === 'test' && !forceMemoryAgent);
+  if (!skipMemoryAgent) {
+    try {
+      onThought("Memory Agent: Retrieving relevant past memories...\n");
+      memoriesResult = await runWorkerAgent('memory_agent', settings, `Recall memories relevant to: "${userMessage}"`, db, userId, githubToken);
+    } catch (err) {
+      console.error('Memory Agent query failed:', err);
+      memoriesResult = `Error retrieving memories: ${err.message}`;
+    }
+  }
+
+  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n### User Memories Context:\n${memoriesResult}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
@@ -241,6 +256,8 @@ async function runAgentLoop({
         subTask = decision.params?.task || JSON.stringify(decision.params);
       } else if (agentName === 'host_specialist') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
+      } else if (agentName === 'memory_agent') {
+        subTask = decision.params?.task || userMessage;
       } else {
         subTask = userMessage;
       }
