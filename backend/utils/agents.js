@@ -11,7 +11,7 @@ Your job is to orchestrate, delegate tasks to specialized sub-agents, gather the
 4. delegate_to_coder (params: { task }): Best for reading/writing local workspace files, git/GitHub integrations, and executing shell commands.
 5. delegate_to_qa_engineer (params: { task }): Best for reviewing code quality, finding bugs/vulnerabilities, and running project tests.
 6. delegate_to_weather_expert (params: { action, zipcode, country }): Best for retrieving current, hourly, or daily forecasts.
-7. delegate_to_host_specialist (params: { query }): Best for inspecting local computer system details (CPU, memory, disk, OS).
+7. delegate_to_host_specialist (params: { query }): Best for inspecting local computer system details (CPU, memory, disk, OS) and checking power/battery status.
 
 ### Direct Core Tools:
 - time (action: 'current_time' or 'lookup_timezone'): Use to find the current date/time.
@@ -84,13 +84,13 @@ Rules:
 - Format the forecast details (temperatures, wind, precipitation) cleanly for the Supervisor.`,
 
   host_specialist: `You are the Host Specialist Agent.
-Your job is to query the local computer's specifications.
+Your job is to query the local computer's specifications and battery/power telemetry.
 Available Tools:
-- host_machine (action: 'get_specifications')
+- host_machine (action: 'get_specifications' | 'get_power')
 
 Rules:
 - Retrieve host specs using the host_machine tool.
-- Format the specifications (CPU, memory usage, disk volume details) clearly.`
+- Format the specifications (CPU, memory usage, disk details, power telemetry) clearly.`
 };
 
 // Reusable function to execute a single LLM decision turn

@@ -1,17 +1,49 @@
 const os = require('os');
 const { exec } = require('child_process');
 const util = require('util');
+const path = require('path');
 const execPromise = util.promisify(exec);
 
 /**
+ * Helper to fetch power/battery info via INA219 helper script.
+ */
+async function getPowerInfo() {
+  try {
+    const scriptPath = path.join(__dirname, '../scripts/ina219_read.py');
+    const { stdout } = await execPromise(`python3 "${scriptPath}"`);
+    const data = JSON.parse(stdout);
+    if (!data.success) {
+      return `### ⚡ Power & Battery Status (Simulated/Warning)
+- **Status**: ${data.error || 'Simulated'}
+- **Battery Level**: ${data.battery_percent}%
+- **Power Draw**: ${data.power_w} W
+- **Voltage**: ${data.voltage_v} V
+- **Current**: ${data.current_a} A`;
+    }
+    return `### ⚡ Power & Battery Status
+- **Battery Level**: ${data.battery_percent}%
+- **Power Draw**: ${data.power_w} W
+- **Voltage**: ${data.voltage_v} V
+- **Current**: ${data.current_a} A`;
+  } catch (err) {
+    return `### ⚡ Power & Battery Status
+- **Error**: Failed to read power telemetry: ${err.message}`;
+  }
+}
+
+/**
  * Handles operations for the Host Machine Agent.
- * Retrieves CPU, memory, uptime, OS, and disk information.
+ * Retrieves CPU, memory, uptime, OS, disk, and power information.
  * 
- * @param {string} action Action to perform.
+ * @param {string} action Action to perform: 'get_specifications' or 'get_power'.
  * @param {object} params Action parameters.
  * @returns {Promise<string>} Report on the host machine specifications.
  */
 async function handleHostMachineTool(action, params = {}) {
+  if (action === 'get_power') {
+    return await getPowerInfo();
+  }
+
   try {
     const platform = os.platform();
     const release = os.release();
@@ -69,6 +101,8 @@ async function handleHostMachineTool(action, params = {}) {
       diskInfo = `Failed to retrieve disk info: ${e.message}`;
     }
 
+    const powerInfo = await getPowerInfo();
+
     return `### 🖥️ Host Machine Specifications
 - **Operating System**: ${type} (${platform} ${release}) - ${arch} Architecture
 - **Uptime**: ${uptimeStr}
@@ -78,6 +112,8 @@ async function handleHostMachineTool(action, params = {}) {
 
 ### 💾 Disk Volumes
 ${diskInfo}
+
+${powerInfo}
 `;
   } catch (err) {
     return `Error retrieving host machine specifications: ${err.message}`;
