@@ -10,12 +10,49 @@ jest.mock('@google/generative-ai', () => {
 });
 
 let shouldDiskFail = false;
+let shouldPowerFail = false;
+
+// Link shouldPowerFail to global to be safely accessible in hoisted jest.mock
+Object.defineProperty(global, 'shouldPowerFail', {
+  get: () => shouldPowerFail,
+  set: (val) => { shouldPowerFail = val; },
+  configurable: true
+});
+
+jest.mock('../tools/ina219_tool', () => {
+  return {
+    measurePower: jest.fn().mockImplementation(async () => {
+      if (global.shouldPowerFail) {
+        throw new Error('Power script execution failed');
+      }
+      return {
+        success: true,
+        simulated: true,
+        readings: [
+          { battery_percent: 85.5, power_w: 2.45, voltage_v: 12.08, current_a: 0.203 },
+          { battery_percent: 85.5, power_w: 2.45, voltage_v: 12.08, current_a: 0.203 },
+          { battery_percent: 85.5, power_w: 2.45, voltage_v: 12.08, current_a: 0.203 }
+        ],
+        average: {
+          battery_percent: 85.5,
+          power_w: 2.45,
+          voltage_v: 12.08,
+          current_a: 0.203
+        }
+      };
+    })
+  };
+});
 
 // Mock child_process.exec before requiring modules
 const customPromisify = (cmd, opts) => {
   return new Promise((resolve, reject) => {
     if (shouldDiskFail && (cmd.includes('Get-PSDrive') || cmd.includes('df -h'))) {
       reject(new Error('Disk check failed'));
+      return;
+    }
+    if (shouldPowerFail && cmd.includes('ina219_read.py')) {
+      reject(new Error('Power script execution failed'));
       return;
     }
     if (cmd.includes('invalid_cmd')) {
@@ -31,6 +68,17 @@ const customPromisify = (cmd, opts) => {
       });
     } else if (cmd.includes('df -h')) {
       resolve({ stdout: 'df -h output', stderr: '' });
+    } else if (cmd.includes('ina219_read.py')) {
+      resolve({
+        stdout: JSON.stringify({
+          success: true,
+          battery_percent: 85.5,
+          power_w: 2.45,
+          voltage_v: 12.08,
+          current_a: 0.203
+        }),
+        stderr: ''
+      });
     } else {
       resolve({ stdout: 'Command output', stderr: '' });
     }
@@ -96,6 +144,20 @@ describe('Multi-Agent System & Tools Tests', () => {
       const result = await handleHostMachineTool('get_specifications');
       expect(result).toContain('Error retrieving host machine specifications: Total memory error');
       memSpy.mockRestore();
+    });
+
+    test('host_machine_tool get_power retrieves battery details', async () => {
+      const result = await handleHostMachineTool('get_power');
+      expect(result).toContain('Power & Battery Status');
+      expect(result).toContain('85.5%');
+      expect(result).toContain('2.45 W');
+    });
+
+    test('host_machine_tool get_power handles python execution failures gracefully', async () => {
+      shouldPowerFail = true;
+      const result = await handleHostMachineTool('get_power');
+      expect(result).toContain('Failed to read power telemetry');
+      shouldPowerFail = false;
     });
   });
 
