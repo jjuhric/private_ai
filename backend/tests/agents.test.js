@@ -11,11 +11,18 @@ jest.mock('@google/generative-ai', () => {
 
 let shouldDiskFail = false;
 let shouldPowerFail = false;
+let shouldTempFail = false;
 
 // Link shouldPowerFail to global to be safely accessible in hoisted jest.mock
 Object.defineProperty(global, 'shouldPowerFail', {
   get: () => shouldPowerFail,
   set: (val) => { shouldPowerFail = val; },
+  configurable: true
+});
+
+Object.defineProperty(global, 'shouldTempFail', {
+  get: () => shouldTempFail,
+  set: (val) => { shouldTempFail = val; },
   configurable: true
 });
 
@@ -38,6 +45,29 @@ jest.mock('../tools/ina219_tool', () => {
           power_w: 2.45,
           voltage_v: 12.08,
           current_a: 0.203
+        }
+      };
+    })
+  };
+});
+
+jest.mock('../tools/temp_tool', () => {
+  return {
+    measureCpuTemp: jest.fn().mockImplementation(async () => {
+      if (global.shouldTempFail) {
+        throw new Error('Temp sensor execution failed');
+      }
+      return {
+        success: true,
+        simulated: true,
+        readings: [
+          { celsius: 42.5, fahrenheit: 108.5 },
+          { celsius: 42.5, fahrenheit: 108.5 },
+          { celsius: 42.5, fahrenheit: 108.5 }
+        ],
+        average: {
+          celsius: 42.5,
+          fahrenheit: 108.5
         }
       };
     })
@@ -158,6 +188,20 @@ describe('Multi-Agent System & Tools Tests', () => {
       const result = await handleHostMachineTool('get_power');
       expect(result).toContain('Failed to read power telemetry');
       shouldPowerFail = false;
+    });
+
+    test('host_machine_tool get_temperature retrieves CPU temperature details', async () => {
+      const result = await handleHostMachineTool('get_temperature');
+      expect(result).toContain('CPU Temperature');
+      expect(result).toContain('42.5°C');
+      expect(result).toContain('108.5°F');
+    });
+
+    test('host_machine_tool get_temperature handles failures gracefully', async () => {
+      shouldTempFail = true;
+      const result = await handleHostMachineTool('get_temperature');
+      expect(result).toContain('Failed to read CPU temperature');
+      shouldTempFail = false;
     });
   });
 
