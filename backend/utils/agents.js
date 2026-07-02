@@ -84,9 +84,9 @@ Rules:
 - Format the forecast details (temperatures, wind, precipitation) cleanly for the Supervisor.`,
 
   host_specialist: `You are the Host Specialist Agent.
-Your job is to query the local computer's specifications and battery/power telemetry.
+Your job is to query the local computer's specifications, battery/power telemetry, and CPU temperature.
 Available Tools:
-- host_machine (action: 'get_specifications' | 'get_power')
+- host_machine (action: 'get_specifications' | 'get_power' | 'get_temperature')
 
 Rules:
 - Retrieve host specs using the host_machine tool.

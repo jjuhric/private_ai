@@ -4,6 +4,7 @@ const util = require('util');
 const path = require('path');
 const execPromise = util.promisify(exec);
 const { measurePower } = require('./ina219_tool');
+const { measureCpuTemp } = require('./temp_tool');
 
 /**
  * Helper to fetch power/battery info via INA219 helper script.
@@ -49,6 +50,37 @@ ${readingsStr}
 }
 
 /**
+ * Helper to fetch CPU temperature info via native temp_tool.
+ */
+async function getTemperatureInfo() {
+  try {
+    const data = await measureCpuTemp();
+    if (!data.success) {
+      return `### 🌡️ CPU Temperature (Simulated/Warning)
+- **Status**: ${data.error || 'Failed to read CPU temperature'}`;
+    }
+
+    let statusHeader = `### 🌡️ CPU Temperature`;
+    if (data.simulated) {
+      statusHeader = `### 🌡️ CPU Temperature (Simulated)`;
+    }
+
+    const readingsStr = data.readings.map((r, i) => {
+      return `- **Reading ${i + 1}**: ${r.celsius}°C (${r.fahrenheit}°F)`;
+    }).join('\n');
+
+    return `${statusHeader}
+${readingsStr}
+
+#### 📊 3-Sample Average
+- **Average Temperature**: ${data.average.celsius}°C (${data.average.fahrenheit}°F)`;
+  } catch (err) {
+    return `### 🌡️ CPU Temperature
+- **Error**: Failed to read CPU temperature: ${err.message}`;
+  }
+}
+
+/**
  * Handles operations for the Host Machine Agent.
  * Retrieves CPU, memory, uptime, OS, disk, and power information.
  * 
@@ -59,6 +91,9 @@ ${readingsStr}
 async function handleHostMachineTool(action, params = {}) {
   if (action === 'get_power') {
     return await getPowerInfo();
+  }
+  if (action === 'get_temperature') {
+    return await getTemperatureInfo();
   }
 
   try {
