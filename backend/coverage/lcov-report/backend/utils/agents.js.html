@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for backend/ai.js</title>
+    <title>Code coverage report for backend/utils/agents.js</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../prettify.css" />
-    <link rel="stylesheet" href="../base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../sort-arrow-sprite.png);
+            background-image: url(../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">backend</a> ai.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend/utils</a> agents.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.45% </span>
+                <span class="strong">90% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>182/183</span>
+                <span class='fraction'>117/130</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.29% </span>
+                <span class="strong">83.19% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>116/136</span>
+                <span class='fraction'>99/119</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>3/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">99.43% </span>
+                <span class="strong">90.62% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>176/177</span>
+                <span class='fraction'>116/128</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -408,609 +408,413 @@
 <a name='L343'></a><a href='#L343'>343</a>
 <a name='L344'></a><a href='#L344'>344</a>
 <a name='L345'></a><a href='#L345'>345</a>
-<a name='L346'></a><a href='#L346'>346</a>
-<a name='L347'></a><a href='#L347'>347</a>
-<a name='L348'></a><a href='#L348'>348</a>
-<a name='L349'></a><a href='#L349'>349</a>
-<a name='L350'></a><a href='#L350'>350</a>
-<a name='L351'></a><a href='#L351'>351</a>
-<a name='L352'></a><a href='#L352'>352</a>
-<a name='L353'></a><a href='#L353'>353</a>
-<a name='L354'></a><a href='#L354'>354</a>
-<a name='L355'></a><a href='#L355'>355</a>
-<a name='L356'></a><a href='#L356'>356</a>
-<a name='L357'></a><a href='#L357'>357</a>
-<a name='L358'></a><a href='#L358'>358</a>
-<a name='L359'></a><a href='#L359'>359</a>
-<a name='L360'></a><a href='#L360'>360</a>
-<a name='L361'></a><a href='#L361'>361</a>
-<a name='L362'></a><a href='#L362'>362</a>
-<a name='L363'></a><a href='#L363'>363</a>
-<a name='L364'></a><a href='#L364'>364</a>
-<a name='L365'></a><a href='#L365'>365</a>
-<a name='L366'></a><a href='#L366'>366</a>
-<a name='L367'></a><a href='#L367'>367</a>
-<a name='L368'></a><a href='#L368'>368</a>
-<a name='L369'></a><a href='#L369'>369</a>
-<a name='L370'></a><a href='#L370'>370</a>
-<a name='L371'></a><a href='#L371'>371</a>
-<a name='L372'></a><a href='#L372'>372</a>
-<a name='L373'></a><a href='#L373'>373</a>
-<a name='L374'></a><a href='#L374'>374</a>
-<a name='L375'></a><a href='#L375'>375</a>
-<a name='L376'></a><a href='#L376'>376</a>
-<a name='L377'></a><a href='#L377'>377</a>
-<a name='L378'></a><a href='#L378'>378</a>
-<a name='L379'></a><a href='#L379'>379</a>
-<a name='L380'></a><a href='#L380'>380</a>
-<a name='L381'></a><a href='#L381'>381</a>
-<a name='L382'></a><a href='#L382'>382</a>
-<a name='L383'></a><a href='#L383'>383</a>
-<a name='L384'></a><a href='#L384'>384</a>
-<a name='L385'></a><a href='#L385'>385</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<a name='L346'></a><a href='#L346'>346</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">74x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">74x</span>
+<span class="cline-any cline-yes">74x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">74x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">74x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">59x</span>
+<span class="cline-any cline-yes">59x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">56x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">51x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">56x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">61x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">59x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-yes">58x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">71x</span>
+<span class="cline-any cline-yes">71x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">17x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">48x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">47x</span>
-<span class="cline-any cline-yes">47x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">47x</span>
-<span class="cline-any cline-yes">47x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">47x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">47x</span>
-<span class="cline-any cline-yes">20x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">17x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21x</span>
 <span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">26x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">21x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { handleCalendarTool } = require('./tools/calendar_tool');
-const { handleGitHubTool } = require('./tools/github_tool');
-const { handleWebSearchTool } = require('./tools/web_search_tool');
-const { handleGoogleNewsTool } = require('./tools/google_news_tool');
-const { handleWeatherTool } = require('./tools/weather_tool');
-const { handleMemoryTool } = require('./tools/memory_tool');
-const { handleTimeTool } = require('./tools/time_tool');
 &nbsp;
-// Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
-async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk) {
-  const localStyle = apiStyle || <span class="branch-1 cbranch-no" title="branch not covered" >'openai';</span>
-  let endpoint = '';
-  let headers = {
-    'Content-Type': 'application/json'
-  };
+const AGENT_PROMPTS = {
+  supervisor: `You are the Supervisor Agent of the Private AI system.
+Your job is to coordinate, delegate tasks to specialized sub-agents, retrieve their findings, and compile the final response.
 &nbsp;
-  if (apiKey &amp;&amp; apiKey !== 'lm-studio') {
-    if (localStyle === 'anthropic') {
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-    } else {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-  }
+### Available Sub-Agents &amp; Tools:
+1. delegate_to_web_searcher (params: { query }): Search current web info/Google News.
+2. delegate_to_calendar_handler (params: { action, params }): Manage meetings/tasks. Action values: 'list', 'add', 'delete'.
+3. delegate_to_coder (params: { task }): Writes, refactors, reads local workspace files or runs local commands.
+4. delegate_to_qa_engineer (params: { task }): Reviews code, finds vulnerabilities, and audits code quality.
+5. delegate_to_weather_expert (params: { action, zipcode, country }): Fetches weather (One Call API). Action: 'current', 'hourly', 'daily', 'onecall'.
+6. delegate_to_host_specialist (params: { query }): Inspects local machine CPU, RAM, disk space, and OS properties.
+7. memory (action: 'recall' or 'remember'): Recall past facts or remember new ones.
+8. time (action: 'current_time' or 'lookup_timezone'): Find current date/time.
 &nbsp;
-  let body = {};
+### CRITICAL RULES:
+1. Memory/Time first: If timezone offset or date is missing for weather/calendar, query time/memory first.
+2. Delegation first: Do not answer questions yourself if they require weather, searching, coding, calendar, or host details. Delegate to the correct sub-agent.
+3. Summarization: When sub-agents finish and return their reports, combine their outputs into a final clear response.`,
 &nbsp;
-  try {
-    const urlObj = new URL(baseUrl);
-    const origin = urlObj.origin;
+  web_searcher: `You are the Web Searching Agent.
+Your job is to search the web or Google News to gather info, and summarize the findings.
+Available Tools:
+- search_web (params: { query })
+- google_news (params: { query })`,
 &nbsp;
-    if (localStyle === 'lm-studio') {
-      endpoint = `${origin}/api/v1/chat`;
-    } else if (localStyle === 'anthropic') {
-      endpoint = `${origin}/v1/messages`;
-    } else {
-      endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
-    }
-  } catch (e) {
-<span class="cstat-no" title="statement not covered" >    endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;</span>
-  }
+  calendar_handler: `You are the Calendar Handling Agent.
+Your job is to manage calendar events.
+Available Tools:
+- calendar (action: 'list' | 'add' | 'delete', params: { title, start_time, end_time, description, eventId, date })`,
 &nbsp;
-  if (localStyle === 'anthropic') {
-    // Anthropic style formatting
-    const systemMessage = messages.find(m =&gt; m.role === 'system')?.content || <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
-    const anthropicMessages = messages
-      .filter(m =&gt; m.role !== 'system')
-      .map(m =&gt; ({
-        role: m.role === 'assistant' ? <span class="branch-0 cbranch-no" title="branch not covered" >'assistant' </span>: 'user',
-        content: m.content
-      }));
+  coder: `You are the Coding Agent (Superior Developer).
+Your job is to read/write files and execute shell commands inside the workspace directory.
+Available Tools:
+- read_file (params: { filePath })
+- write_file (params: { filePath, content })
+- list_dir (params: { dirPath })
+- execute_command (params: { command })
+- github (action: 'list_repos' | 'get_repo' | 'list_issues', params: { owner, repo })`,
 &nbsp;
-    body = {
-      model: modelName,
-      messages: anthropicMessages,
-      max_tokens: 4096,
-      stream: true
-    };
-    <span class="missing-if-branch" title="else path not taken" >E</span>if (systemMessage) {
-      body.system = systemMessage;
-    }
-  } else {
-    // OpenAI and LM Studio style formatting
-    body = {
-      model: modelName,
-      messages: messages,
-      temperature: 0.7,
-      frequency_penalty: 0.3,
-      presence_penalty: 0.1,
-      max_tokens: 4096,
-      stream: true
-    };
-  }
+  qa_engineer: `You are the Quality Assurance Agent.
+Your job is to find vulnerabilities, bugs, and enforce code quality standards.
+Available Tools:
+- read_file (params: { filePath })
+- list_dir (params: { dirPath })
+- execute_command (params: { command })`,
 &nbsp;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body)
-  });
+  weather_expert: `You are the Weather Expert Agent.
+Your job is to gather current, hourly, or daily forecasts.
+Available Tools:
+- weather (action: 'current' | 'hourly' | 'daily' | 'onecall', params: { zipcode, country })`,
 &nbsp;
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`LLM API error: ${response.status} - ${errText}`);
-  }
+  host_specialist: `You are the Host Specialist Agent.
+Your job is to query the local computer's specifications (CPU, RAM, OS, disk volume info).
+Available Tools:
+- host_machine (action: 'get_specifications')`
+};
 &nbsp;
-  const contentType = response.headers.get('content-type') || <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
-  if (!contentType.includes('text/event-stream')) {
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || data.content?.[0]?.text;
-    <span class="missing-if-branch" title="else path not taken" >E</span>if (content) {
-      onChunk(content);
-    }
-    return;
-  }
-&nbsp;
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buffer = '';
-&nbsp;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-&nbsp;
-    for (const line of lines) {
-      const cleaned = line.trim();
-      if (!cleaned || cleaned === 'data: [DONE]') continue;
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (cleaned.startsWith('data: ')) {
-        try {
-          const parsed = JSON.parse(cleaned.substring(6));
-          // Support both OpenAI format and Anthropic format chunk parsing
-          const text = parsed.choices?.[0]?.delta?.content || <span class="branch-1 cbranch-no" title="branch not covered" >parsed.delta?.text;</span>
-          <span class="missing-if-branch" title="else path not taken" >E</span>if (text) onChunk(text);
-        } catch (e) {
-          // ignore malformed lines
-        }
-      }
-    }
-  }
-}
-&nbsp;
-// Helper to call Gemini Client Stream
-async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk) {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: modelName || <span class="branch-1 cbranch-no" title="branch not covered" >'gemini-2.5-flash',</span>
-    systemInstruction: systemInstruction
-  });
-&nbsp;
-  const contents = [];
-  for (const msg of history) {
-    contents.push({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    });
-  }
-  contents.push({
-    role: 'user',
-    parts: [{ text: userMessage }]
-  });
-&nbsp;
-  const result = await model.generateContentStream({ contents });
-  for await (const chunk of result.stream) {
-    const text = chunk.text();
-    <span class="missing-if-branch" title="else path not taken" >E</span>if (text) onChunk(text);
-  }
-}
-&nbsp;
-// Run the agent loop
-// Run the agent loop (Multi-Agent Coordinator)
-async function runAgentLoop({
-  db,
-  userId,
-  provider,
-  modelName,
-  userMessage,
-  history,
-  githubToken,
-  geminiKey, // legacy, fallback to onlineKey
-  localBaseUrl,
-  localApiKey,
-  localApiStyle,
-  onlineUrl,
-  onlineKey,
-  onlineProvider,
-  onThought,
-  onContent,
-  onToolCall,
-  isAborted
-}) {
-  const { AGENT_PROMPTS, runAgentTurn, runWorkerAgent } = require('./utils/agents');
-&nbsp;
-  // Filter history to ensure it starts with a user message
-  const firstUserIdx = (history || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>.findIndex(msg =&gt; msg.role === 'user');
-  const cleanedHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
-&nbsp;
-  const settings = {
+// Reusable function to execute a single LLM decision turn
+async function runAgentTurn(agentName, systemPrompt, settings, userMessage, history) {
+  const {
     provider,
     modelName,
     onlineProvider,
@@ -1020,201 +824,280 @@ async function runAgentLoop({
     localApiKey,
     localApiStyle,
     onlineUrl
-  };
+  } = settings;
 &nbsp;
-  const systemPrompt = AGENT_PROMPTS.supervisor;
-  let currentHistory = [...cleanedHistory];
-  let accumulatedToolOutputs = [];
-  let toolCallsCount = 0;
-  const maxToolCalls = 10;
+  const isGemini = provider === 'gemini' || (provider === 'online' &amp;&amp; onlineProvider === 'gemini');
+  let respText = '';
 &nbsp;
-  while (toolCallsCount &lt; maxToolCalls) {
-    if (isAborted &amp;&amp; isAborted()) {
-      onThought("Stream aborted by user.\n");
-      break;
+  const fullPrompt = `${systemPrompt}
+&nbsp;
+You MUST output your decision in this exact JSON format:
+{
+  "thought": "your step-by-step reasoning",
+  "tool": "tool_name_or_none",
+  "action": "action_name_if_any",
+  "params": {}
+}
+&nbsp;
+If you are done, set "tool" to "none". Do NOT output anything else but valid JSON.
+&nbsp;
+User Message: ${userMessage}
+History Context: ${JSON.stringify(history.slice(-10))}`;
+&nbsp;
+  if (isGemini) {
+    const activeKey = provider === 'gemini' ? (geminiKey || <span class="branch-1 cbranch-no" title="branch not covered" >onlineKey)</span> : onlineKey;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!activeKey) <span class="cstat-no" title="statement not covered" >throw new Error('Gemini API key is not configured.');</span>
+    const genAI = new GoogleGenerativeAI(activeKey);
+    const model = genAI.getGenerativeModel({
+      model: modelName || 'gemini-2.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+    const result = await model.generateContent(fullPrompt);
+    respText = result.response.text();
+  } else {
+    let targetUrl = provider === 'local' 
+      ? (localBaseUrl || 'http://localhost:1234/v1') 
+      : (onlineUrl || 'https://api.openai.com/v1');
+    let targetKey = provider === 'local' ? localApiKey : onlineKey;
+    let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
+&nbsp;
+    let endpoint = '';
+    let headers = { 'Content-Type': 'application/json' };
+    if (targetKey &amp;&amp; targetKey !== 'lm-studio') {
+      if (targetStyle === 'anthropic') {
+        headers['x-api-key'] = targetKey;
+        headers['anthropic-version'] = '2023-06-01';
+      } else {
+        headers['Authorization'] = `Bearer ${targetKey}`;
+      }
     }
-    let decision = null;
-    onThought(`Supervisor deciding strategy (turn ${toolCallsCount + 1}/${maxToolCalls})...\n`);
 &nbsp;
     try {
-      decision = await runAgentTurn('supervisor', systemPrompt, settings, userMessage, currentHistory);
-    } catch (err) {
-      console.error('Supervisor turn failed, using fallback "none":', err);
-      decision = {
-        thought: `Supervisor error: ${err.message}. Proceeding directly with default responder.`,
-        tool: 'none',
-        params: {}
+      const urlObj = new URL(targetUrl);
+      const origin = urlObj.origin;
+      if (targetStyle === 'lm-studio') {
+        endpoint = `${origin}/api/v1/chat`;
+      } else if (targetStyle === 'anthropic') {
+        endpoint = `${origin}/v1/messages`;
+      } else {
+        endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+      }
+    } catch (e) {
+      endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+    }
+&nbsp;
+    let body = {};
+    if (targetStyle === 'anthropic') {
+      body = {
+        model: modelName,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: fullPrompt }],
+        max_tokens: 1024
+      };
+    } else {
+      body = {
+        model: modelName,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: fullPrompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 2048,
+        response_format: { type: "json_object" }
       };
     }
 &nbsp;
-    onThought(`Supervisor Thought: ${decision.thought}\n`);
+    let res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
 &nbsp;
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`LLM Error: ${res.status} - ${errText}`);
+    }
+&nbsp;
+    const data = await res.json();
+    respText = targetStyle === 'anthropic' ? (data.content?.[0]?.text || <span class="branch-1 cbranch-no" title="branch not covered" >'')</span> : (data.choices?.[0]?.message?.content || <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>;
+  }
+&nbsp;
+  respText = respText
+    .replace(/&lt;think&gt;[\s\S]*?&lt;\/think&gt;/g, '')
+    .replace(/&lt;\|channel&gt;thought[\s\S]*?&lt;channel\|&gt;/g, '')
+    .trim();
+&nbsp;
+  try {
+    return JSON.parse(respText);
+  } catch (err) {
+    const firstBrace = respText.indexOf('{');
+    const lastBrace = respText.lastIndexOf('}');
+    if (firstBrace !== -1 &amp;&amp; lastBrace !== -1 &amp;&amp; lastBrace &gt; firstBrace) {
+      try {
+        return JSON.parse(respText.substring(firstBrace, lastBrace + 1));
+      } catch (e) {}
+    }
+    throw new Error(`Failed to parse agent JSON: ${respText}`);
+  }
+}
+&nbsp;
+async function runAgentResponse(agentName, systemPrompt, settings, userMessage, history, toolOutputs) {
+  const {
+    provider,
+    modelName,
+    onlineProvider,
+    onlineKey,
+    geminiKey,
+    localBaseUrl,
+    localApiKey,
+    localApiStyle,
+    onlineUrl
+  } = settings;
+&nbsp;
+  const isGemini = provider === 'gemini' || (provider === 'online' &amp;&amp; <span class="branch-2 cbranch-no" title="branch not covered" >onlineProvider === 'gemini')</span>;
+  const responderInstruction = `${systemPrompt}
+&nbsp;
+Based on the task: "${userMessage}"
+And these tool outputs:
+${JSON.stringify(toolOutputs)}
+&nbsp;
+Generate a detailed final report summarizing your actions and findings. Make it clear and production-ready.`;
+&nbsp;
+  if (isGemini) {
+    const activeKey = provider === 'gemini' ? (geminiKey || <span class="branch-1 cbranch-no" title="branch not covered" >onlineKey)</span> : <span class="branch-1 cbranch-no" title="branch not covered" >onlineKey;</span>
+    const genAI = new GoogleGenerativeAI(activeKey);
+    const model = genAI.getGenerativeModel({ model: modelName || 'gemini-2.5-flash' });
+    const result = await model.generateContent(responderInstruction);
+    return result.response.text();
+  } else {
+    let targetUrl = provider === 'local' 
+      ? (localBaseUrl || <span class="branch-1 cbranch-no" title="branch not covered" >'http://localhost:1234/v1') </span>
+      : (onlineUrl || 'https://api.openai.com/v1');
+    let targetKey = provider === 'local' ? localApiKey : onlineKey;
+    let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
+&nbsp;
+    let endpoint = '';
+    let headers = { 'Content-Type': 'application/json' };
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (targetKey &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >targetKey !== 'lm-studio')</span> {
+<span class="cstat-no" title="statement not covered" >      if (targetStyle === 'anthropic') {</span>
+<span class="cstat-no" title="statement not covered" >        headers['x-api-key'] = targetKey;</span>
+<span class="cstat-no" title="statement not covered" >        headers['anthropic-version'] = '2023-06-01';</span>
+      } else {
+<span class="cstat-no" title="statement not covered" >        headers['Authorization'] = `Bearer ${targetKey}`;</span>
+      }
+    }
+&nbsp;
+    try {
+      const urlObj = new URL(targetUrl);
+      const origin = urlObj.origin;
+      if (targetStyle === 'lm-studio') {
+        endpoint = `${origin}/api/v1/chat`;
+      } else if (targetStyle === 'anthropic') {
+        endpoint = `${origin}/v1/messages`;
+      } else {
+        endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+      }
+    } catch (e) {
+      endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+    }
+&nbsp;
+    let body = {};
+    if (targetStyle === 'anthropic') {
+      body = {
+        model: modelName,
+        system: responderInstruction,
+        messages: [{ role: 'user', content: 'Generate report.' }],
+        max_tokens: 1024
+      };
+    } else {
+      body = {
+        model: modelName,
+        messages: [{ role: 'user', content: responderInstruction }],
+        temperature: 0.2,
+        max_tokens: 2048
+      };
+    }
+&nbsp;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+&nbsp;
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!res.ok) {
+<span class="cstat-no" title="statement not covered" >      throw new Error(`LLM Error: ${res.status}`);</span>
+    }
+&nbsp;
+    const data = await res.json();
+    return targetStyle === 'anthropic' ? (data.content?.[0]?.text || <span class="branch-1 cbranch-no" title="branch not covered" >'')</span> : (data.choices?.[0]?.message?.content || <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>;
+  }
+}
+&nbsp;
+async function runWorkerAgent(agentName, settings, task, db, userId, githubToken) {
+  const systemPrompt = AGENT_PROMPTS[agentName];
+  if (!systemPrompt) throw new Error(`Unknown agent: ${agentName}`);
+&nbsp;
+  const history = [];
+  const toolOutputs = [];
+  let turn = 0;
+  const maxTurns = 5;
+&nbsp;
+  while (turn &lt; maxTurns) {
+    const decision = await runAgentTurn(agentName, systemPrompt, settings, task, history);
+    
     if (!decision.tool || decision.tool === 'none') {
       break;
     }
 &nbsp;
-    onThought(`Supervisor invoking tool/delegate: "${decision.tool}" with action "${decision.action}"...\n`);
-    onToolCall({ tool: decision.tool, action: decision.action || 'delegate', params: decision.params });
-&nbsp;
-    let toolOutput = '';
-    
-    // Check for delegation
-    if (decision.tool.startsWith('delegate_to_')) {
-      const agentName = decision.tool.replace('delegate_to_', '');
-      let subTask = '';
-      if (agentName === 'web_searcher') {
-        subTask = decision.params?.query || <span class="branch-1 cbranch-no" title="branch not covered" >userMessage;</span>
-      } else if (agentName === 'calendar_handler') {
-        subTask = decision.params?.task || <span class="branch-1 cbranch-no" title="branch not covered" >JSON.stringify(decision.params);</span>
-      } else if (agentName === 'coder') {
-        subTask = decision.params?.task || <span class="branch-1 cbranch-no" title="branch not covered" >userMessage;</span>
-      } else if (agentName === 'qa_engineer') {
-        subTask = decision.params?.task || <span class="branch-1 cbranch-no" title="branch not covered" >userMessage;</span>
-      } else if (agentName === 'weather_expert') {
-        subTask = decision.params?.task || JSON.stringify(decision.params);
-      } else if (agentName === 'host_specialist') {
-        subTask = decision.params?.query || <span class="branch-1 cbranch-no" title="branch not covered" >decision.params?.task </span>|| <span class="branch-2 cbranch-no" title="branch not covered" >userMessage;</span>
-      } else {
-        subTask = userMessage;
-      }
-&nbsp;
-      onThought(`Delegating sub-task to Agent "${agentName}": "${subTask}"...\n`);
-      try {
-        toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId, githubToken);
-      } catch (err) {
-        toolOutput = `Agent "${agentName}" delegation failed: ${err.message}`;
-      }
-    } else {
-      // Execute direct fallback tools of supervisor
-      if (decision.tool === 'calendar') {
-        toolOutput = await handleCalendarTool(db, userId, decision.action, decision.params);
-      } else if (decision.tool === 'github') {
-        toolOutput = await handleGitHubTool(githubToken, decision.action, decision.params);
-      } else if (decision.tool === 'search_web') {
-        const q = decision.params?.query || <span class="branch-1 cbranch-no" title="branch not covered" >userMessage;</span>
-        toolOutput = await handleWebSearchTool(db, userId, q);
-      } else if (decision.tool === 'google_news') {
-        toolOutput = await handleGoogleNewsTool(decision.params?.query);
-      } else if (decision.tool === 'weather') {
-        toolOutput = await handleWeatherTool(db, userId, decision.action, decision.params);
-      } else if (decision.tool === 'memory') {
-        toolOutput = await handleMemoryTool(db, userId, decision.action, decision.params);
-      } else if (decision.tool === 'time') {
-        toolOutput = await handleTimeTool(db, userId, decision.action, decision.params);
-      } else {
-        toolOutput = `Error: Tool "${decision.tool}" is unrecognized by Supervisor.`;
-      }
+    let output = '';
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (decision.tool === 'weather') {
+      const { handleWeatherTool } = <span class="cstat-no" title="statement not covered" >require('../tools/weather_tool');</span>
+<span class="cstat-no" title="statement not covered" >      output = await handleWeatherTool(db, userId, decision.action, decision.params);</span>
+    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (decision.tool === 'host_machine') {
+      const { handleHostMachineTool } = <span class="cstat-no" title="statement not covered" >require('../tools/host_machine_tool');</span>
+<span class="cstat-no" title="statement not covered" >      output = await handleHostMachineTool(decision.action, decision.params);</span>
+    } else <span class="missing-if-branch" title="if path not taken" >I</span>if (['read_file', 'write_file', 'list_dir', 'execute_command'].includes(decision.tool)) {
+      const { handleCoderTool } = <span class="cstat-no" title="statement not covered" >require('../tools/coder_tools');</span>
+<span class="cstat-no" title="statement not covered" >      output = await handleCoderTool(decision.tool, decision.params);</span>
+    } else if (decision.tool === 'github') {
+      const { handleGitHubTool } = require('../tools/github_tool');
+      output = await handleGitHubTool(githubToken, decision.action, decision.params);
+    } else if (decision.tool === 'calendar') {
+      const { handleCalendarTool } = require('../tools/calendar_tool');
+      output = await handleCalendarTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'search_web') {
+      const { handleWebSearchTool } = require('../tools/web_search_tool');
+      const q = decision.params?.query || <span class="branch-1 cbranch-no" title="branch not covered" >task;</span>
+      output = await handleWebSearchTool(db, userId, q);
+    } else if (decision.tool === 'google_news') {
+      const { handleGoogleNewsTool } = require('../tools/google_news_tool');
+      output = await handleGoogleNewsTool(decision.params?.query);
+    } else <span class="missing-if-branch" title="else path not taken" >E</span>{
+<span class="cstat-no" title="statement not covered" >      output = `Error: Tool "${decision.tool}" is not accessible to this agent.`;</span>
     }
 &nbsp;
-    onThought(`Response received from tool/agent (length: ${toolOutput.length})\n`);
-&nbsp;
-    accumulatedToolOutputs.push({
-      tool: decision.tool,
-      output: toolOutput
-    });
-&nbsp;
-    currentHistory.push({
+    toolOutputs.push({ tool: decision.tool, action: decision.action, output });
+    
+    history.push({
       role: 'assistant',
       content: `Thought: ${decision.thought}\nCalling tool: ${decision.tool} with parameters: ${JSON.stringify(decision.params)}`
     });
-    currentHistory.push({
+    history.push({
       role: 'user',
-      content: `[Output for ${decision.tool}]:\n${toolOutput}`
+      content: `[Tool Output for ${decision.tool}]:\n${output}`
     });
 &nbsp;
-    toolCallsCount++;
+    turn++;
   }
 &nbsp;
-  // Now, call the Responder Agent to output the streamed response
-  if (isAborted &amp;&amp; isAborted()) {
-    onThought("Stream aborted by user.\n");
-    return;
-  }
-  onThought('Supervisor generating final response...\n');
-&nbsp;
-  const responderInstruction = `You are a helpful, smart AI Personal Assistant Supervisor.
-If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside &lt;think&gt; and &lt;/think&gt; tags. For example: &lt;think&gt;your thoughts here&lt;/think&gt;your final response here.
-CRITICAL: Avoid going in loops or repeating analysis. Keep any thinking process concise and make a clear decision quickly, then close the &lt;/think&gt; tag and output your final response immediately.
-Here is the user request: "${userMessage}".
-${accumulatedToolOutputs.length &gt; 0 ? `We delegated tasks/queried tools to gather context. Here are the report/action results:\n${accumulatedToolOutputs.map(t =&gt; `--- [Source: ${t.tool}] ---\n${t.output}`).join('\n\n')}` : ''}
-Formulate a rich, helpful final response. Format in beautiful markdown. Fully support emojis.
-Make sure to answer the user query directly and clearly.`;
-&nbsp;
-  const isGemini = provider === 'gemini' || (provider === 'online' &amp;&amp; onlineProvider === 'gemini');
-&nbsp;
-  if (isGemini) {
-    const activeKey = provider === 'gemini' ? (geminiKey || <span class="branch-1 cbranch-no" title="branch not covered" >onlineKey)</span> : onlineKey;
-    await callGeminiStream(
-      activeKey,
-      modelName,
-      responderInstruction,
-      cleanedHistory,
-      userMessage,
-      onContent
-    );
-  } else {
-    let targetUrl = '';
-    let targetKey = '';
-    let targetStyle = '';
-&nbsp;
-    if (provider === 'local') {
-      targetUrl = localBaseUrl || 'http://localhost:1234/v1';
-      targetKey = localApiKey;
-      targetStyle = localApiStyle || 'openai';
-    } else {
-      targetUrl = onlineUrl || 'https://api.openai.com/v1';
-      targetKey = onlineKey;
-      targetStyle = onlineProvider || 'openai';
-    }
-&nbsp;
-    const messages = [
-      { role: 'system', content: responderInstruction }
-    ];
-    for (const msg of cleanedHistory) {
-      messages.push({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      });
-    }
-    messages.push({ role: 'user', content: userMessage });
-&nbsp;
-    await callLocalLLMStream(
-      targetUrl,
-      targetKey,
-      modelName,
-      messages,
-      targetStyle,
-      onContent
-    );
-  }
+  return await runAgentResponse(agentName, systemPrompt, settings, task, history, toolOutputs);
 }
 &nbsp;
-async function generateGreetingAndSave(db, userId, chatId) {
-  let userName = '';
-  try {
-    const user = await db.get('SELECT name FROM users WHERE id = ?', [userId]);
-    userName = user?.name || '';
-  } catch (err) {
-    console.error('Failed to fetch user name for greeting:', err);
-  }
-&nbsp;
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-&nbsp;
-  const greeting = `Hello${userName ? ' ' + userName : ''}! Today is ${dateStr} ${timeStr}. What can I do for you next?`;
-&nbsp;
-  try {
-    await db.run(
-      'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
-      [chatId, 'assistant', greeting]
-    );
-  } catch (dbErr) {
-    console.error('Failed to save generated greeting to database:', dbErr);
-  }
-}
-&nbsp;
-module.exports = { runAgentLoop, handleGoogleNewsTool, generateGreetingAndSave };
+module.exports = {
+  AGENT_PROMPTS,
+  runAgentTurn,
+  runWorkerAgent
+};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -1224,14 +1107,14 @@ module.exports = { runAgentLoop, handleGoogleNewsTool, generateGreetingAndSave }
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
                 at 2026-07-02T00:53:02.058Z
             </div>
-        <script src="../prettify.js"></script>
+        <script src="../../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="../sorter.js"></script>
-        <script src="../block-navigation.js"></script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
     </body>
 </html>
     
