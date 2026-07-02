@@ -158,6 +158,16 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       body: JSON.stringify(body)
     });
 
+    if (!res.ok && body.response_format) {
+      console.warn("Local/OpenAI LLM failed with response_format, retrying without it...");
+      delete body.response_format;
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+    }
+
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(`LLM Error: ${res.status} - ${errText}`);
