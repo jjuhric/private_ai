@@ -215,6 +215,43 @@ async function handleWeatherTool(db, userId, action, params) {
     } catch (err) {
       return `Error: Failed to fetch daily forecast: ${err.message}`;
     }
+  } else if (action === 'onecall') {
+    try {
+      const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`One Call API returned status ${res.status}: ${res.statusText}`);
+      }
+      const data = await res.json();
+      
+      const current = data.current || {};
+      const currentTemp = current.temp;
+      const feelsLike = current.feels_like;
+      const humidity = current.humidity;
+      const windSpeed = current.wind_speed;
+      const weatherDesc = current.weather?.[0]?.description || 'N/A';
+      
+      const daily = data.daily || [];
+      let dailyMd = `#### 📅 7-Day Forecast:\n`;
+      daily.slice(0, 7).forEach(day => {
+        const date = new Date(day.dt * 1000).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        const tempDay = day.temp?.day;
+        const tempNight = day.temp?.night;
+        const desc = day.weather?.[0]?.description || 'N/A';
+        dailyMd += `- **${date}**: Day: ${tempDay}${unitSymbol}, Night: ${tempNight}${unitSymbol} - *${desc}*\n`;
+      });
+
+      return `### 🌦️ OpenWeatherMap One Call API Report for **${cityName}** (${zipcode}, ${country})
+- **Current Temperature**: ${currentTemp}${unitSymbol} (Feels like: ${feelsLike}${unitSymbol})
+- **Conditions**: ${weatherDesc.charAt(0).toUpperCase() + weatherDesc.slice(1)}
+- **Humidity**: ${humidity}%
+- **Wind Speed**: ${windSpeed} ${speedUnit}
+
+${dailyMd}`;
+    } catch (err) {
+      console.error('One Call API failed:', err.message);
+      return `Error: Failed to fetch One Call weather data: ${err.message}. (Ensure your API key is subscribed to One Call 3.0/4.0)`;
+    }
   }
 
   return `Error: Unknown action "${action}" for weather tool.`;
