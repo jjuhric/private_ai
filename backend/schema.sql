@@ -62,5 +62,6 @@ CREATE TABLE IF NOT EXISTS memories (
   level TEXT NOT NULL, -- 'short-term' or 'long-term'
   expires_at DATETIME, -- NULL for long-term, timestamp for short-term
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  embedding TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const { getEmbedding, getSemanticSimilarity } = require('../utils/embeddings');
 
 // Get all active memories for the user
 router.get('/', authenticateToken, async (req, res) => {
@@ -51,23 +52,52 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
     
-    // Check for existing active memory with the same content
-    const existing = await db.get(
-      'SELECT * FROM memories WHERE user_id = ? AND LOWER(content) = LOWER(?) AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
-      [req.user.id, content.trim()]
+    // Fetch user settings and generate embedding
+    const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
+    const newEmbedding = await getEmbedding(content.trim(), userSettings);
+
+    // Fetch active memories to check for semantic duplicates
+    const activeMemories = await db.all(
+      'SELECT * FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
+      [req.user.id]
     );
 
-    if (existing) {
+    let semanticDuplicate = null;
+    if (activeMemories.length > 0) {
+      for (const mem of activeMemories) {
+        let memEmbedding = null;
+        if (mem.embedding) {
+          try {
+            memEmbedding = JSON.parse(mem.embedding);
+          } catch (e) {}
+        }
+        const sim = getSemanticSimilarity(content.trim(), newEmbedding, mem.content, memEmbedding);
+        if (sim > 0.85) {
+          semanticDuplicate = mem;
+          break;
+        }
+      }
+    }
+
+    if (semanticDuplicate) {
+      // Update content, embedding, level, expires_at
+      await db.run(
+        'UPDATE memories SET content = ?, level = ?, expires_at = ?, embedding = ?, created_at = datetime(\'now\') WHERE id = ?',
+        [content.trim(), memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null, semanticDuplicate.id]
+      );
+      
+      const updatedMemory = await db.get('SELECT * FROM memories WHERE id = ?', [semanticDuplicate.id]);
+      
       return res.json({
         success: true,
-        memory: existing,
+        memory: updatedMemory,
         isDuplicate: true
       });
     }
 
     const result = await db.run(
-      'INSERT INTO memories (user_id, content, level, expires_at) VALUES (?, ?, ?, ?)',
-      [req.user.id, content.trim(), memLevel, finalExpiresAt]
+      'INSERT INTO memories (user_id, content, level, expires_at, embedding) VALUES (?, ?, ?, ?, ?)',
+      [req.user.id, content.trim(), memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null]
     );
 
     res.json({
@@ -78,6 +108,7 @@ router.post('/', authenticateToken, async (req, res) => {
         content: content.trim(),
         level: memLevel,
         expires_at: finalExpiresAt,
+        embedding: newEmbedding ? JSON.stringify(newEmbedding) : null,
         created_at: new Date().toISOString()
       }
     });

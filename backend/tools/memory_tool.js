@@ -1,3 +1,5 @@
+const { getEmbedding, getSemanticSimilarity } = require('../utils/embeddings');
+
 /**
  * Handles operations for the Memory tool.
  * 
@@ -46,19 +48,44 @@ async function handleMemoryTool(db, userId, action, params = {}) {
           }
         }
 
-        // Check for existing active memory with the same content
-        const existing = await db.get(
-          'SELECT id, expires_at FROM memories WHERE user_id = ? AND LOWER(content) = LOWER(?) AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
-          [userId, cleanContent]
+        // Fetch user settings and generate embedding
+        const userSettings = (db.get && typeof db.get === 'function') ? (await db.get('SELECT * FROM user_settings WHERE user_id = ?', [userId]) || {}) : {};
+        const newEmbedding = await getEmbedding(cleanContent, userSettings);
+
+        // Fetch active memories to check for semantic duplicates
+        const activeMemories = await db.all(
+          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
+          [userId]
         );
 
-        if (existing) {
-          return `Already remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${existing.id}${existing.expires_at ? `, Expires at: ${existing.expires_at}` : ''}).`;
+        let semanticDuplicate = null;
+        if (activeMemories.length > 0) {
+          for (const mem of activeMemories) {
+            let memEmbedding = null;
+            if (mem.embedding) {
+              try {
+                memEmbedding = JSON.parse(mem.embedding);
+              } catch (e) {}
+            }
+            const sim = getSemanticSimilarity(cleanContent, newEmbedding, mem.content, memEmbedding);
+            if (sim > 0.85) {
+              semanticDuplicate = mem;
+              break;
+            }
+          }
+        }
+
+        if (semanticDuplicate) {
+          await db.run(
+            'UPDATE memories SET content = ?, level = ?, expires_at = ?, embedding = ?, created_at = datetime(\'now\') WHERE id = ?',
+            [cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null, semanticDuplicate.id]
+          );
+          return `Already remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${semanticDuplicate.id}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}). Updated existing memory.`;
         }
 
         const result = await db.run(
-          'INSERT INTO memories (user_id, content, level, expires_at) VALUES (?, ?, ?, ?)',
-          [userId, cleanContent, memLevel, finalExpiresAt]
+          'INSERT INTO memories (user_id, content, level, expires_at, embedding) VALUES (?, ?, ?, ?, ?)',
+          [userId, cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null]
         );
 
         return `Successfully remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${result.lastID}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}).`;
@@ -67,19 +94,34 @@ async function handleMemoryTool(db, userId, action, params = {}) {
       case 'recall': {
         const { query } = params;
         
-        let querySql = 'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\'))';
-        const queryParams = [userId];
+        const rows = await db.all(
+          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
+          [userId]
+        );
 
         if (query && typeof query === 'string' && query.trim() !== '') {
-          querySql += ' AND content LIKE ?';
-          queryParams.push(`%${query.trim()}%`);
-        }
+          const cleanQuery = query.trim();
+          const userSettings = (db.get && typeof db.get === 'function') ? (await db.get('SELECT * FROM user_settings WHERE user_id = ?', [userId]) || {}) : {};
+          const queryEmbedding = await getEmbedding(cleanQuery, userSettings);
 
-        querySql += ' ORDER BY created_at DESC';
-        const rows = await db.all(querySql, queryParams);
+          const scoredRows = rows.map(r => {
+            let rowEmbedding = null;
+            if (r.embedding) {
+              try {
+                rowEmbedding = JSON.parse(r.embedding);
+              } catch (e) {}
+            }
+            const similarity = getSemanticSimilarity(cleanQuery, queryEmbedding, r.content, rowEmbedding);
+            return { ...r, similarity };
+          });
 
-        if (rows.length === 0) {
-          if (query) {
+          // Sort by similarity descending
+          scoredRows.sort((a, b) => b.similarity - a.similarity);
+
+          // Filter by threshold
+          const matchedRows = scoredRows.filter(r => r.similarity >= 0.35);
+
+          if (matchedRows.length === 0) {
             // Fallback: search for any active memories if search query yielded nothing
             const allActive = await db.all(
               'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) ORDER BY created_at DESC LIMIT 5',
@@ -89,12 +131,26 @@ async function handleMemoryTool(db, userId, action, params = {}) {
               return `No memories matched your search for "${query}". Here are the most recent general memories:\n` +
                 allActive.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
             }
+          } else {
+            const limit = 5;
+            const topMatches = matchedRows.slice(0, limit);
+            return `Retrieved memories:\n` +
+              topMatches.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
           }
           return 'No active memories found.';
         }
 
+        if (rows.length === 0) {
+          return 'No active memories found.';
+        }
+
+        // Return most recent memories if no query was provided
+        const allActive = await db.all(
+          'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) ORDER BY created_at DESC',
+          [userId]
+        );
         return `Retrieved memories:\n` +
-          rows.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
+          allActive.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
       }
 
       case 'forget': {

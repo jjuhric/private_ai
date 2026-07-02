@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for backend/routes/memory.js</title>
+    <title>Code coverage report for backend/utils/embeddings.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend/routes</a> memory.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend/utils</a> embeddings.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">98.61% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>63/63</span>
+                <span class='fraction'>71/72</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90% </span>
+                <span class="strong">90.9% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>36/40</span>
+                <span class='fraction'>70/77</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>63/63</span>
+                <span class='fraction'>67/67</span>
             </div>
         
             
@@ -203,286 +203,328 @@
 <a name='L138'></a><a href='#L138'>138</a>
 <a name='L139'></a><a href='#L139'>139</a>
 <a name='L140'></a><a href='#L140'>140</a>
-<a name='L141'></a><a href='#L141'>141</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36x</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const express = require('express');
-const router = express.Router();
-const { getDb } = require('../db');
-const { authenticateToken } = require('../middleware/auth');
-const { getEmbedding, getSemanticSimilarity } = require('../utils/embeddings');
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">23x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">22x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { GoogleGenerativeAI } = require('@google/generative-ai');
 &nbsp;
-// Get all active memories for the user
-router.get('/', authenticateToken, async (req, res) =&gt; {
-  try {
-    const db = await getDb();
-    const memories = await db.all(
-      'SELECT * FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at &gt; datetime(\'now\')) ORDER BY created_at DESC',
-      [req.user.id]
-    );
-    res.json(memories);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+/**
+ * Retrieves a vector embedding for a given text.
+ * Supports Gemini API (text-embedding-004) and local/OpenAI-style endpoints (/embeddings).
+ * 
+ * @param {string} text The text to embed.
+ * @param {object} userSettings The user's settings containing API keys.
+ * @returns {Promise&lt;number[]|null&gt;} Array of floats representing embedding or null.
+ */
+async function getEmbedding(text, userSettings = <span class="branch-0 cbranch-no" title="branch not covered" >{})</span> {
+  const isGemini = userSettings.provider === 'gemini' || 
+                   (userSettings.provider === 'online' &amp;&amp; userSettings.online_provider === 'gemini') ||
+                   (!userSettings.provider &amp;&amp; (userSettings.online_key || userSettings.gemini_key));
 &nbsp;
-router.post('/', authenticateToken, async (req, res) =&gt; {
-  const { content, level, expiresAt, days } = req.body;
-  
-  if (!content || typeof content !== 'string' || content.trim() === '') {
-    return res.status(400).json({ error: 'Content is required.' });
-  }
+  if (isGemini) {
+    const apiKey = userSettings.online_key || userSettings.gemini_key;
+    if (!apiKey) {
+      console.warn('Embeddings: No Gemini API Key configured in user settings.');
+      return null;
+    }
 &nbsp;
-  const memLevel = (level === 'short-term' || level === 'long-term') ? level : 'long-term';
-  let finalExpiresAt = null;
-  if (memLevel === 'short-term') {
-    if (expiresAt) {
-      const parsedDate = new Date(expiresAt);
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (!isNaN(parsedDate.getTime())) {
-        finalExpiresAt = parsedDate.toISOString();
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+      const result = await model.embedContent(text);
+      <span class="missing-if-branch" title="else path not taken" >E</span>if (result &amp;&amp; result.embedding &amp;&amp; result.embedding.values) {
+        return result.embedding.values;
       }
+    } catch (err) {
+      console.error('Embeddings: Failed to generate embedding via Gemini API:', err.message);
     }
-    
-    if (!finalExpiresAt &amp;&amp; days &amp;&amp; typeof days === 'number') {
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      finalExpiresAt = date.toISOString();
+  } else {
+    // Local / OpenAI / Custom provider
+    let baseUrl = '';
+    let apiKey = '';
+    let modelName = 'text-embedding-ada-002';
+&nbsp;
+    if (userSettings.provider === 'local') {
+      baseUrl = userSettings.local_url || 'http://192.168.1.42:1234/v1';
+      apiKey = userSettings.local_key || '';
+      modelName = userSettings.model_name || 'text-embedding-ada-002';
+    } else {
+      baseUrl = userSettings.online_url || '';
+      apiKey = userSettings.online_key || '';
+      modelName = userSettings.model_name || 'text-embedding-ada-002';
     }
 &nbsp;
-    if (!finalExpiresAt) {
-      // Default to 30 days retention
-      const date = new Date();
-      date.setDate(date.getDate() + 30);
-      finalExpiresAt = date.toISOString();
-    }
-  }
-&nbsp;
-  try {
-    const db = await getDb();
-    
-    // Fetch user settings and generate embedding
-    const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
-    const newEmbedding = await getEmbedding(content.trim(), userSettings);
-&nbsp;
-    // Fetch active memories to check for semantic duplicates
-    const activeMemories = await db.all(
-      'SELECT * FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at &gt; datetime(\'now\'))',
-      [req.user.id]
-    );
-&nbsp;
-    let semanticDuplicate = null;
-    if (activeMemories.length &gt; 0) {
-      for (const mem of activeMemories) {
-        let memEmbedding = null;
-        if (mem.embedding) {
-          try {
-            memEmbedding = JSON.parse(mem.embedding);
-          } catch (e) {}
+    if (baseUrl) {
+      try {
+        let endpoint = baseUrl.replace(/\/$/, '');
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (!endpoint.endsWith('/embeddings')) {
+          endpoint = `${endpoint}/embeddings`;
         }
-        const sim = getSemanticSimilarity(content.trim(), newEmbedding, mem.content, memEmbedding);
-        if (sim &gt; 0.85) {
-          semanticDuplicate = mem;
-          break;
+&nbsp;
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiKey &amp;&amp; apiKey !== 'lm-studio') {
+          headers['Authorization'] = `Bearer ${apiKey}`;
         }
+&nbsp;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            input: text,
+            model: modelName
+          })
+        });
+&nbsp;
+        if (response.ok) {
+          const data = await response.json();
+          const embedding = data.data?.[0]?.embedding;
+          <span class="missing-if-branch" title="else path not taken" >E</span>if (embedding &amp;&amp; Array.isArray(embedding)) {
+            return embedding;
+          }
+        }
+      } catch (err) {
+        console.error('Embeddings: Failed to generate embedding via Local/OpenAI endpoint:', err.message);
       }
     }
-&nbsp;
-    if (semanticDuplicate) {
-      // Update content, embedding, level, expires_at
-      await db.run(
-        'UPDATE memories SET content = ?, level = ?, expires_at = ?, embedding = ?, created_at = datetime(\'now\') WHERE id = ?',
-        [content.trim(), memLevel, finalExpiresAt, newEmbedding ? <span class="branch-0 cbranch-no" title="branch not covered" >JSON.stringify(newEmbedding) </span>: null, semanticDuplicate.id]
-      );
-      
-      const updatedMemory = await db.get('SELECT * FROM memories WHERE id = ?', [semanticDuplicate.id]);
-      
-      return res.json({
-        success: true,
-        memory: updatedMemory,
-        isDuplicate: true
-      });
-    }
-&nbsp;
-    const result = await db.run(
-      'INSERT INTO memories (user_id, content, level, expires_at, embedding) VALUES (?, ?, ?, ?, ?)',
-      [req.user.id, content.trim(), memLevel, finalExpiresAt, newEmbedding ? <span class="branch-0 cbranch-no" title="branch not covered" >JSON.stringify(newEmbedding) </span>: null]
-    );
-&nbsp;
-    res.json({
-      success: true,
-      memory: {
-        id: result.lastID,
-        user_id: req.user.id,
-        content: content.trim(),
-        level: memLevel,
-        expires_at: finalExpiresAt,
-        embedding: newEmbedding ? <span class="branch-0 cbranch-no" title="branch not covered" >JSON.stringify(newEmbedding) </span>: null,
-        created_at: new Date().toISOString()
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
-});
 &nbsp;
-// Delete a memory
-router.delete('/:id', authenticateToken, async (req, res) =&gt; {
-  const memoryId = req.params.id;
-  try {
-    const db = await getDb();
-    const result = await db.run(
-      'DELETE FROM memories WHERE id = ? AND user_id = ?',
-      [memoryId, req.user.id]
-    );
+  return null;
+}
 &nbsp;
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Memory not found or not owned by user.' });
-    }
-&nbsp;
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+/**
+ * Computes cosine similarity between two vectors.
+ * 
+ * @param {number[]} vecA First vector.
+ * @param {number[]} vecB Second vector.
+ * @returns {number} Cosine similarity score between -1 and 1.
+ */
+function cosineSimilarity(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i &lt; vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
   }
-});
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 &nbsp;
-module.exports = router;
+/**
+ * Computes a Jaccard token similarity score as a robust fallback.
+ * 
+ * @param {string} str1 First string.
+ * @param {string} str2 Second string.
+ * @returns {number} Jaccard similarity score between 0 and 1.
+ */
+function getKeywordSimilarity(str1, str2) {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+  if (s1 === s2) {
+    return 1.0;
+  }
+  const words1 = new Set(s1.match(/\w+/g) || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>;
+  const words2 = new Set(s2.match(/\w+/g) || <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>;
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (words1.size === 0 || words2.size === 0) <span class="cstat-no" title="statement not covered" >return 0;</span>
+  const intersection = new Set([...words1].filter(x =&gt; words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+  const jaccard = intersection.size / union.size;
+&nbsp;
+  if (s1.includes(s2) || s2.includes(s1)) {
+    return Math.max(jaccard, 0.5);
+  }
+  return jaccard;
+}
+&nbsp;
+/**
+ * Computes semantic similarity, falling back to keyword similarity if vectors are not available.
+ * 
+ * @param {string} textA First text.
+ * @param {number[]|null} vecA First embedding.
+ * @param {string} textB Second text.
+ * @param {number[]|null} vecB Second embedding.
+ * @returns {number} Semantic similarity score.
+ */
+function getSemanticSimilarity(textA, vecA, textB, vecB) {
+  if (vecA &amp;&amp; vecB &amp;&amp; Array.isArray(vecA) &amp;&amp; Array.isArray(vecB) &amp;&amp; vecA.length &gt; 0 &amp;&amp; vecB.length &gt; 0) {
+    return cosineSimilarity(vecA, vecB);
+  }
+  return getKeywordSimilarity(textA, textB);
+}
+&nbsp;
+module.exports = {
+  getEmbedding,
+  cosineSimilarity,
+  getKeywordSimilarity,
+  getSemanticSimilarity
+};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->

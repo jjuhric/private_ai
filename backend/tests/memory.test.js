@@ -361,5 +361,66 @@ describe('Memory Capabilities Tests', () => {
       expect(events[0].title).toBe(`Reminder: Vacation on ${todayISO}`);
       expect(events[0].start_time).toContain(todayISO);
     });
+
+    describe('Semantic Similarity & Deduplication Tests', () => {
+      test('getKeywordSimilarity calculates exact, partial, and subset similarities correctly', () => {
+        const { getKeywordSimilarity } = require('../utils/embeddings');
+        expect(getKeywordSimilarity('I love eating fresh apples', 'I love eating fresh apples')).toBe(1.0);
+        expect(getKeywordSimilarity('fresh apples', 'I love eating fresh apples')).toBe(0.5); // substring fallback
+        expect(getKeywordSimilarity('blueberries', 'bananas')).toBe(0.0);
+      });
+
+      test('getSemanticSimilarity falls back to keyword similarity if vectors are missing', () => {
+        const { getSemanticSimilarity } = require('../utils/embeddings');
+        const score1 = getSemanticSimilarity('Hiking is fun', null, 'Hiking is fun', null);
+        expect(score1).toBe(1.0);
+        const score2 = getSemanticSimilarity('Hiking', null, 'Hiking is fun', null);
+        expect(score2).toBe(0.5);
+      });
+
+      test('remember action prevents duplicate active memory semantically (using keyword overlap fallback)', async () => {
+        await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'My favorite color is green' });
+        
+        // Duplicate check
+        const duplicateRes = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'My favorite color is green' });
+        expect(duplicateRes).toContain('Already remembered');
+        expect(duplicateRes).toContain('Updated existing memory');
+
+        const rows = await mockTestDb.all('SELECT * FROM memories WHERE user_id = ?', [userId]);
+        expect(rows.length).toBe(1);
+      });
+
+      test('remember and recall with active memory containing stringified embedding', async () => {
+        // Insert a memory with an embedding
+        await mockTestDb.run(
+          'INSERT INTO memories (user_id, content, level, embedding) VALUES (?, ?, ?, ?)',
+          [userId, 'I love playing chess', 'long-term', JSON.stringify([0.1, 0.2, 0.3])]
+        );
+
+        // This will query active memories, enter the parsing try-catch block, and trigger duplicate prevention
+        const dupRes = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'I love playing chess' });
+        expect(dupRes).toContain('Already remembered');
+
+        // This will query active memories and parse the embedding during recall
+        const recallRes = await handleMemoryTool(mockTestDb, userId, 'recall', { query: 'chess' });
+        expect(recallRes).toContain('I love playing chess');
+      });
+
+      test('POST /api/memories prevents duplicate semantically when existing has embedding', async () => {
+        await mockTestDb.run(
+          'INSERT INTO memories (user_id, content, level, embedding) VALUES (?, ?, ?, ?)',
+          [userId, 'I live in Austin', 'long-term', JSON.stringify([0.5, 0.6, 0.7])]
+        );
+
+        const res = await request(app)
+          .post('/api/memories')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ content: 'I live in Austin', level: 'long-term' });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.isDuplicate).toBe(true);
+      });
+    });
   });
 });
