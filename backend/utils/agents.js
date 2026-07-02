@@ -228,7 +228,13 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
         return JSON.parse(respText.substring(firstBrace, lastBrace + 1));
       } catch (e) {}
     }
-    throw new Error(`Failed to parse agent JSON: ${respText}`);
+    console.warn(`Failed to parse agent JSON, falling back to none: ${respText}`);
+    return {
+      thought: `Parsing failed. Raw response: ${respText}`,
+      tool: 'none',
+      action: '',
+      params: {}
+    };
   }
 }
 
