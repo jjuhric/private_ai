@@ -9,9 +9,15 @@ jest.mock('@google/generative-ai', () => {
   };
 });
 
+let shouldDiskFail = false;
+
 // Mock child_process.exec before requiring modules
 const customPromisify = (cmd, opts) => {
   return new Promise((resolve, reject) => {
+    if (shouldDiskFail && (cmd.includes('Get-PSDrive') || cmd.includes('df -h'))) {
+      reject(new Error('Disk check failed'));
+      return;
+    }
     if (cmd.includes('invalid_cmd')) {
       const err = new Error('Command execution failed');
       err.code = 127;
@@ -54,11 +60,42 @@ describe('Multi-Agent System & Tools Tests', () => {
   });
 
   describe('Host Machine Tool', () => {
-    test('retrieves host details successfully', async () => {
+    test('retrieves host details successfully on win32', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('win32');
       const result = await handleHostMachineTool('get_specifications');
       expect(result).toContain('Host Machine Specifications');
-      expect(result).toContain('CPU');
-      expect(result).toContain('Memory');
+      expect(result).toContain('Drive C');
+      platformSpy.mockRestore();
+    });
+
+    test('host_machine_tool on non-win32 platform', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('linux');
+      const result = await handleHostMachineTool('get_specifications');
+      expect(result).toContain('Host Machine Specifications');
+      expect(result).toContain('df -h');
+      platformSpy.mockRestore();
+    });
+
+    test('host_machine_tool handles disk info retrieval failure', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('linux');
+      shouldDiskFail = true;
+      const result = await handleHostMachineTool('get_specifications');
+      expect(result).toContain('Failed to retrieve disk info');
+      shouldDiskFail = false;
+      platformSpy.mockRestore();
+    });
+
+    test('host_machine_tool handles total system error', async () => {
+      const os = require('os');
+      const memSpy = jest.spyOn(os, 'totalmem').mockImplementation(() => {
+        throw new Error('Total memory error');
+      });
+      const result = await handleHostMachineTool('get_specifications');
+      expect(result).toContain('Error retrieving host machine specifications: Total memory error');
+      memSpy.mockRestore();
     });
   });
 
@@ -278,15 +315,6 @@ describe('Multi-Agent System & Tools Tests', () => {
   });
 
   describe('Agent Coverage Extensions', () => {
-    test('host_machine_tool on non-win32 platform', async () => {
-      const os = require('os');
-      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('linux');
-      const result = await handleHostMachineTool('get_specifications');
-      expect(result).toContain('Host Machine Specifications');
-      expect(result).toContain('df -h');
-      platformSpy.mockRestore();
-    });
-
     test('read_file validation when path is a directory', async () => {
       const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
       const statSpy = jest.spyOn(fs, 'statSync').mockReturnValue({ isFile: () => false });
