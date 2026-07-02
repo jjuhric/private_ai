@@ -12,6 +12,38 @@ jest.mock('@google/generative-ai', () => {
 let shouldDiskFail = false;
 let shouldPowerFail = false;
 
+// Link shouldPowerFail to global to be safely accessible in hoisted jest.mock
+Object.defineProperty(global, 'shouldPowerFail', {
+  get: () => shouldPowerFail,
+  set: (val) => { shouldPowerFail = val; },
+  configurable: true
+});
+
+jest.mock('../tools/ina219_tool', () => {
+  return {
+    measurePower: jest.fn().mockImplementation(async () => {
+      if (global.shouldPowerFail) {
+        throw new Error('Power script execution failed');
+      }
+      return {
+        success: true,
+        simulated: true,
+        readings: [
+          { battery_percent: 85.5, power_w: 2.45, voltage_v: 12.08, current_a: 0.203 },
+          { battery_percent: 85.5, power_w: 2.45, voltage_v: 12.08, current_a: 0.203 },
+          { battery_percent: 85.5, power_w: 2.45, voltage_v: 12.08, current_a: 0.203 }
+        ],
+        average: {
+          battery_percent: 85.5,
+          power_w: 2.45,
+          voltage_v: 12.08,
+          current_a: 0.203
+        }
+      };
+    })
+  };
+});
+
 // Mock child_process.exec before requiring modules
 const customPromisify = (cmd, opts) => {
   return new Promise((resolve, reject) => {

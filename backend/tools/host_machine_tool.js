@@ -3,28 +3,45 @@ const { exec } = require('child_process');
 const util = require('util');
 const path = require('path');
 const execPromise = util.promisify(exec);
+const { measurePower } = require('./ina219_tool');
 
 /**
  * Helper to fetch power/battery info via INA219 helper script.
  */
 async function getPowerInfo() {
   try {
-    const scriptPath = path.join(__dirname, '../scripts/ina219_read.py');
-    const { stdout } = await execPromise(`python3 "${scriptPath}"`);
-    const data = JSON.parse(stdout);
+    const data = await measurePower();
     if (!data.success) {
       return `### ⚡ Power & Battery Status (Simulated/Warning)
 - **Status**: ${data.error || 'Simulated'}
-- **Battery Level**: ${data.battery_percent}%
-- **Power Draw**: ${data.power_w} W
-- **Voltage**: ${data.voltage_v} V
-- **Current**: ${data.current_a} A`;
+- **Battery Level**: ${data.battery_percent || 0}%
+- **Power Draw**: ${data.power_w || 0} W
+- **Voltage**: ${data.voltage_v || 0} V
+- **Current**: ${data.current_a || 0} A`;
     }
-    return `### ⚡ Power & Battery Status
-- **Battery Level**: ${data.battery_percent}%
-- **Power Draw**: ${data.power_w} W
-- **Voltage**: ${data.voltage_v} V
-- **Current**: ${data.current_a} A`;
+
+    let statusHeader = `### ⚡ Power & Battery Status`;
+    if (data.simulated) {
+      statusHeader = `### ⚡ Power & Battery Status (Simulated)`;
+    }
+
+    const readingsStr = data.readings.map((r, i) => {
+      return `#### Reading ${i + 1}
+- **Battery Level**: ${r.battery_percent}%
+- **Power Draw**: ${r.power_w} W
+- **Voltage**: ${r.voltage_v} V
+- **Current**: ${r.current_a} A`;
+    }).join('\n\n');
+
+    return `${statusHeader}
+
+${readingsStr}
+
+#### 📊 3-Sample Average
+- **Battery Level**: ${data.average.battery_percent}%
+- **Power Draw**: ${data.average.power_w} W
+- **Voltage**: ${data.average.voltage_v} V
+- **Current**: ${data.average.current_a} A`;
   } catch (err) {
     return `### ⚡ Power & Battery Status
 - **Error**: Failed to read power telemetry: ${err.message}`;
