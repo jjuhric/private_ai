@@ -814,5 +814,148 @@ describe('Multi-Agent System & Tools Tests', () => {
 
       global.fetch = globalFetch;
     });
+
+    test('runWorkerAgent routes memory tool', async () => {
+      const globalFetch = global.fetch;
+      let calls = 0;
+      global.fetch = jest.fn().mockImplementation((url) => {
+        calls++;
+        if (calls === 1) {
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Recalling memories', tool: 'memory', action: 'recall', params: { query: 'test' } }) } }] })
+          });
+        } else {
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Finishing', tool: 'none' }) } }] })
+          });
+        }
+      });
+
+      const mockDb = {
+        all: jest.fn().mockResolvedValue([{ id: 1, content: 'User likes chess', level: 'long-term' }]),
+        get: jest.fn().mockResolvedValue(null)
+      };
+
+      const result = await runWorkerAgent('memory_agent', { provider: 'openai', modelName: 'gpt-4' }, 'Manage memories', mockDb, 1, 'token');
+      expect(result).toBeDefined();
+      global.fetch = globalFetch;
+    });
+
+    test('runAgentLoop with pre-coordinator memory agent flow', async () => {
+      const mockThought = jest.fn();
+      const mockContent = jest.fn();
+      const mockToolCall = jest.fn();
+      const globalFetch = global.fetch;
+
+      let calls = 0;
+      global.fetch = jest.fn().mockImplementation(() => {
+        calls++;
+        if (calls === 1) {
+          // Memory Agent turn 0
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Recalling', tool: 'none' }) } }] })
+          });
+        } else if (calls === 2) {
+          // Memory Agent final response
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: 'Past memories report' } }] })
+          });
+        } else if (calls === 3) {
+          // Supervisor turn 0
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Found memories, deciding none', tool: 'none' }) } }] })
+          });
+        } else {
+          // Responder stream
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: 'Final supervisor response.' } }] })
+          });
+        }
+      });
+
+      const mockDb = {
+        all: jest.fn().mockResolvedValue([]),
+        get: jest.fn().mockResolvedValue(null)
+      };
+
+      await runAgentLoop({
+        db: mockDb,
+        userId: 1,
+        provider: 'openai',
+        modelName: 'gpt-4',
+        userMessage: 'What are my memories?',
+        history: [],
+        onThought: mockThought,
+        onContent: mockContent,
+        onToolCall: mockToolCall,
+        forceMemoryAgent: true
+      });
+
+      expect(mockContent).toHaveBeenCalledWith('Final supervisor response.');
+      global.fetch = globalFetch;
+    });
+
+    test('runAgentLoop handles Memory Agent pre-run failure gracefully', async () => {
+      const mockThought = jest.fn();
+      const mockContent = jest.fn();
+      const mockToolCall = jest.fn();
+      const globalFetch = global.fetch;
+
+      let calls = 0;
+      global.fetch = jest.fn().mockImplementation(() => {
+        calls++;
+        if (calls === 1) {
+          // Make Memory Agent turn 0 throw an error
+          throw new Error('Memory LLM failed');
+        } else if (calls === 2) {
+          // Supervisor turn 0
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Proceeding', tool: 'none' }) } }] })
+          });
+        } else {
+          // Responder stream
+          return Promise.resolve({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({ choices: [{ message: { content: 'Final fallback response.' } }] })
+          });
+        }
+      });
+
+      const mockDb = {
+        all: jest.fn().mockResolvedValue([]),
+        get: jest.fn().mockResolvedValue(null)
+      };
+
+      await runAgentLoop({
+        db: mockDb,
+        userId: 1,
+        provider: 'openai',
+        modelName: 'gpt-4',
+        userMessage: 'Test message',
+        history: [],
+        onThought: mockThought,
+        onContent: mockContent,
+        onToolCall: mockToolCall,
+        forceMemoryAgent: true
+      });
+
+      expect(mockContent).toHaveBeenCalledWith('Final fallback response.');
+      global.fetch = globalFetch;
+    });
   });
 });
