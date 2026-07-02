@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1782953582138" clover="3.2.0">
-  <project timestamp="1782953582138" name="All files">
-    <metrics statements="1377" coveredstatements="1337" conditionals="947" coveredconditionals="753" methods="103" coveredmethods="97" elements="2427" coveredelements="2187" complexity="0" loc="1377" ncloc="1377" packages="5" files="20" classes="20"/>
+<coverage generated="1782953760681" clover="3.2.0">
+  <project timestamp="1782953760681" name="All files">
+    <metrics statements="1377" coveredstatements="1339" conditionals="947" coveredconditionals="753" methods="103" coveredmethods="97" elements="2427" coveredelements="2189" complexity="0" loc="1377" ncloc="1377" packages="5" files="20" classes="20"/>
     <package name="backend">
       <metrics statements="177" coveredstatements="176" conditionals="136" coveredconditionals="116" methods="9" coveredmethods="9"/>
       <file name="ai.js" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\backend\ai.js">
@@ -578,7 +578,7 @@
       </file>
     </package>
     <package name="backend.tools">
-      <metrics statements="636" coveredstatements="618" conditionals="406" coveredconditionals="308" methods="48" coveredmethods="44"/>
+      <metrics statements="636" coveredstatements="620" conditionals="406" coveredconditionals="308" methods="48" coveredmethods="44"/>
       <file name="calendar_tool.js" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\backend\tools\calendar_tool.js">
         <metrics statements="19" coveredstatements="19" conditionals="18" coveredconditionals="16" methods="1" coveredmethods="1"/>
         <line num="3" count="13" type="cond" truecount="2" falsecount="0"/>
@@ -743,35 +743,35 @@
         <line num="92" count="4" type="stmt"/>
       </file>
       <file name="host_machine_tool.js" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\backend\tools\host_machine_tool.js">
-        <metrics statements="47" coveredstatements="44" conditionals="19" coveredconditionals="12" methods="4" coveredmethods="4"/>
+        <metrics statements="47" coveredstatements="46" conditionals="19" coveredconditionals="12" methods="4" coveredmethods="4"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
         <line num="4" count="1" type="stmt"/>
-        <line num="15" count="2" type="stmt"/>
-        <line num="16" count="2" type="stmt"/>
-        <line num="17" count="2" type="stmt"/>
-        <line num="18" count="2" type="stmt"/>
-        <line num="19" count="2" type="stmt"/>
-        <line num="20" count="2" type="stmt"/>
-        <line num="21" count="2" type="stmt"/>
-        <line num="22" count="2" type="stmt"/>
-        <line num="23" count="2" type="stmt"/>
-        <line num="24" count="2" type="stmt"/>
-        <line num="27" count="2" type="stmt"/>
-        <line num="28" count="2" type="stmt"/>
-        <line num="29" count="2" type="stmt"/>
-        <line num="30" count="2" type="stmt"/>
-        <line num="33" count="2" type="stmt"/>
-        <line num="34" count="2" type="stmt"/>
-        <line num="35" count="2" type="stmt"/>
-        <line num="36" count="2" type="stmt"/>
-        <line num="39" count="2" type="cond" truecount="1" falsecount="1"/>
-        <line num="40" count="2" type="stmt"/>
-        <line num="41" count="2" type="cond" truecount="1" falsecount="1"/>
-        <line num="43" count="2" type="stmt"/>
-        <line num="44" count="2" type="stmt"/>
-        <line num="45" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="15" count="4" type="stmt"/>
+        <line num="16" count="4" type="stmt"/>
+        <line num="17" count="4" type="stmt"/>
+        <line num="18" count="4" type="stmt"/>
+        <line num="19" count="4" type="stmt"/>
+        <line num="20" count="4" type="stmt"/>
+        <line num="21" count="4" type="stmt"/>
+        <line num="22" count="3" type="stmt"/>
+        <line num="23" count="3" type="stmt"/>
+        <line num="24" count="3" type="stmt"/>
+        <line num="27" count="3" type="stmt"/>
+        <line num="28" count="3" type="stmt"/>
+        <line num="29" count="3" type="stmt"/>
+        <line num="30" count="3" type="stmt"/>
+        <line num="33" count="3" type="stmt"/>
+        <line num="34" count="3" type="stmt"/>
+        <line num="35" count="3" type="stmt"/>
+        <line num="36" count="3" type="stmt"/>
+        <line num="39" count="3" type="cond" truecount="1" falsecount="1"/>
+        <line num="40" count="3" type="stmt"/>
+        <line num="41" count="3" type="cond" truecount="1" falsecount="1"/>
+        <line num="43" count="3" type="stmt"/>
+        <line num="44" count="3" type="stmt"/>
+        <line num="45" count="3" type="cond" truecount="2" falsecount="0"/>
         <line num="47" count="1" type="stmt"/>
         <line num="48" count="1" type="cond" truecount="1" falsecount="1"/>
         <line num="49" count="1" type="stmt"/>
@@ -784,12 +784,12 @@
         <line num="57" count="1" type="cond" truecount="1" falsecount="1"/>
         <line num="58" count="1" type="stmt"/>
         <line num="62" count="0" type="stmt"/>
-        <line num="65" count="1" type="stmt"/>
+        <line num="65" count="2" type="stmt"/>
         <line num="66" count="1" type="stmt"/>
-        <line num="69" count="0" type="stmt"/>
-        <line num="72" count="2" type="stmt"/>
-        <line num="77" count="3" type="cond" truecount="2" falsecount="0"/>
-        <line num="83" count="0" type="stmt"/>
+        <line num="69" count="1" type="stmt"/>
+        <line num="72" count="3" type="stmt"/>
+        <line num="77" count="6" type="cond" truecount="2" falsecount="0"/>
+        <line num="83" count="1" type="stmt"/>
         <line num="87" count="1" type="stmt"/>
       </file>
       <file name="memory_tool.js" path="C:\Users\jjuhr\OneDrive\Documents\private_ai\backend\tools\memory_tool.js">
