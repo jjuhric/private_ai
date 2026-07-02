@@ -389,6 +389,38 @@ describe('Memory Capabilities Tests', () => {
         const rows = await mockTestDb.all('SELECT * FROM memories WHERE user_id = ?', [userId]);
         expect(rows.length).toBe(1);
       });
+
+      test('remember and recall with active memory containing stringified embedding', async () => {
+        // Insert a memory with an embedding
+        await mockTestDb.run(
+          'INSERT INTO memories (user_id, content, level, embedding) VALUES (?, ?, ?, ?)',
+          [userId, 'I love playing chess', 'long-term', JSON.stringify([0.1, 0.2, 0.3])]
+        );
+
+        // This will query active memories, enter the parsing try-catch block, and trigger duplicate prevention
+        const dupRes = await handleMemoryTool(mockTestDb, userId, 'remember', { content: 'I love playing chess' });
+        expect(dupRes).toContain('Already remembered');
+
+        // This will query active memories and parse the embedding during recall
+        const recallRes = await handleMemoryTool(mockTestDb, userId, 'recall', { query: 'chess' });
+        expect(recallRes).toContain('I love playing chess');
+      });
+
+      test('POST /api/memories prevents duplicate semantically when existing has embedding', async () => {
+        await mockTestDb.run(
+          'INSERT INTO memories (user_id, content, level, embedding) VALUES (?, ?, ?, ?)',
+          [userId, 'I live in Austin', 'long-term', JSON.stringify([0.5, 0.6, 0.7])]
+        );
+
+        const res = await request(app)
+          .post('/api/memories')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ content: 'I live in Austin', level: 'long-term' });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.isDuplicate).toBe(true);
+      });
     });
   });
 });
