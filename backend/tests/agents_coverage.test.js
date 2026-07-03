@@ -59,6 +59,10 @@ describe('Agents Coverage Extender Tests', () => {
 
     const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
     expect(result).toBeDefined();
+
+    // Call again to hit the rest of the tools (maxTurns = 5 per call)
+    const result2 = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
+    expect(result2).toBeDefined();
   });
 
   test('runAgentTurn with anthropic style headers and response parsing', async () => {
@@ -155,5 +159,51 @@ describe('Agents Coverage Extender Tests', () => {
     
     expect(mockDb.all).toHaveBeenCalled();
     expect(mockDb.get).toHaveBeenCalled();
+  });
+
+  test('runWorkerAgent query_vault tool routing', async () => {
+    const settings = { provider: 'openai', modelName: 'gpt-4' };
+    let calls = 0;
+    global.fetch = jest.fn().mockImplementation(async () => {
+      calls++;
+      if (calls === 1) {
+        return {
+          ok: true,
+          headers: { get: () => 'application/json' },
+          json: async () => ({ choices: [{ message: { content: JSON.stringify({ tool: 'query_vault', action: 'query', params: { query: 'test' } }) } }] })
+        };
+      }
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ choices: [{ message: { content: 'Final response.' } }] })
+      };
+    });
+
+    const result = await runWorkerAgent('document_vault', settings, 'Query vault', {}, 1, 'token');
+    expect(result).toBeDefined();
+  });
+
+  test('runWorkerAgent unknown tool routing fallback', async () => {
+    const settings = { provider: 'openai', modelName: 'gpt-4' };
+    let calls = 0;
+    global.fetch = jest.fn().mockImplementation(async () => {
+      calls++;
+      if (calls === 1) {
+        return {
+          ok: true,
+          headers: { get: () => 'application/json' },
+          json: async () => ({ choices: [{ message: { content: JSON.stringify({ tool: 'unknown_tool', action: 'query' }) } }] })
+        };
+      }
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ choices: [{ message: { content: 'Final response.' } }] })
+      };
+    });
+
+    const result = await runWorkerAgent('supervisor', settings, 'Query unknown', {}, 1, 'token');
+    expect(result).toBeDefined();
   });
 });
