@@ -22,6 +22,12 @@ const vaultRouter = require('./routes/vault');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Helper to check if origin is a local private network subnet
+const isLocalOrigin = (origin) => {
+  const localRegex = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|[a-zA-Z0-9-]+\.local)(:\d+)?$/;
+  return localRegex.test(origin);
+};
+
 // Restrict CORS origins in production
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
@@ -30,10 +36,13 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       return callback(null, true);
     }
-    return callback(new Error('CORS Policy: origin not allowed'), false);
+    if (isLocalOrigin(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
   },
   credentials: true
 }));
