@@ -171,5 +171,16 @@ describe('MemoryPane Component Tests', () => {
       expiresAt: undefined,
       days: 90
     });
+
+    // 6. Submit short-term-custom with no date
+    fireEvent.change(textInput, { target: { value: 'No custom date' } });
+    fireEvent.change(select, { target: { value: 'short-term-custom' } });
+    fireEvent.submit(form);
+    expect(mockOnAddMemory).toHaveBeenCalledWith({
+      content: 'No custom date',
+      level: 'short-term',
+      expiresAt: undefined,
+      days: undefined
+    });
   });
 });
