@@ -119,4 +119,41 @@ describe('Agents Coverage Extender Tests', () => {
       onToolCall: jest.fn()
     })).rejects.toThrow('LLM API error');
   });
+
+  test('runAgentLoop database queries catch failure blocks', async () => {
+    const { runAgentLoop } = require('../ai');
+    const mockDb = {
+      all: jest.fn().mockRejectedValue(new Error('DB Query failure')),
+      get: jest.fn().mockRejectedValue(new Error('DB Get failure'))
+    };
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: (name) => name === 'content-type' ? 'application/json' : null
+      },
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ tool: 'none', thought: 'error fallback test' }) } }]
+      })
+    });
+
+    await runAgentLoop({
+      db: mockDb,
+      userId: 1,
+      provider: 'local',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key',
+      localApiStyle: 'openai',
+      userMessage: 'test message',
+      history: [],
+      onThought: jest.fn(),
+      onContent: jest.fn(),
+      onToolCall: jest.fn(),
+      isAborted: () => false,
+      forceMemoryAgent: true
+    });
+    
+    expect(mockDb.all).toHaveBeenCalled();
+    expect(mockDb.get).toHaveBeenCalled();
+  });
 });
