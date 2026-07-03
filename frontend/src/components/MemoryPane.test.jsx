@@ -114,4 +114,62 @@ describe('MemoryPane Component Tests', () => {
     fireEvent.click(deleteButtons[1]);
     expect(defaultProps.onDeleteMemory).toHaveBeenCalledWith(2);
   });
+
+  test('covers empty content validation and alternate short term durations', () => {
+    const mockOnAddMemory = vi.fn();
+    const { container } = render(<MemoryPane {...defaultProps} onAddMemory={mockOnAddMemory} />);
+    
+    const textInput = screen.getByPlaceholderText('e.g. I prefer dark mode, or I have a dog named Rusty.');
+    const select = screen.getByRole('combobox');
+    const form = textInput.closest('form');
+
+    // 1. Submit empty content
+    fireEvent.change(textInput, { target: { value: '' } });
+    fireEvent.submit(form);
+    expect(mockOnAddMemory).not.toHaveBeenCalled();
+
+    // 2. Submit short-term-30
+    fireEvent.change(textInput, { target: { value: 'Relative 30' } });
+    fireEvent.change(select, { target: { value: 'short-term-30' } });
+    fireEvent.submit(form);
+    expect(mockOnAddMemory).toHaveBeenCalledWith({
+      content: 'Relative 30',
+      level: 'short-term',
+      expiresAt: undefined,
+      days: 30
+    });
+
+    // 3. Submit short-term-1
+    fireEvent.change(textInput, { target: { value: 'Relative 1' } });
+    fireEvent.change(select, { target: { value: 'short-term-1' } });
+    fireEvent.submit(form);
+    expect(mockOnAddMemory).toHaveBeenCalledWith({
+      content: 'Relative 1',
+      level: 'short-term',
+      expiresAt: undefined,
+      days: 1
+    });
+
+    // 4. Submit short-term-7
+    fireEvent.change(textInput, { target: { value: 'Relative 7' } });
+    fireEvent.change(select, { target: { value: 'short-term-7' } });
+    fireEvent.submit(form);
+    expect(mockOnAddMemory).toHaveBeenCalledWith({
+      content: 'Relative 7',
+      level: 'short-term',
+      expiresAt: undefined,
+      days: 7
+    });
+
+    // 5. Submit short-term-90
+    fireEvent.change(textInput, { target: { value: 'Relative 90' } });
+    fireEvent.change(select, { target: { value: 'short-term-90' } });
+    fireEvent.submit(form);
+    expect(mockOnAddMemory).toHaveBeenCalledWith({
+      content: 'Relative 90',
+      level: 'short-term',
+      expiresAt: undefined,
+      days: 90
+    });
+  });
 });
