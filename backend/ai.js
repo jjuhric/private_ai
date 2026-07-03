@@ -194,18 +194,9 @@ async function runAgentLoop({
     onCommandApprovalRequired
   };
 
-  // Query memories using the Memory Agent before routing
-  let memoriesResult = 'No relevant memories found.';
-  const skipMemoryAgent = (process.env.NODE_ENV === 'test' && !forceMemoryAgent);
-  if (!skipMemoryAgent) {
-    try {
-      onThought("Memory Agent: Retrieving relevant past memories...\n");
-      memoriesResult = await runWorkerAgent('memory_agent', settings, `Recall memories relevant to: "${userMessage}"`, db, userId, githubToken);
-    } catch (err) {
-      console.error('Memory Agent query failed:', err);
-      memoriesResult = `Error retrieving memories: ${err.message}`;
-    }
-  }
+  // Core/Location memories will be fetched programmatically below.
+  // Other memories should be requested by the Supervisor dynamically using delegate_to_memory_agent.
+  let memoriesResult = 'No relevant memories retrieved yet. Delegate to the memory agent if you need other past user facts.';
 
   // Programmatic fetch of core identity and location memories to guarantee availability
   try {
