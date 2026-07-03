@@ -9,12 +9,20 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
  * @returns {Promise<number[]|null>} Array of floats representing embedding or null.
  */
 async function getEmbedding(text, userSettings = {}) {
-  const isGemini = userSettings.provider === 'gemini' || 
-                   (userSettings.provider === 'online' && userSettings.online_provider === 'gemini') ||
-                   (!userSettings.provider && (userSettings.online_key || userSettings.gemini_key));
+  const { decrypt } = require('./crypto');
+  const decryptedSettings = {
+    ...userSettings,
+    online_key: decrypt(userSettings.online_key),
+    gemini_key: decrypt(userSettings.gemini_key),
+    local_key: decrypt(userSettings.local_key)
+  };
+
+  const isGemini = decryptedSettings.provider === 'gemini' || 
+                   (decryptedSettings.provider === 'online' && decryptedSettings.online_provider === 'gemini') ||
+                   (!decryptedSettings.provider && (decryptedSettings.online_key || decryptedSettings.gemini_key));
 
   if (isGemini) {
-    const apiKey = userSettings.online_key || userSettings.gemini_key;
+    const apiKey = decryptedSettings.online_key || decryptedSettings.gemini_key;
     if (!apiKey) {
       console.warn('Embeddings: No Gemini API Key configured in user settings.');
       return null;
@@ -36,14 +44,14 @@ async function getEmbedding(text, userSettings = {}) {
     let apiKey = '';
     let modelName = 'text-embedding-ada-002';
 
-    if (userSettings.provider === 'local') {
-      baseUrl = userSettings.local_url || 'http://192.168.1.42:1234/v1';
-      apiKey = userSettings.local_key || '';
-      modelName = userSettings.model_name || 'text-embedding-ada-002';
+    if (decryptedSettings.provider === 'local') {
+      baseUrl = decryptedSettings.local_url || 'http://192.168.1.42:1234/v1';
+      apiKey = decryptedSettings.local_key || '';
+      modelName = decryptedSettings.model_name || 'text-embedding-ada-002';
     } else {
-      baseUrl = userSettings.online_url || '';
-      apiKey = userSettings.online_key || '';
-      modelName = userSettings.model_name || 'text-embedding-ada-002';
+      baseUrl = decryptedSettings.online_url || '';
+      apiKey = decryptedSettings.online_key || '';
+      modelName = decryptedSettings.model_name || 'text-embedding-ada-002';
     }
 
     if (baseUrl) {

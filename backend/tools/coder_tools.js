@@ -80,9 +80,26 @@ async function handleListDir(params) {
   }
 }
 
-async function handleExecuteCommand(params) {
-  const { command } = params;
+async function handleExecuteCommand(params, options = {}) {
+  let { command } = params;
   if (!command) return 'Error: "command" parameter is required.';
+
+  // If command approval is enabled, wait for the user to approve
+  if (options.onCommandApprovalRequired) {
+    const commandId = 'cmd_' + Math.random().toString(36).substring(2, 15);
+    
+    // Fire event to client via SSE callback
+    options.onCommandApprovalRequired({ commandId, command });
+
+    const { registerPendingCommand } = require('../utils/commandApproval');
+    const result = await registerPendingCommand(commandId, command, options.userId);
+
+    if (!result.approved) {
+      return `Command execution rejected by user. Command was: "${command}"`;
+    }
+    
+    command = result.command; // Proceed with potentially edited command
+  }
 
   try {
     const workspaceRoot = path.resolve(process.cwd());
@@ -96,7 +113,7 @@ async function handleExecuteCommand(params) {
   }
 }
 
-async function handleCoderTool(action, params = {}) {
+async function handleCoderTool(action, params = {}, options = {}) {
   switch (action) {
     case 'read_file':
       return handleReadFile(params);
@@ -105,7 +122,7 @@ async function handleCoderTool(action, params = {}) {
     case 'list_dir':
       return handleListDir(params);
     case 'execute_command':
-      return handleExecuteCommand(params);
+      return handleExecuteCommand(params, options);
     default:
       return `Error: Unknown coding/QA tool action "${action}".`;
   }

@@ -12,12 +12,13 @@ Your job is to orchestrate, delegate tasks to specialized sub-agents, gather the
 5. delegate_to_qa_engineer (params: { task }): Best for reviewing code quality, finding bugs/vulnerabilities, and running project tests.
 6. delegate_to_weather_expert (params: { action, zipcode, country }): Best for retrieving current, hourly, or daily forecasts.
 7. delegate_to_host_specialist (params: { query }): Best for inspecting local computer system details (CPU, memory, disk, OS) and checking power/battery status.
+8. delegate_to_document_vault (params: { query }): Best for querying local private files, notes, or uploaded documents in the Vault.
 
 ### Direct Core Tools:
 - time (action: 'current_time' or 'lookup_timezone'): Use to find the current date/time.
 
 ### CRITICAL RULES:
-1. Delegation first: Do not answer questions yourself if they require external actions (searching, coding, calendar, host specs, weather). Always delegate to the appropriate specialized agent.
+1. Delegation first: Do not answer questions yourself if they require external actions (searching, coding, calendar, host specs, weather, vault query). Always delegate to the appropriate specialized agent.
 2. Inspect Memories: You will receive the user's relevant memories. Use this context to guide your decisions and avoid repeatedly asking the user for details (e.g. location, names, preferences) that are already known.
 3. Iterative Decision: Review the sub-agent's structured report. Decide if it has compiled enough information to answer the user request or if further delegation/turns are needed.`,
 
@@ -90,7 +91,16 @@ Available Tools:
 
 Rules:
 - Retrieve host specs using the host_machine tool.
-- Format the specifications (CPU, memory usage, disk details, power telemetry) clearly.`
+- Format the specifications (CPU, memory usage, disk details, power telemetry) clearly.`,
+
+  document_vault: `You are the Document Vault Agent.
+Your job is to search the user's private vault files to answer questions using retrieved document context.
+Available Tools:
+- query_vault (params: { query })
+
+Rules:
+- Use 'query_vault' with a specific search query.
+- Summarize the matched document snippets clearly, citing the filenames.`
 };
 
 // Reusable function to execute a single LLM decision turn
@@ -355,7 +365,10 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       output = await handleHostMachineTool(decision.action, decision.params);
     } else if (['read_file', 'write_file', 'list_dir', 'execute_command'].includes(decision.tool)) {
       const { handleCoderTool } = require('../tools/coder_tools');
-      output = await handleCoderTool(decision.tool, decision.params);
+      output = await handleCoderTool(decision.tool, decision.params, {
+        userId,
+        onCommandApprovalRequired: settings.onCommandApprovalRequired
+      });
     } else if (decision.tool === 'github') {
       const { handleGitHubTool } = require('../tools/github_tool');
       output = await handleGitHubTool(githubToken, decision.action, decision.params);
@@ -372,6 +385,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     } else if (decision.tool === 'memory') {
       const { handleMemoryTool } = require('../tools/memory_tool');
       output = await handleMemoryTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'query_vault') {
+      const { handleVaultTool } = require('../tools/vault_tool');
+      output = await handleVaultTool(db, userId, 'query', decision.params);
     } else {
       output = `Error: Tool "${decision.tool}" is not accessible to this agent.`;
     }

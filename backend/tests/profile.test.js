@@ -106,7 +106,11 @@ describe('Profile Router Tests', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(getRes.statusCode).toBe(200);
-    expect(getRes.body).toEqual(payload);
+    expect(getRes.body.name).toBe(payload.name);
+    expect(getRes.body.zipcode).toBe(payload.zipcode);
+    expect(getRes.body.country).toBe(payload.country);
+    expect(getRes.body.temp_unit).toBe(payload.temp_unit);
+    expect(getRes.body.weather_api_key).toBe('apik••••••••y123');
   });
 
   test('error paths - database failure catches', async () => {

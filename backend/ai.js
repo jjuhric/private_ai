@@ -258,6 +258,8 @@ async function runAgentLoop({
         subTask = decision.params?.query || decision.params?.task || userMessage;
       } else if (agentName === 'memory_agent') {
         subTask = decision.params?.task || userMessage;
+      } else if (agentName === 'document_vault') {
+        subTask = decision.params?.query || decision.params?.task || userMessage;
       } else {
         subTask = userMessage;
       }

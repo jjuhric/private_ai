@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, Plus, Edit2, X, Calendar, Settings, LogOut, Brain } from 'lucide-react';
+import { MessageSquare, Plus, Edit2, X, Calendar, Settings, LogOut, Brain, Network } from 'lucide-react';
 
 export default function Sidebar({
   user,
@@ -132,6 +132,15 @@ export default function Sidebar({
         >
           <Brain size={18} />
           <span>AI Memory</span>
+        </button>
+
+        <button 
+          className={`btn-new-chat ${activeTab === 'dashboard' ? 'active' : ''}`} 
+          onClick={() => { setActiveTab('dashboard'); setIsMobileSidebarOpen(false); }} 
+          style={{ margin: 0 }}
+        >
+          <Network size={18} />
+          <span>Agent Dashboard</span>
         </button>
         
         <div className="user-profile">

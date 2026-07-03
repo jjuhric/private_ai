@@ -11,7 +11,24 @@ router.get('/', authenticateToken, async (req, res) => {
       await db.run('INSERT INTO user_settings (user_id) VALUES (?)', [req.user.id]);
       settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
     }
-    res.json(settings);
+    
+    const { decrypt } = require('../utils/crypto');
+    const maskKey = (key) => {
+      if (!key) return '';
+      const dec = decrypt(key);
+      if (dec.length <= 8) return '••••••••';
+      return dec.substring(0, 4) + '••••••••' + dec.substring(dec.length - 4);
+    };
+
+    const responseSettings = {
+      ...settings,
+      github_token: settings.github_token ? maskKey(settings.github_token) : '',
+      gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : '',
+      local_key: settings.local_key ? maskKey(settings.local_key) : '',
+      online_key: settings.online_key ? maskKey(settings.online_key) : ''
+    };
+
+    res.json(responseSettings);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -21,6 +38,16 @@ router.put('/', authenticateToken, async (req, res) => {
   const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider } = req.body;
   try {
     const db = await getDb();
+    const { encrypt } = require('../utils/crypto');
+    
+    const existing = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
+    const isMasked = (val) => val && val.includes('••');
+    
+    const finalGithub = isMasked(github_token) ? existing.github_token : (github_token ? encrypt(github_token) : null);
+    const finalGemini = isMasked(gemini_key) ? existing.gemini_key : (gemini_key ? encrypt(gemini_key) : null);
+    const finalLocal = isMasked(local_key) ? existing.local_key : (local_key ? encrypt(local_key) : null);
+    const finalOnline = isMasked(online_key) ? existing.online_key : (online_key ? encrypt(online_key) : null);
+
     await db.run(
       `INSERT INTO user_settings (
          user_id, provider, model_name, github_token, gemini_key, local_key, 
@@ -30,17 +57,17 @@ router.put('/', authenticateToken, async (req, res) => {
        ON CONFLICT(user_id) DO UPDATE SET
          provider = excluded.provider,
          model_name = excluded.model_name,
-         github_token = COALESCE(excluded.github_token, github_token),
-         gemini_key = COALESCE(excluded.gemini_key, gemini_key),
-         local_key = COALESCE(excluded.local_key, local_key),
+         github_token = excluded.github_token,
+         gemini_key = excluded.gemini_key,
+         local_key = excluded.local_key,
          local_url = COALESCE(excluded.local_url, local_url),
          local_api_style = COALESCE(excluded.local_api_style, local_api_style),
          online_url = COALESCE(excluded.online_url, online_url),
-         online_key = COALESCE(excluded.online_key, online_key),
+         online_key = excluded.online_key,
          online_provider = COALESCE(excluded.online_provider, online_provider)`,
       [
-        req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', github_token, gemini_key, local_key,
-        local_url || 'http://192.168.1.42:1234/v1', local_api_style || 'openai', online_url, online_key, online_provider || 'gemini'
+        req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', finalGithub, finalGemini, finalLocal,
+        local_url || 'http://192.168.1.42:1234/v1', local_api_style || 'openai', online_url, finalOnline, online_provider || 'gemini'
       ]
     );
     res.json({ success: true, message: 'Settings updated successfully.' });
@@ -55,7 +82,9 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     const settings = await db.get('SELECT local_url, local_key, local_api_style FROM user_settings WHERE user_id = ?', [req.user.id]);
     const localUrl = settings?.local_url || 'http://192.168.1.42:1234/v1';
     const localApiStyle = settings?.local_api_style || 'openai';
-    const localApiKey = settings?.local_key;
+    
+    const { decrypt } = require('../utils/crypto');
+    const localApiKey = decrypt(settings?.local_key);
     const authHeader = localApiKey && localApiKey !== 'lm-studio' ? { 'Authorization': `Bearer ${localApiKey}` } : {};
 
     let endpoint = '';
@@ -98,8 +127,10 @@ router.get('/online-models', authenticateToken, async (req, res) => {
     const db = await getDb();
     const settings = await db.get('SELECT online_url, online_key, online_provider FROM user_settings WHERE user_id = ?', [req.user.id]);
     const provider = settings?.online_provider || 'gemini';
-    const key = settings?.online_key;
     const url = settings?.online_url;
+
+    const { decrypt } = require('../utils/crypto');
+    const key = decrypt(settings?.online_key);
 
     if (!key) {
       return res.json(getDefaultOnlineModels(provider));

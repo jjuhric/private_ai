@@ -103,7 +103,7 @@ describe('Settings Router Tests', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(getRes.body.provider).toBe('online');
-    expect(getRes.body.online_key).toBe('gemini_test_key');
+    expect(getRes.body.online_key).toBe('gemi••••••••_key');
   });
 
   test('GET /api/settings/local-models - success path', async () => {
