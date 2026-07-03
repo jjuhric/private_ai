@@ -18,7 +18,8 @@ async function handleWeatherTool(db, userId, action, params) {
     return 'Error: OpenWeatherMap API Key is not configured. Please open your user profile by clicking your avatar in the sidebar footer and save your API Key.';
   }
 
-  const apiKey = profile.weather_api_key;
+  const { decrypt } = require('../utils/crypto');
+  const apiKey = decrypt(profile.weather_api_key);
   const units = profile.temp_unit || 'imperial';
   const unitSymbol = units === 'imperial' ? '°F' : (units === 'metric' ? '°C' : 'K');
   const speedUnit = units === 'imperial' ? 'mph' : 'm/s';

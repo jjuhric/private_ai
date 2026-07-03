@@ -4,8 +4,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getDb } = require('../db');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 
-router.post('/register', async (req, res) => {
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per window
+  message: { error: 'Too many authentication attempts from this IP, please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+router.post('/register', authLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password || username.trim() === '' || password.length < 4) {
     return res.status(400).json({ error: 'Username and password (min 4 characters) are required.' });
@@ -35,7 +44,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password are required.' });
 

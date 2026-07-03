@@ -141,6 +141,14 @@ describe('Auth Router Tests', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  test('GET /api/auth/me - authenticated with invalid/expired token', async () => {
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', 'Bearer invalid_token_here');
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error).toBe('Session expired or invalid.');
+  });
+
   test('error paths - database failure catches', async () => {
     mockDbError = true;
 

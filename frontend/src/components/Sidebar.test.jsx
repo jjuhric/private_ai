@@ -170,5 +170,11 @@ describe('Sidebar Component Tests', () => {
     fireEvent.click(memoryBtn);
     expect(defaultProps.setActiveTab).toHaveBeenCalledWith('memory');
     expect(mockSetIsMobileSidebarOpen).toHaveBeenCalledWith(false);
+
+    // 3. Agent Dashboard click
+    const dashboardBtn = screen.getByText('Agent Dashboard');
+    fireEvent.click(dashboardBtn);
+    expect(defaultProps.setActiveTab).toHaveBeenCalledWith('dashboard');
+    expect(mockSetIsMobileSidebarOpen).toHaveBeenCalledWith(false);
   });
 });

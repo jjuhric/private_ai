@@ -65,3 +65,21 @@ CREATE TABLE IF NOT EXISTS memories (
   embedding TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS vault_documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  filepath TEXT UNIQUE NOT NULL,
+  file_size INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS vault_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  document_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  embedding TEXT,
+  FOREIGN KEY (document_id) REFERENCES vault_documents(id) ON DELETE CASCADE
+);

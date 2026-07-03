@@ -28,10 +28,17 @@ describe('ChatPane Component Tests', () => {
   });
 
   test('renders welcome message and fires logo image onError fallback', () => {
-    const { container } = render(<ChatPane {...defaultProps} messages={[]} />);
+    const { container, rerender } = render(<ChatPane {...defaultProps} messages={[]} />);
     expect(screen.getByText('Welcome to Private AI')).toBeInTheDocument();
     
-    const img = container.querySelector('img');
+    let img = container.querySelector('img');
+    fireEvent.error(img);
+    expect(img.src).toContain('placehold.co');
+
+    // Test with activeChatId = null
+    rerender(<ChatPane {...defaultProps} activeChatId={null} />);
+    expect(screen.getByText('No Active Chat')).toBeInTheDocument();
+    img = container.querySelector('img');
     fireEvent.error(img);
     expect(img.src).toContain('placehold.co');
   });
@@ -91,5 +98,59 @@ describe('ChatPane Component Tests', () => {
       />
     );
     expect(screen.getByText('Thinking...')).toBeInTheDocument();
+  });
+
+  test('renders pending and resolved command approvals', () => {
+    const mockHandleResolveCommand = vi.fn();
+    const logs = [
+      {
+        type: 'command_approval',
+        commandId: 'cmd_123',
+        command: 'npm run start',
+        status: 'pending'
+      }
+    ];
+
+    const { rerender } = render(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        toolLogs={logs}
+        handleResolveCommand={mockHandleResolveCommand}
+      />
+    );
+
+    expect(screen.getByText('🛡️ Host Script Execution Request')).toBeInTheDocument();
+    
+    // Test Approve button click
+    const approveBtn = screen.getByText('Approve');
+    fireEvent.click(approveBtn);
+    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', true);
+
+    // Test Reject button click
+    const rejectBtn = screen.getByText('Reject');
+    fireEvent.click(rejectBtn);
+    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', false);
+
+    // Test resolved command approval state
+    const resolvedLogs = [
+      {
+        type: 'command_approval',
+        commandId: 'cmd_123',
+        command: 'npm run start',
+        status: 'approved'
+      }
+    ];
+
+    rerender(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        toolLogs={resolvedLogs}
+        handleResolveCommand={mockHandleResolveCommand}
+      />
+    );
+
+    expect(screen.getByText('Status: APPROVED')).toBeInTheDocument();
   });
 });

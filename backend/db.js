@@ -24,6 +24,10 @@ async function getDb() {
   // Enable foreign keys
   await dbConnection.run('PRAGMA foreign_keys = ON');
 
+  // Enable WAL (Write-Ahead Logging) mode and busy timeout for concurrent request handling
+  await dbConnection.run('PRAGMA journal_mode = WAL');
+  await dbConnection.run('PRAGMA busy_timeout = 5000');
+
   // Load schema
   try {
     const schemaPath = path.join(__dirname, 'schema.sql');

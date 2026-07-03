@@ -7,6 +7,7 @@ import CalendarPane from './components/CalendarPane';
 import MemoryPane from './components/MemoryPane';
 import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
+import AgentDashboard from './components/AgentDashboard';
 
 function App() {
   // Auth state
@@ -471,6 +472,30 @@ function App() {
     }
   };
 
+  const handleResolveCommand = async (commandId, approved) => {
+    const editedCommand = document.getElementById(`cmd-input-${commandId}`)?.value || '';
+    
+    // Update local state to reflect approved or rejected status
+    setToolLogs(prev => prev.map(log => 
+      log.commandId === commandId 
+        ? { ...log, status: approved ? 'approved' : 'rejected', command: approved ? editedCommand : log.command } 
+        : log
+    ));
+
+    try {
+      await fetch('/api/chat/approve-command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ commandId, approved, command: editedCommand })
+      });
+    } catch (err) {
+      console.error('Failed to resolve command:', err);
+    }
+  };
+
   // Chat Streaming Logic
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -575,6 +600,13 @@ function App() {
               }
             } else if (eventType === 'tool') {
               setToolLogs(prev => [...prev, dataValue]);
+            } else if (eventType === 'command_approval_required') {
+              setToolLogs(prev => [...prev, {
+                type: 'command_approval',
+                commandId: dataValue.commandId,
+                command: dataValue.command,
+                status: 'pending'
+              }]);
             } else if (eventType === 'error') {
               console.error(dataValue);
               alert(`Error: ${dataValue.message}`);
@@ -671,7 +703,7 @@ function App() {
               }}
               title={activeTab !== 'chat' ? "Return to Chat" : ""}
             >
-              {activeTab === 'chat' ? 'Private AI Assistant' : (activeTab === 'calendar' ? 'Schedule Manager' : 'AI Memory Vault')}
+              {activeTab === 'chat' ? 'Private AI Assistant' : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard'))}
             </h2>
           </div>
 
@@ -696,6 +728,7 @@ function App() {
             handleSendMessage={handleSendMessage}
             handleStop={handleStop}
             messagesEndRef={messagesEndRef}
+            handleResolveCommand={handleResolveCommand}
           />
         )}
         {activeTab === 'calendar' && (
@@ -714,6 +747,12 @@ function App() {
             memories={memories}
             onAddMemory={handleAddMemory}
             onDeleteMemory={handleDeleteMemory}
+          />
+        )}
+        {activeTab === 'dashboard' && (
+          <AgentDashboard
+            token={token}
+            toolLogs={toolLogs}
           />
         )}
       </main>

@@ -1,0 +1,199 @@
+import React from 'react';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import AgentDashboard from './AgentDashboard';
+
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+describe('AgentDashboard Component Tests', () => {
+  const token = 'fake-token';
+  const defaultLogs = [
+    { tool: 'query_vault', action: 'query', params: { query: 'test' } }
+  ];
+
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
+  test('renders active agent grid registry and tool timeline', () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 1, filename: 'vault_doc.txt', file_size: 1024 }]
+    });
+
+    render(<AgentDashboard token={token} toolLogs={defaultLogs} />);
+
+    expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Supervisor Agent')).toBeInTheDocument();
+    expect(screen.getByText('Document Vault Agent')).toBeInTheDocument();
+    
+    // Check that RAG agent status is shown as Active based on toolLogs input
+    expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+    
+    // Check live routing timeline contains log entry
+    expect(screen.getByText('[QUERY_VAULT]')).toBeInTheDocument();
+  });
+
+  test('switches tabs and lists indexed vault documents', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 10, filename: 'secret_specs.md', file_size: 2048 }]
+    });
+
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+
+    // Click Document Vault tab button
+    const vaultTabBtn = screen.getByText('Document Vault (RAG)');
+    fireEvent.click(vaultTabBtn);
+
+    // Should render upload elements
+    expect(screen.getByText('Add Document to RAG Vault')).toBeInTheDocument();
+
+    // Verify document table contains loaded document
+    await waitFor(() => {
+      expect(screen.getByText('secret_specs.md')).toBeInTheDocument();
+      expect(screen.getByText('2.0 KB')).toBeInTheDocument();
+    });
+  });
+
+  test('submits document upload successfully', async () => {
+    mockFetch
+      // First fetch: lists documents (empty initially)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => []
+      })
+      // Second fetch: submits index document POST
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true })
+      })
+      // Third fetch: updates list after upload
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ id: 12, filename: 'uploaded_doc.txt', file_size: 512 }]
+      });
+
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+
+    // Switch to Vault tab
+    fireEvent.click(screen.getByText('Document Vault (RAG)'));
+
+    // Input values
+    const nameInput = screen.getByPlaceholderText('document_name.txt');
+    fireEvent.change(nameInput, { target: { value: 'uploaded_doc.txt' } });
+
+    const contentInput = screen.getByPlaceholderText('Paste document text context here to parse and index...');
+    fireEvent.change(contentInput, { target: { value: 'This is my text raw contents.' } });
+
+    // Click upload
+    const submitBtn = screen.getByText('Index Document');
+    fireEvent.click(submitBtn);
+
+    // Verify POST fetch was triggered and list refreshed
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(screen.getByText('uploaded_doc.txt')).toBeInTheDocument();
+    });
+  });
+
+  test('deletes document when delete action is clicked', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ id: 45, filename: 'doc_to_delete.txt', file_size: 100 }]
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => []
+      });
+
+    // Mock confirm dialog
+    const confirmSpy = vi.spyOn(global, 'confirm').mockImplementation(() => true);
+
+    const { container } = render(<AgentDashboard token={token} toolLogs={[]} />);
+
+    fireEvent.click(screen.getByText('Document Vault (RAG)'));
+
+    await waitFor(() => {
+      expect(screen.getByText('doc_to_delete.txt')).toBeInTheDocument();
+    });
+
+    const deleteBtn = container.querySelector('button.btn-icon');
+    fireEvent.click(deleteBtn);
+
+    expect(confirmSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+    
+    confirmSpy.mockRestore();
+  });
+
+  test('handles file attachment loading raw text content', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => []
+    });
+
+    const { container } = render(<AgentDashboard token={token} toolLogs={[]} />);
+    fireEvent.click(screen.getByText('Document Vault (RAG)'));
+
+    const fileInput = container.querySelector('input[type="file"]');
+    const mockFile = new File(['mock content text'], 'attachment.txt', { type: 'text/plain' });
+
+    // Trigger file load
+    fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('attachment.txt')).toBeInTheDocument();
+    });
+  });
+
+  test('clicks Agent Network tab button and simulates error paths during upload', async () => {
+    // Mock upload failing (res.ok is false)
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => []
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: 'Simulated upload error' })
+      });
+
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+
+    // 1. Click Agent Network tab to cover setActiveSubTab('network')
+    fireEvent.click(screen.getByText('Agent Network'));
+
+    // Switch back to Vault
+    fireEvent.click(screen.getByText('Document Vault (RAG)'));
+
+    // Input values for failing upload
+    const nameInput = screen.getByPlaceholderText('document_name.txt');
+    fireEvent.change(nameInput, { target: { value: 'fail_doc.txt' } });
+
+    const contentInput = screen.getByPlaceholderText('Paste document text context here to parse and index...');
+    fireEvent.change(contentInput, { target: { value: 'some content' } });
+
+    fireEvent.click(screen.getByText('Index Document'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Simulated upload error')).toBeInTheDocument();
+    });
+
+    // 2. Mock upload throw (network failure catch)
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    fireEvent.click(screen.getByText('Index Document'));
+    await waitFor(() => {
+      expect(screen.getByText('Connection error while uploading.')).toBeInTheDocument();
+    });
+  });
+});

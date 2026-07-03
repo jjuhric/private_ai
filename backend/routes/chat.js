@@ -128,6 +128,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
     );
 
     // Trigger AI orchestration loop
+    const { decrypt } = require('../utils/crypto');
     await runAgentLoop({
       db,
       userId: req.user.id,
@@ -135,12 +136,13 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       modelName: settings.model_name,
       userMessage: message,
       history,
-      githubToken: settings.github_token,
+      githubToken: decrypt(settings.github_token),
       localBaseUrl: settings.local_url || 'http://192.168.1.42:1234/v1',
-      localApiKey: settings.local_key,
+      localApiKey: decrypt(settings.local_key),
       localApiStyle: settings.local_api_style || 'openai',
       onlineUrl: settings.online_url,
-      onlineKey: settings.online_key,
+      onlineKey: decrypt(settings.online_key),
+      geminiKey: decrypt(settings.gemini_key),
       onlineProvider: settings.online_provider || 'gemini',
       isAborted: () => res.destroyed,
       onThought: (thoughtChunk) => {
@@ -153,6 +155,9 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       },
       onToolCall: (toolCall) => {
         sendEvent('tool', toolCall);
+      },
+      onCommandApprovalRequired: ({ commandId, command }) => {
+        sendEvent('command_approval_required', { commandId, command });
       }
     });
 
@@ -222,6 +227,19 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
   } finally {
     clearInterval(heartbeat);
     res.end();
+  }
+});
+
+router.post('/chat/approve-command', authenticateToken, (req, res) => {
+  const { commandId, approved, command } = req.body;
+  if (!commandId) return res.status(400).json({ error: 'commandId is required.' });
+  
+  const { resolveCommand } = require('../utils/commandApproval');
+  const success = resolveCommand(commandId, approved, command);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Command not found or already resolved.' });
   }
 });
 

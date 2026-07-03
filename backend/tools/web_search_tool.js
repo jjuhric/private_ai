@@ -58,7 +58,9 @@ async function handleWebSearchTool(db, userId, query) {
       
       const zipMatch = query.match(/\b\d{5}\b/);
       const zipcode = zipMatch ? zipMatch[0] : (profile ? profile.zipcode : null);
-      const apiKey = profile ? profile.weather_api_key : null;
+      
+      const { decrypt } = require('../utils/crypto');
+      const apiKey = profile ? decrypt(profile.weather_api_key) : null;
       const units = profile ? profile.temp_unit : 'imperial'; // 'imperial', 'metric', 'standard'
 
       if (zipcode && apiKey) {

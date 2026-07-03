@@ -14,7 +14,8 @@ export default function ChatPane({
   setInputText,
   handleSendMessage,
   handleStop,
-  messagesEndRef
+  messagesEndRef,
+  handleResolveCommand
 }) {
   return (
     <div className="chat-pane">
@@ -63,18 +64,88 @@ export default function ChatPane({
         {isStreaming && (
           <div className="message-bubble-wrapper assistant">
             {streamThoughts && <ExpandableThoughts thoughts={streamThoughts} defaultExpanded={true} />}
-            {toolLogs.map((log, idx) => (
-              <div key={idx} className="tool-call-log">
-                {log.tool === 'calendar' ? (
-                  <Calendar size={14} />
-                ) : log.tool === 'github' ? (
-                  <Github size={14} />
-                ) : (
-                  <Search size={14} />
-                )}
-                <span>Running tool action: {log.action} ({JSON.stringify(log.params)})</span>
-              </div>
-            ))}
+            {toolLogs.map((log, idx) => {
+              if (log.type === 'command_approval') {
+                return (
+                  <div key={idx} className="memory-card" style={{ 
+                    margin: '10px 0', 
+                    padding: '16px', 
+                    background: 'rgba(230, 80, 80, 0.1)', 
+                    border: '1px solid rgba(230, 80, 80, 0.3)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', color: '#ff6b6b' }}>
+                      🛡️ Host Script Execution Request
+                    </div>
+                    <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--text-secondary)' }}>
+                      The AI wants to execute a terminal command. You can review, edit, or reject this request.
+                    </p>
+                    
+                    {log.status === 'pending' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          id={`cmd-input-${log.commandId}`}
+                          defaultValue={log.command}
+                          style={{ 
+                            fontFamily: 'monospace', 
+                            fontSize: '0.85rem', 
+                            background: 'rgba(0,0,0,0.3)', 
+                            border: '1px solid var(--accent-primary)',
+                            color: '#fff',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            width: '100%'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => handleResolveCommand(log.commandId, true)}
+                            style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => handleResolveCommand(log.commandId, false)}
+                            style={{ padding: '6px 16px', fontSize: '0.85rem', border: '1px solid rgba(255,255,255,0.1)' }}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.85rem', color: '#fff', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div>Command: <code style={{ background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>{log.command}</code></div>
+                        <div style={{ fontWeight: 600, color: log.status === 'approved' ? '#51cf66' : '#ff6b6b' }}>
+                          Status: {log.status.toUpperCase()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={idx} className="tool-call-log">
+                  {log.tool === 'calendar' ? (
+                    <Calendar size={14} />
+                  ) : log.tool === 'github' ? (
+                    <Github size={14} />
+                  ) : (
+                    <Search size={14} />
+                  )}
+                  <span>Running tool action: {log.action} ({JSON.stringify(log.params)})</span>
+                </div>
+              );
+            })}
             {(streamContent || isStreaming) && (
               <div 
                 className={`message-bubble ${!streamContent ? 'typing-cursor' : ''}`}
