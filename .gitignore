@@ -13,3 +13,9 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Test coverage & results
+coverage/
+**/coverage/
+test-results/
+
