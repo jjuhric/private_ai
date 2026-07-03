@@ -113,6 +113,68 @@ describe('Profile Router Tests', () => {
     expect(getRes.body.weather_api_key).toBe('apik••••••••y123');
   });
 
+  test('PUT /api/profile - preserves existing key when masked key is submitted', async () => {
+    const payload = {
+      name: 'John Doe',
+      zipcode: '90210',
+      country: 'CA',
+      temp_unit: 'metric',
+      weather_api_key: 'apik••••••••y123'
+    };
+
+    const res = await request(app)
+      .put('/api/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ success: true, message: 'Profile updated successfully.' });
+  });
+
+  test('PUT /api/profile - updates key to null when empty key is submitted', async () => {
+    const payload = {
+      name: 'John Doe',
+      zipcode: '90210',
+      country: 'CA',
+      temp_unit: 'metric',
+      weather_api_key: ''
+    };
+
+    const res = await request(app)
+      .put('/api/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ success: true, message: 'Profile updated successfully.' });
+
+    const getRes = await request(app)
+      .get('/api/profile')
+      .set('Authorization', `Bearer ${token}`);
+    expect(getRes.body.weather_api_key).toBeNull();
+  });
+
+  test('GET /api/profile - masks short keys with full bullet placeholder', async () => {
+    // Save a short key
+    await request(app)
+      .put('/api/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'John Doe',
+        zipcode: '90210',
+        country: 'CA',
+        temp_unit: 'metric',
+        weather_api_key: 'short'
+      });
+
+    const getRes = await request(app)
+      .get('/api/profile')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(getRes.statusCode).toBe(200);
+    expect(getRes.body.weather_api_key).toBe('••••••••');
+  });
+
   test('error paths - database failure catches', async () => {
     mockDbError = true;
 

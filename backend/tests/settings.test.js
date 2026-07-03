@@ -70,6 +70,15 @@ describe('Settings Router Tests', () => {
     jest.clearAllMocks();
   });
 
+  afterEach(async () => {
+    if (mockTestDb) {
+      await mockTestDb.run(
+        `UPDATE user_settings SET provider = 'online', online_provider = 'gemini', online_key = 'gemini_test_key', online_url = NULL, local_api_style = 'openai', local_url = 'http://localhost:1234/v1' WHERE user_id = ?`,
+        [userId]
+      );
+    }
+  });
+
   test('GET /api/settings - retrieves or inserts user settings', async () => {
     const res = await request(app)
       .get('/api/settings')
@@ -131,6 +140,89 @@ describe('Settings Router Tests', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('google/gemma-4-e4b');
+  });
+
+  test('GET /api/settings/local-models - lm-studio style and invalid URL', async () => {
+    // 1. lm-studio style success
+    await request(app)
+      .put('/api/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        provider: 'local',
+        model_name: 'local-model-1',
+        local_url: 'http://localhost:1234/v1',
+        local_key: '',
+        local_api_style: 'lm-studio'
+      });
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'lm-model-1' }]
+      })
+    });
+
+    let res = await request(app)
+      .get('/api/settings/local-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(['lm-model-1']);
+
+    // 2. Invalid URL path constructor throw fallback
+    await request(app)
+      .put('/api/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        provider: 'local',
+        model_name: 'local-model-1',
+        local_url: 'not-a-valid-url',
+        local_key: '',
+        local_api_style: 'openai'
+      });
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'fallback-url-model' }]
+      })
+    });
+
+    res = await request(app)
+      .get('/api/settings/local-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(200);
+
+    // 3. Non-ok fetch status throws error
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      statusText: 'Model service unavailable'
+    });
+
+    res = await request(app)
+      .get('/api/settings/local-models')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(200); // returns fallback array
+  });
+
+  test('GET /api/settings/online-models - custom provider fetch failure fallback', async () => {
+    await request(app)
+      .put('/api/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        provider: 'online',
+        online_provider: 'custom',
+        online_url: 'http://custom-model-api/v1',
+        online_key: 'custom_key'
+      });
+
+    // Make fetch fail to trigger lines 183-184 database fallback
+    global.fetch.mockRejectedValueOnce(new Error('Custom API error simulated'));
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
   });
 
   test('GET /api/settings/online-models - gemini success path', async () => {
