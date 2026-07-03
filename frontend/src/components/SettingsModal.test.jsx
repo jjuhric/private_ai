@@ -374,4 +374,15 @@ describe('SettingsModal Component Tests', () => {
     const selectEl = screen.getByDisplayValue('Anthropic');
     expect(selectEl).toBeInTheDocument();
   });
+
+  test('renders with all visibility toggles set to true', () => {
+    const props = {
+      ...defaultProps,
+      showLocalKey: true,
+      showOnlineKey: true,
+      showGithubToken: true
+    };
+    render(<SettingsModal {...props} />);
+    expect(screen.getByText('GitHub Integration')).toBeInTheDocument();
+  });
 });

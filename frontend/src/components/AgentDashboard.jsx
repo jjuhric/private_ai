@@ -99,11 +99,19 @@ export default function AgentDashboard({ token, toolLogs }) {
     reader.readAsText(file);
   };
 
-  // Determine active agent based on toolLogs
   const getAgentStatus = (agentType) => {
     if (toolLogs && toolLogs.length > 0) {
       const lastLog = toolLogs[toolLogs.length - 1];
-      // Map tool log to agent type
+      if (lastLog.agent) {
+        if (agentType === 'supervisor' && lastLog.agent === 'supervisor') return 'Active';
+        if (agentType === 'memory' && lastLog.agent === 'memory_agent') return 'Active';
+        if (agentType === 'crawler' && lastLog.agent === 'web_searcher') return 'Active';
+        if (agentType === 'rag' && lastLog.agent === 'document_vault') return 'Active';
+        if (agentType === 'dev' && (lastLog.agent === 'coder' || lastLog.agent === 'qa_engineer')) return 'Active';
+        if (agentType === 'weather' && lastLog.agent === 'weather_expert') return 'Active';
+        if (agentType === 'host' && lastLog.agent === 'host_specialist') return 'Active';
+      }
+      // Map tool log to agent type (fallback)
       if (agentType === 'supervisor') return 'Active';
       if (agentType === 'memory' && lastLog.tool === 'memory') return 'Active';
       if (agentType === 'crawler' && (lastLog.tool === 'search_web' || lastLog.tool === 'google_news')) return 'Active';

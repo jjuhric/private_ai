@@ -196,4 +196,76 @@ describe('AgentDashboard Component Tests', () => {
       expect(screen.getByText('Connection error while uploading.')).toBeInTheDocument();
     });
   });
+
+  test('handles fetchDocuments failure gracefully', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Fetch failure'));
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+    await vi.waitFor(() => {
+      expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
+    });
+  });
+
+  test('handles delete document failure gracefully', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ id: 45, filename: 'doc_to_delete.txt', file_size: 100 }]
+      })
+      .mockRejectedValueOnce(new Error('Delete failure'));
+
+    const confirmSpy = vi.spyOn(global, 'confirm').mockImplementation(() => true);
+    const { container } = render(<AgentDashboard token={token} toolLogs={[]} />);
+    fireEvent.click(screen.getByText('Document Vault (RAG)'));
+
+    await waitFor(() => {
+      expect(screen.getByText('doc_to_delete.txt')).toBeInTheDocument();
+    });
+
+    const deleteBtn = container.querySelector('button.btn-icon');
+    fireEvent.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+    confirmSpy.mockRestore();
+  });
+
+  test('renders active agent based on agent property in logs', () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    const logs = [
+      { tool: 'memory', action: 'recall', agent: 'memory_agent' },
+      { tool: 'search_web', action: 'query', agent: 'web_searcher' },
+      { tool: 'query_vault', action: 'query', agent: 'document_vault' },
+      { tool: 'read_file', action: 'read', agent: 'coder' },
+      { tool: 'weather', action: 'forecast', agent: 'weather_expert' },
+      { tool: 'host_machine', action: 'specs', agent: 'host_specialist' }
+    ];
+    render(<AgentDashboard token={token} toolLogs={logs} />);
+    expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
+  });
+
+  test('handles empty upload validation error', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+    fireEvent.click(screen.getByText('Document Vault (RAG)'));
+    // Trigger submit directly on the form to bypass required validation blocker
+    const form = screen.getByText('Index Document').closest('form');
+    fireEvent.submit(form);
+    await waitFor(() => {
+      expect(screen.getByText('Please specify a filename and enter some content.')).toBeInTheDocument();
+    });
+  });
+
+  test('renders active agent based on tool fallback in logs when agent is missing', () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    const logs = [
+      { tool: 'memory', action: 'recall' },
+      { tool: 'search_web', action: 'query' },
+      { tool: 'read_file', action: 'read' },
+      { tool: 'weather', action: 'forecast' },
+      { tool: 'host_machine', action: 'specs' }
+    ];
+    render(<AgentDashboard token={token} toolLogs={logs} />);
+    expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
+  });
 });

@@ -177,4 +177,49 @@ describe('Sidebar Component Tests', () => {
     expect(defaultProps.setActiveTab).toHaveBeenCalledWith('dashboard');
     expect(mockSetIsMobileSidebarOpen).toHaveBeenCalledWith(false);
   });
+
+  test('covers activeTab renders and editing chat click check', () => {
+    const mockSetActiveChatId = vi.fn();
+    const mockSetActiveTab = vi.fn();
+    const { rerender } = render(
+      <Sidebar 
+        {...defaultProps} 
+        activeTab="calendar"
+        setActiveChatId={mockSetActiveChatId}
+        setActiveTab={mockSetActiveTab}
+      />
+    );
+    expect(screen.getByText('My Calendar').closest('button')).toHaveClass('active');
+
+    rerender(
+      <Sidebar 
+        {...defaultProps} 
+        activeTab="memory"
+      />
+    );
+    expect(screen.getByText('AI Memory').closest('button')).toHaveClass('active');
+
+    rerender(
+      <Sidebar 
+        {...defaultProps} 
+        activeTab="dashboard"
+      />
+    );
+    expect(screen.getByText('Agent Dashboard').closest('button')).toHaveClass('active');
+
+    // Click chat item while editing it (should NOT activate/setActiveChatId)
+    rerender(
+      <Sidebar 
+        {...defaultProps} 
+        editingChatId={1}
+        setActiveChatId={mockSetActiveChatId}
+        setActiveTab={mockSetActiveTab}
+      />
+    );
+    const editingItem = screen.getByText('New Chat').closest('.chat-item'); // Wait, select chat item wrapper or child input
+    // The input text has autoFocus. Let's click it or the item
+    const chatItem = screen.getAllByRole('textbox')[0];
+    fireEvent.click(chatItem);
+    expect(mockSetActiveChatId).not.toHaveBeenCalled();
+  });
 });

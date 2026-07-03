@@ -152,5 +152,26 @@ describe('ChatPane Component Tests', () => {
     );
 
     expect(screen.getByText('Status: APPROVED')).toBeInTheDocument();
+
+    // Test rejected command approval state
+    const rejectedLogs = [
+      {
+        type: 'command_approval',
+        commandId: 'cmd_123',
+        command: 'npm run start',
+        status: 'rejected'
+      }
+    ];
+
+    rerender(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        toolLogs={rejectedLogs}
+        handleResolveCommand={mockHandleResolveCommand}
+      />
+    );
+
+    expect(screen.getByText('Status: REJECTED')).toBeInTheDocument();
   });
 });
