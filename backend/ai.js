@@ -170,6 +170,7 @@ async function runAgentLoop({
   onContent,
   onToolCall,
   isAborted,
+  onCommandApprovalRequired,
   forceMemoryAgent = false
 }) {
   const { AGENT_PROMPTS, runAgentTurn, runWorkerAgent } = require('./utils/agents');
@@ -188,7 +189,9 @@ async function runAgentLoop({
     localApiKey,
     localApiStyle,
     onlineUrl,
-    forceMemoryAgent
+    forceMemoryAgent,
+    onToolCall,
+    onCommandApprovalRequired
   };
 
   // Query memories using the Memory Agent before routing
@@ -204,7 +207,48 @@ async function runAgentLoop({
     }
   }
 
-  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n### User Memories Context:\n${memoriesResult}`;
+  // Programmatic fetch of core identity and location memories to guarantee availability
+  try {
+    const coreRows = await db.all(
+      `SELECT id, content, level FROM memories 
+       WHERE user_id = ? 
+         AND (expires_at IS NULL OR expires_at > datetime('now'))
+         AND (
+           content LIKE '%zipcode%' OR 
+           content LIKE '%location%' OR 
+           content LIKE '%latitude%' OR 
+           content LIKE '%longitude%' OR 
+           content LIKE '%address%' OR 
+           content LIKE '%first name%' OR 
+           content LIKE '%last name%' OR
+           content LIKE '%country%'
+         )`,
+      [userId]
+    );
+    if (coreRows && coreRows.length > 0) {
+      const coreMemStrings = coreRows.map(r => `- [ID ${r.id}] ${r.content} (${r.level})`);
+      memoriesResult = `${memoriesResult}\n\n### Core Identity & Location Memories:\n${coreMemStrings.join('\n')}`;
+    }
+  } catch (err) {
+    console.error('Failed to programmatically query core memories:', err);
+  }
+
+  // Fetch user profile details
+  let profileContext = '';
+  try {
+    const profile = await db.get('SELECT name, zipcode, country, temp_unit FROM users WHERE id = ?', [userId]);
+    if (profile) {
+      profileContext = `### User Profile Details:
+- Profile Name: ${profile.name || 'Not set'}
+- Profile Zipcode: ${profile.zipcode || 'Not set'}
+- Profile Country: ${profile.country || 'US'}
+- Profile Temp Unit: ${profile.temp_unit || 'imperial'}`;
+    }
+  } catch (err) {
+    console.error('Failed to load user profile in agent loop:', err);
+  }
+
+  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;

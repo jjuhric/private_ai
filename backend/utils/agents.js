@@ -356,6 +356,10 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       break;
     }
 
+    if (settings.onToolCall) {
+      settings.onToolCall({ tool: decision.tool, action: decision.action || 'execute', params: decision.params });
+    }
+
     let output = '';
     if (decision.tool === 'weather') {
       const { handleWeatherTool } = require('../tools/weather_tool');
