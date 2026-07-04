@@ -5,23 +5,26 @@ const dbModule = require('../db');
 describe('Database Migration Tests', () => {
   const testDbPath = path.join(__dirname, 'migration_test.db');
 
-  beforeEach(() => {
-    // Clear connection and delete old test file
-    jest.resetModules();
-    if (fs.existsSync(testDbPath)) {
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (e) {}
+  function cleanupDbFiles() {
+    for (const suffix of ['', '-wal', '-shm']) {
+      const filePath = testDbPath + suffix;
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {}
+      }
     }
+  }
+
+  beforeEach(() => {
+    // Clear connection and delete old test file + WAL/SHM journals
+    jest.resetModules();
+    cleanupDbFiles();
     process.env.DB_PATH = testDbPath;
   });
 
   afterEach(() => {
-    if (fs.existsSync(testDbPath)) {
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (e) {}
-    }
+    cleanupDbFiles();
   });
 
   test('should initialize a new database and apply migrations', async () => {
@@ -46,11 +49,13 @@ describe('Database Migration Tests', () => {
       driver: sqlite3.Database
     });
 
-    // Create minimal schema manually
+    // Create a legacy schema with basic columns but missing the newer
+    // migration columns (local_key, embedding, etc.). Use user_id as
+    // PK to match the real schema definition.
     await db.exec(`
-      CREATE TABLE users (id INTEGER PRIMARY KEY);
-      CREATE TABLE user_settings (id INTEGER PRIMARY KEY, model_name TEXT, preferred_online_model TEXT);
-      CREATE TABLE memories (id INTEGER PRIMARY KEY);
+      CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT);
+      CREATE TABLE user_settings (user_id INTEGER PRIMARY KEY, provider TEXT, model_name TEXT, github_token TEXT, gemini_key TEXT);
+      CREATE TABLE memories (id INTEGER PRIMARY KEY, user_id INTEGER, content TEXT, level TEXT);
     `);
     await db.close();
 
