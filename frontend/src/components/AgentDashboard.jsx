@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers } from 'lucide-react';
 
-export default function AgentDashboard({ token, toolLogs }) {
+export default function AgentDashboard({ token, toolLogs, activeAgent, isStreaming }) {
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network' or 'vault'
   const [documents, setDocuments] = useState([]);
   const [fileContent, setFileContent] = useState('');
@@ -100,26 +100,21 @@ export default function AgentDashboard({ token, toolLogs }) {
   };
 
   const getAgentStatus = (agentType) => {
-    if (toolLogs && toolLogs.length > 0) {
-      const lastLog = toolLogs[toolLogs.length - 1];
-      if (lastLog.agent) {
-        if (agentType === 'supervisor' && lastLog.agent === 'supervisor') return 'Active';
-        if (agentType === 'memory' && lastLog.agent === 'memory_agent') return 'Active';
-        if (agentType === 'crawler' && lastLog.agent === 'web_searcher') return 'Active';
-        if (agentType === 'rag' && lastLog.agent === 'document_vault') return 'Active';
-        if (agentType === 'dev' && (lastLog.agent === 'coder' || lastLog.agent === 'qa_engineer')) return 'Active';
-        if (agentType === 'weather' && lastLog.agent === 'weather_expert') return 'Active';
-        if (agentType === 'host' && lastLog.agent === 'host_specialist') return 'Active';
-      }
-      // Map tool log to agent type (fallback)
-      if (agentType === 'supervisor') return 'Active';
-      if (agentType === 'memory' && lastLog.tool === 'memory') return 'Active';
-      if (agentType === 'crawler' && (lastLog.tool === 'search_web' || lastLog.tool === 'google_news')) return 'Active';
-      if (agentType === 'rag' && lastLog.tool === 'query_vault') return 'Active';
-      if (agentType === 'dev' && (lastLog.tool === 'read_file' || lastLog.tool === 'write_file' || lastLog.tool === 'execute_command' || lastLog.tool === 'github')) return 'Active';
-      if (agentType === 'weather' && lastLog.tool === 'weather') return 'Active';
-      if (agentType === 'host' && lastLog.tool === 'host_machine') return 'Active';
-    }
+    // When streaming is explicitly finished (false), all agents return to Idle
+    if (isStreaming === false) return 'Idle';
+
+    const currentAgent = activeAgent || (toolLogs && toolLogs.length > 0 ? (toolLogs[toolLogs.length - 1].agent || toolLogs[toolLogs.length - 1].tool) : null) || (isStreaming ? 'supervisor' : null);
+    if (!currentAgent) return 'Idle';
+
+    if (agentType === 'supervisor' && currentAgent === 'supervisor') return 'Active';
+    if (agentType === 'memory' && (currentAgent === 'memory_agent' || currentAgent === 'memory')) return 'Active';
+    if (agentType === 'crawler' && (currentAgent === 'web_searcher' || currentAgent === 'search_web' || currentAgent === 'google_news')) return 'Active';
+    if (agentType === 'rag' && (currentAgent === 'document_vault' || currentAgent === 'query_vault')) return 'Active';
+    if (agentType === 'dev' && (currentAgent === 'coder' || currentAgent === 'read_file' || currentAgent === 'write_file' || currentAgent === 'execute_command' || currentAgent === 'github')) return 'Active';
+    if (agentType === 'qa' && currentAgent === 'qa_engineer') return 'Active';
+    if (agentType === 'weather' && (currentAgent === 'weather_expert' || currentAgent === 'weather')) return 'Active';
+    if (agentType === 'host' && (currentAgent === 'host_specialist' || currentAgent === 'host_machine')) return 'Active';
+
     return 'Idle';
   };
 

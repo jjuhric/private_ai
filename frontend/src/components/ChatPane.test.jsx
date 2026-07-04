@@ -125,12 +125,12 @@ describe('ChatPane Component Tests', () => {
     // Test Approve button click
     const approveBtn = screen.getByText('Approve');
     fireEvent.click(approveBtn);
-    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', true);
+    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', true, 'npm run start');
 
     // Test Reject button click
     const rejectBtn = screen.getByText('Reject');
     fireEvent.click(rejectBtn);
-    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', false);
+    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', false, 'npm run start');
 
     // Test resolved command approval state
     const resolvedLogs = [

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsModal({
@@ -16,6 +16,16 @@ export default function SettingsModal({
   showGithubToken,
   setShowGithubToken
 }) {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isSettingsOpen) {
+        setIsSettingsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsOpen, setIsSettingsOpen]);
+
   if (!isSettingsOpen) return null;
 
   return (
@@ -23,7 +33,7 @@ export default function SettingsModal({
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Assistant Settings</h3>
-          <button className="btn-icon" onClick={() => setIsSettingsOpen(false)}>
+          <button className="btn-icon" onClick={() => setIsSettingsOpen(false)} aria-label="Close settings modal">
             <X size={20} />
           </button>
         </div>

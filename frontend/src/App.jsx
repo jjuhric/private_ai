@@ -8,6 +8,7 @@ import MemoryPane from './components/MemoryPane';
 import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
 import AgentDashboard from './components/AgentDashboard';
+import Toast from './components/Toast';
 
 function App() {
   // Auth state
@@ -16,6 +17,11 @@ function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState('');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
+  const [toast, setToast] = useState({ message: '', type: 'info' });
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
 
   // Navigation and panels
   const [chats, setChats] = useState([]);
@@ -36,7 +42,7 @@ function App() {
     model_name: 'google/gemma-4-e4b',
     github_token: '',
     local_key: '',
-    local_url: 'http://192.168.1.42:1234/v1',
+    local_url: 'http://localhost:1234/v1',
     local_api_style: 'openai',
     online_url: '',
     online_key: '',
@@ -60,6 +66,7 @@ function App() {
   // Input & Streaming state
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [activeAgent, setActiveAgent] = useState(null);
   const [streamThoughts, setStreamThoughts] = useState('');
   const [streamContent, setStreamContent] = useState('');
   const [toolLogs, setToolLogs] = useState([]); // array of active/past tool calls
@@ -303,7 +310,7 @@ function App() {
           github_token: data.github_token || '',
           gemini_key: data.gemini_key || '',
           local_key: data.local_key || '',
-          local_url: data.local_url || 'http://192.168.1.42:1234/v1',
+          local_url: data.local_url || 'http://localhost:1234/v1',
           local_api_style: data.local_api_style || 'openai',
           online_url: data.online_url || '',
           online_key: data.online_key || '',
@@ -506,6 +513,7 @@ function App() {
     setMessages(prev => [...prev, { role: 'user', content: currentMsg }]);
     
     setIsStreaming(true);
+    setActiveAgent('supervisor');
     setStreamThoughts('');
     setStreamContent('');
     setToolLogs([]);
@@ -558,7 +566,11 @@ function App() {
               // text was not json
             }
 
-            if (eventType === 'thought') {
+            if (eventType === 'agent_status') {
+              if (dataValue && dataValue.agent !== undefined) {
+                setActiveAgent(dataValue.agent);
+              }
+            } else if (eventType === 'thought') {
               coordinatorThoughts += dataValue;
               setStreamThoughts(coordinatorThoughts);
             } else if (eventType === 'content') {
@@ -600,6 +612,11 @@ function App() {
               }
             } else if (eventType === 'tool') {
               setToolLogs(prev => [...prev, dataValue]);
+              if (dataValue.agent) {
+                setActiveAgent(dataValue.agent);
+              } else if (dataValue.tool && dataValue.tool.startsWith('delegate_to_')) {
+                setActiveAgent(dataValue.tool.replace('delegate_to_', ''));
+              }
             } else if (eventType === 'command_approval_required') {
               setToolLogs(prev => [...prev, {
                 type: 'command_approval',
@@ -609,7 +626,7 @@ function App() {
               }]);
             } else if (eventType === 'error') {
               console.error(dataValue);
-              alert(`Error: ${dataValue.message}`);
+              showToast(`Error: ${dataValue.message}`, 'error');
             }
           }
         }
@@ -626,10 +643,11 @@ function App() {
         console.log('Stream aborted by user.');
       } else {
         console.error(err);
-        alert('Communication failed. Is LM Studio or backend active?');
+        showToast('Communication failed. Is LM Studio or backend active?', 'error');
       }
     } finally {
       setIsStreaming(false);
+      setActiveAgent(null);
       abortControllerRef.current = null;
     }
   };
@@ -753,6 +771,8 @@ function App() {
           <AgentDashboard
             token={token}
             toolLogs={toolLogs}
+            activeAgent={activeAgent}
+            isStreaming={isStreaming}
           />
         )}
       </main>
@@ -778,8 +798,14 @@ function App() {
       <ProfileModal
         isProfileOpen={isProfileOpen}
         setIsProfileOpen={setIsProfileOpen}
-        profile={profile}
         saveProfile={saveProfile}
+      />
+
+      {/* Toast Notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: '', type: 'info' })}
       />
     </div>
   );

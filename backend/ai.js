@@ -126,7 +126,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
 async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: modelName || 'gemini-2.5-flash',
+    model: modelName || 'gemini-1.5-flash',
     systemInstruction: systemInstruction
   });
 
@@ -169,6 +169,7 @@ async function runAgentLoop({
   onThought,
   onContent,
   onToolCall,
+  onAgentStatus,
   isAborted,
   onCommandApprovalRequired,
   forceMemoryAgent = false
@@ -191,6 +192,7 @@ async function runAgentLoop({
     onlineUrl,
     forceMemoryAgent,
     onToolCall,
+    onAgentStatus,
     onCommandApprovalRequired
   };
 
@@ -251,6 +253,7 @@ async function runAgentLoop({
       break;
     }
     let decision = null;
+    if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
     onThought(`Supervisor deciding strategy (turn ${toolCallsCount + 1}/${maxToolCalls})...\n`);
 
     try {
@@ -299,12 +302,14 @@ async function runAgentLoop({
         subTask = userMessage;
       }
 
+      if (onAgentStatus) onAgentStatus({ agent: agentName, status: 'active' });
       onThought(`Delegating sub-task to Agent "${agentName}": "${subTask}"...\n`);
       try {
         toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId, githubToken);
       } catch (err) {
         toolOutput = `Agent "${agentName}" delegation failed: ${err.message}`;
       }
+      if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
     } else {
       // Execute direct fallback tools of supervisor
       if (decision.tool === 'calendar') {
@@ -351,6 +356,7 @@ async function runAgentLoop({
     onThought("Stream aborted by user.\n");
     return;
   }
+  if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
   onThought('Supervisor generating final response...\n');
 
   const responderInstruction = `You are a helpful, smart AI Personal Assistant Supervisor.

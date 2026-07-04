@@ -354,6 +354,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
   const maxTurns = 5;
 
   while (turn < maxTurns) {
+    if (settings.onAgentStatus) {
+      settings.onAgentStatus({ agent: agentName, status: 'active' });
+    }
     const decision = await runAgentTurn(agentName, systemPrompt, settings, task, history);
     
     if (!decision.tool || decision.tool === 'none') {

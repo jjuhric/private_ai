@@ -1,5 +1,5 @@
-import React from 'react';
-import { Calendar, Github, Search, Send, Square } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Github, Search, Send, Square, Cpu, CloudSun, Newspaper, FileText } from 'lucide-react';
 import { marked } from 'marked';
 import ExpandableThoughts from './ExpandableThoughts';
 
@@ -17,6 +17,19 @@ export default function ChatPane({
   messagesEndRef,
   handleResolveCommand
 }) {
+  const [editedCommands, setEditedCommands] = useState({});
+
+  const starterPrompts = [
+    { icon: <Cpu size={16} color="#a78bfa" />, text: "Check host CPU temperature & RAM specs", query: "Can you inspect my computer specifications, thermal temperature, and battery telemetry?" },
+    { icon: <CloudSun size={16} color="#38bdf8" />, text: "Check local weather forecast", query: "What is the weather forecast for my location?" },
+    { icon: <Newspaper size={16} color="#34d399" />, text: "Summarize recent AI technology news", query: "Search for the latest artificial intelligence news articles and summarize them." },
+    { icon: <FileText size={16} color="#f472b6" />, text: "Search Document Vault notes", query: "Query my document vault for relevant notes and information." }
+  ];
+
+  const handleCommandChange = (commandId, value) => {
+    setEditedCommands(prev => ({ ...prev, [commandId]: value }));
+  };
+
   return (
     <div className="chat-pane">
       <div className="messages-scroller">
@@ -35,17 +48,30 @@ export default function ChatPane({
           </div>
         ) : (
           messages.length === 0 && !isStreaming && (
-            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '20vh' }}>
+            <div className="starter-container">
               <img 
                 src="/logo.png" 
                 alt="Logo" 
-                style={{ width: 80, height: 80, opacity: 0.5, marginBottom: 16 }} 
+                style={{ width: 72, height: 72, marginBottom: 16 }} 
                 onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
               />
-              <h3>Welcome to Private AI</h3>
-              <p style={{ fontSize: '0.9rem', marginTop: 8 }}>
-                Ask me anything. I can browse the web, check GitHub, and manage your calendar.
+              <h3 className="starter-title">Welcome to Private AI</h3>
+              <p className="starter-subtitle">
+                Your private multi-agent assistant with web search, persistent memory storage, hardware sensors, and document vault.
               </p>
+              <div className="starter-chips-grid">
+                {starterPrompts.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className="starter-chip"
+                    onClick={() => setInputText(chip.query)}
+                  >
+                    {chip.icon}
+                    <span>{chip.text}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )
         )}
@@ -66,6 +92,7 @@ export default function ChatPane({
             {streamThoughts && <ExpandableThoughts thoughts={streamThoughts} defaultExpanded={true} />}
             {toolLogs.map((log, idx) => {
               if (log.type === 'command_approval') {
+                const currentCmd = editedCommands[log.commandId] !== undefined ? editedCommands[log.commandId] : log.command;
                 return (
                   <div key={idx} className="memory-card" style={{ 
                     margin: '10px 0', 
@@ -89,8 +116,8 @@ export default function ChatPane({
                         <input 
                           type="text" 
                           className="form-control" 
-                          id={`cmd-input-${log.commandId}`}
-                          defaultValue={log.command}
+                          value={currentCmd}
+                          onChange={(e) => handleCommandChange(log.commandId, e.target.value)}
                           style={{ 
                             fontFamily: 'monospace', 
                             fontSize: '0.85rem', 
@@ -106,7 +133,7 @@ export default function ChatPane({
                           <button 
                             type="button"
                             className="btn btn-primary"
-                            onClick={() => handleResolveCommand(log.commandId, true)}
+                            onClick={() => handleResolveCommand(log.commandId, true, currentCmd)}
                             style={{ padding: '6px 16px', fontSize: '0.85rem' }}
                           >
                             Approve
@@ -114,7 +141,7 @@ export default function ChatPane({
                           <button 
                             type="button"
                             className="btn btn-secondary"
-                            onClick={() => handleResolveCommand(log.commandId, false)}
+                            onClick={() => handleResolveCommand(log.commandId, false, currentCmd)}
                             style={{ padding: '6px 16px', fontSize: '0.85rem', border: '1px solid rgba(255,255,255,0.1)' }}
                           >
                             Reject
@@ -181,3 +208,4 @@ export default function ChatPane({
     </div>
   );
 }
+
