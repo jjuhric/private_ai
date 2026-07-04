@@ -12,8 +12,13 @@ describe('SetupWizard Component Tests', () => {
     global.fetch = mockFetch;
   });
 
-  test('renders Step 1 user details and advances to Step 2 on fill', async () => {
+  test('renders Step 1 device selection and advances to Step 2 (profile) and Step 3 (LLM)', async () => {
     render(<SetupWizard token="test_token" onComplete={mockOnComplete} />);
+
+    expect(screen.getByText('Device Selection')).toBeInTheDocument();
+    
+    // Click Continue to go to Step 2 (Profile)
+    fireEvent.click(screen.getByText('Continue'));
 
     expect(screen.getByText('Personal Profile Details')).toBeInTheDocument();
     
@@ -21,18 +26,20 @@ describe('SetupWizard Component Tests', () => {
     const nameInput = screen.getByPlaceholderText('Jeffery');
     fireEvent.change(nameInput, { target: { value: 'Jeffery' } });
 
-    // Click Continue
-    const continueBtn = screen.getByText('Continue');
-    fireEvent.click(continueBtn);
+    // Click Continue to go to Step 3 (LLM)
+    fireEvent.click(screen.getByText('Continue'));
 
-    // Expect to be on Step 2
+    // Expect to be on Step 3
     expect(screen.getByText('LLM Configuration')).toBeInTheDocument();
   });
 
-  test('Step 2 local connection test success path', async () => {
+  test('Step 3 local connection test success path', async () => {
     render(<SetupWizard token="test_token" onComplete={mockOnComplete} />);
 
     // Step 1
+    fireEvent.click(screen.getByText('Continue'));
+
+    // Step 2
     fireEvent.change(screen.getByPlaceholderText('Jeffery'), { target: { value: 'Jeffery' } });
     fireEvent.click(screen.getByText('Continue'));
 
@@ -50,10 +57,13 @@ describe('SetupWizard Component Tests', () => {
     });
   });
 
-  test('Step 2 validation prevents Continue if invalid', () => {
+  test('Step 3 validation prevents Continue if invalid', () => {
     render(<SetupWizard token="test_token" onComplete={mockOnComplete} />);
 
     // Step 1
+    fireEvent.click(screen.getByText('Continue'));
+
+    // Step 2
     fireEvent.change(screen.getByPlaceholderText('Jeffery'), { target: { value: 'Jeffery' } });
     fireEvent.click(screen.getByText('Continue'));
 
@@ -69,17 +79,20 @@ describe('SetupWizard Component Tests', () => {
     expect(continueBtn).not.toBeDisabled();
   });
 
-  test('Step 3 save and complete wizard triggers PUT requests', async () => {
+  test('Step 4 save and complete wizard triggers PUT requests', async () => {
     render(<SetupWizard token="test_token" onComplete={mockOnComplete} />);
 
     // Step 1
+    fireEvent.click(screen.getByText('Continue'));
+
+    // Step 2
     fireEvent.change(screen.getByPlaceholderText('Jeffery'), { target: { value: 'Jeffery' } });
     fireEvent.click(screen.getByText('Continue'));
 
-    // Step 2 (Local is selected and prefilled by default, which is valid)
+    // Step 3 (Local is selected and prefilled by default, which is valid)
     fireEvent.click(screen.getByText('Continue'));
 
-    // Step 3
+    // Step 4
     expect(screen.getByText('Configuration Summary')).toBeInTheDocument();
 
     // Mock Profile save and Settings save

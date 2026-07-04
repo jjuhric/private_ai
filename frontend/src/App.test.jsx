@@ -141,6 +141,6 @@ describe('Main App Component Tests', () => {
       rendered = render(<App />);
     });
 
-    expect(screen.getByText('Personal Profile Details')).toBeInTheDocument();
+    expect(screen.getByText('Device Selection')).toBeInTheDocument();
   });
 });

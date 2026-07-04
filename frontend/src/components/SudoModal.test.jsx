@@ -28,7 +28,7 @@ describe('SudoModal Component Tests', () => {
 
     expect(screen.getByText('Elevated Privileges Required')).toBeInTheDocument();
     expect(screen.getByText('sudo systemctl restart private-ai')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter sudo password')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter password')).toBeInTheDocument();
   });
 
   test('submits password correctly', () => {
@@ -42,7 +42,7 @@ describe('SudoModal Component Tests', () => {
       />
     );
 
-    const input = screen.getByPlaceholderText('Enter sudo password');
+    const input = screen.getByPlaceholderText('Enter password');
     fireEvent.change(input, { target: { value: 'mypassword123' } });
 
     const submitBtn = screen.getByText('Submit');
