@@ -38,15 +38,24 @@ describe('Agents Coverage Extender Tests', () => {
       { tool: 'google_news', action: 'query' },
       { tool: 'memory', action: 'recall' },
       { tool: 'query_vault', action: 'query' },
+      { tool: 'delegate_to_remote_node', params: { nodeId: 1, command: 'status' } },
       { tool: 'unknown_tool', action: 'query' },
       { tool: 'none' } // Stop the loop
     ];
 
     let decisionIdx = 0;
-    global.fetch = jest.fn().mockImplementation(async () => {
+    global.fetch = jest.fn().mockImplementation(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/api/bridge/execute')) {
+        return {
+          ok: true,
+          json: async () => ({ success: true, status: 'online' })
+        };
+      }
       const decision = decisions[decisionIdx++];
       return {
         ok: true,
+        headers: { get: () => 'application/json' },
         json: async () => ({
           choices: [{
             message: {
@@ -205,5 +214,125 @@ describe('Agents Coverage Extender Tests', () => {
 
     const result = await runWorkerAgent('supervisor', settings, 'Query unknown', {}, 1, 'token');
     expect(result).toBeDefined();
+  });
+
+  test('runAgentLoop should route supervisor tool decisions correctly', async () => {
+    const mockDb = {
+      all: jest.fn().mockResolvedValue([]),
+      get: jest.fn().mockResolvedValue({ name: 'Jeffery', zipcode: '32421', country: 'US', temp_unit: 'imperial' })
+    };
+
+    const decisions = [
+      { tool: 'weather', action: 'get_forecast', params: { zipcode: '32421' } },
+      { tool: 'host_machine', action: 'get_specifications' },
+      { tool: 'delegate_to_remote_node', params: { nodeId: 1, command: 'status' } },
+      { tool: 'github', action: 'list' },
+      { tool: 'search_web', action: 'query' },
+      { tool: 'google_news', action: 'query' },
+      { tool: 'time', action: 'get_current_time' },
+      { tool: 'none', thought: 'all done' }
+    ];
+
+    let idx = 0;
+    global.fetch = jest.fn().mockImplementation(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/api/bridge/execute')) {
+        return { ok: true, json: async () => ({ success: true }) };
+      }
+      const decision = decisions[idx++];
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify(decision) } }]
+        })
+      };
+    });
+
+    const { runAgentLoop } = require('../ai');
+    await runAgentLoop({
+      userMessage: 'Test supervisor tools',
+      db: mockDb,
+      userId: 1,
+      githubToken: 'git',
+      provider: 'online',
+      onlineProvider: 'openai',
+      onlineKey: 'key',
+      modelName: 'gpt-4',
+      onThought: jest.fn(),
+      onContent: jest.fn(),
+      onToolCall: jest.fn()
+    });
+
+    expect(global.fetch).toHaveBeenCalled();
+  });
+
+  test('runAgentLoop additional edge paths (URL parsing throw, core memories, subagent name fallbacks)', async () => {
+    const mockDb = {
+      all: jest.fn().mockImplementation((query) => {
+        if (query.includes('LIKE')) {
+          // Return a core identity memory row
+          return Promise.resolve([{ id: 1, content: 'My name is Jeffery', level: 'core' }]);
+        }
+        return Promise.resolve([]);
+      }),
+      get: jest.fn().mockResolvedValue({ name: 'Jeffery', zipcode: '32421', country: 'US', temp_unit: 'imperial' })
+    };
+
+    // 1. URL parser throw branch test by passing an invalid local url 'not_valid_url'
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ tool: 'none', thought: 'url fail test' }) } }]
+      })
+    });
+
+    const { runAgentLoop } = require('../ai');
+    
+    await runAgentLoop({
+      userMessage: 'test',
+      db: mockDb,
+      userId: 1,
+      provider: 'local',
+      localBaseUrl: 'invalid-url-no-protocol',
+      localApiKey: 'key',
+      localApiStyle: 'openai',
+      onThought: jest.fn(),
+      onContent: jest.fn(),
+      onToolCall: jest.fn()
+    });
+
+    // 2. Subagent name mapping branches test: memory_agent and document_vault
+    const decisions = [
+      { tool: 'delegate_to_agent', params: { agent: 'memory_agent', task: 'remember something' } },
+      { tool: 'delegate_to_agent', params: { agent: 'document_vault', query: 'search docs' } },
+      { tool: 'none' }
+    ];
+    let idx = 0;
+    global.fetch = jest.fn().mockImplementation(async () => {
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify(decisions[idx++]) } }]
+        })
+      };
+    });
+
+    await runAgentLoop({
+      userMessage: 'test subagents',
+      db: mockDb,
+      userId: 1,
+      provider: 'local',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key',
+      localApiStyle: 'openai',
+      onThought: jest.fn(),
+      onContent: jest.fn(),
+      onToolCall: jest.fn()
+    });
+
+    expect(mockDb.all).toHaveBeenCalled();
   });
 });

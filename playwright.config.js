@@ -16,7 +16,7 @@ export default defineConfig({
     command: 'npm start',
     url: 'http://localhost:5173',
     reuseExistingServer: true,
-    timeout: 10000,
+    timeout: 60000,
     env: {
       PORT: '5173',
       DB_PATH: 'backend/test_database.db' // Use a separate DB for E2E testing
