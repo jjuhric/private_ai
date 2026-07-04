@@ -478,4 +478,86 @@ describe('AgentDashboard Component Tests', () => {
     alertSpy.mockRestore();
     confirmSpy.mockRestore();
   });
+
+  test('handles network scan, install guide toggling, and quick register modal submit', async () => {
+    const localMockFetch = vi.fn().mockImplementation((url, opts) => {
+      const urlStr = typeof url === 'string' ? url : url.url;
+      if (urlStr.includes('/api/nodes/scan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            success: true,
+            nodes: [
+              { ip_address: '192.168.1.227', port: 3000, device_type: 'windows', is_main_host: false }
+            ]
+          })
+        });
+      }
+      if (urlStr.includes('/api/nodes') && opts?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true })
+        });
+      }
+      // GET nodes
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([])
+      });
+    });
+    vi.stubGlobal('fetch', localMockFetch);
+
+    const { container } = render(
+      <AgentDashboard token="my_token" toolLogs={[]} activeAgent={null} isStreaming={false} />
+    );
+
+    // Click Field Nodes tab
+    fireEvent.click(screen.getByText('Field Nodes'));
+
+    // 1. Toggle Install Guide
+    fireEvent.click(screen.getByText('Install Guide'));
+    expect(screen.getByText('Device Setup Walkthrough Guide')).toBeInTheDocument();
+    
+    // Toggle selector device guide
+    const selectGuide = screen.getByRole('combobox');
+    fireEvent.change(selectGuide, { target: { value: 'esp32' } });
+    expect(screen.getByText(/Flash MicroPython/)).toBeInTheDocument();
+
+    // 2. Click Scan LAN
+    await act(async () => {
+      fireEvent.click(screen.getByText('Scan LAN'));
+    });
+
+    // Check discovered node appears
+    await waitFor(() => {
+      expect(screen.getByText('192.168.1.227:3000')).toBeInTheDocument();
+    });
+
+    // 3. Click Quick Register
+    fireEvent.click(screen.getByText('Quick Register'));
+
+    // Check modal opens
+    expect(screen.getByText('Confirm Node Registration')).toBeInTheDocument();
+
+    // Select Device Type dropdown in register modal
+    const modalSelect = screen.getAllByRole('combobox')[1];
+    fireEvent.change(modalSelect, { target: { value: 'rpi-5-16gb' } });
+
+    // Change node name input
+    const modalNameInput = screen.getByDisplayValue('RPI-5-16GB Node');
+    fireEvent.change(modalNameInput, { target: { value: 'My Living Room RPi' } });
+
+    // Submit registration modal
+    await act(async () => {
+      fireEvent.submit(container.querySelector('.modal-content form'));
+    });
+
+    expect(localMockFetch).toHaveBeenCalledWith('/api/nodes', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('My Living Room RPi')
+    }));
+
+    // Verify modal closed
+    expect(screen.queryByText('Confirm Node Registration')).toBeNull();
+  });
 });

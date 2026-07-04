@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen } from 'lucide-react';
+import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X } from 'lucide-react';
 
 export default function AgentDashboard({ token, toolLogs, activeAgent, isStreaming }) {
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
@@ -47,24 +47,21 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     }
   };
 
-  const handleQuickRegisterNode = async (discoveredNode) => {
-    const defaultName = `${discoveredNode.device_type.toUpperCase()} Node`;
-    const regNode = {
-      node_name: defaultName,
-      device_type: discoveredNode.device_type,
-      ip_address: discoveredNode.ip_address,
-      port: discoveredNode.port,
-      bridge_secret: '' // Automatically uses fallback pairing token
-    };
+  const [registeringNode, setRegisteringNode] = useState(null);
+
+  const handleConfirmRegisterNode = async (e) => {
+    if (e) e.preventDefault();
+    if (!registeringNode) return;
     try {
       const res = await fetch('/api/nodes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(regNode)
+        body: JSON.stringify(registeringNode)
       });
       if (res.ok) {
         fetchNodes();
-        setDiscoveredNodes(prev => prev.filter(n => n.ip_address !== discoveredNode.ip_address));
+        setDiscoveredNodes(prev => prev.filter(n => n.ip_address !== registeringNode.ip_address));
+        setRegisteringNode(null);
       } else {
         const data = await res.json();
         alert(`Failed to register discovered node: ${data.error}`);
@@ -597,7 +594,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
                         <span style={{ color: 'var(--text-secondary)' }}>Type: {n.device_type}</span>
                         {n.is_main_host && <span style={{ marginLeft: '8px', background: 'var(--accent-primary)', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', color: '#fff' }}>Main Host</span>}
                       </div>
-                      <button className="btn btn-primary" onClick={() => handleQuickRegisterNode(n)} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
+                      <button className="btn btn-primary" onClick={() => setRegisteringNode({ node_name: `${n.device_type.toUpperCase()} Node`, device_type: n.device_type, ip_address: n.ip_address, port: n.port, bridge_secret: '' })} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
                         Quick Register
                       </button>
                     </div>
@@ -784,6 +781,69 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
               {loadingHost ? 'Loading system specs...' : 'Failed to retrieve system status.'}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Quick Register Confirmation Modal */}
+      {registeringNode && (
+        <div className="modal-overlay" onClick={() => setRegisteringNode(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Confirm Node Registration</h3>
+              <button className="btn-icon" onClick={() => setRegisteringNode(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleConfirmRegisterNode} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                Specify details for registering the discovered node at <strong>{registeringNode.ip_address}:{registeringNode.port}</strong>.
+              </p>
+              
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Node Name</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  required 
+                  value={registeringNode.node_name} 
+                  onChange={e => setRegisteringNode({ ...registeringNode, node_name: e.target.value })} 
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Device Type</label>
+                <select 
+                  className="form-control" 
+                  value={registeringNode.device_type} 
+                  onChange={e => {
+                    const newType = e.target.value;
+                    const defaultName = `${newType.toUpperCase()} Node`;
+                    setRegisteringNode({ 
+                      ...registeringNode, 
+                      device_type: newType,
+                      node_name: registeringNode.node_name === `${registeringNode.device_type.toUpperCase()} Node` ? defaultName : registeringNode.node_name 
+                    });
+                  }}
+                >
+                  <option value="rpi-5-8gb">Raspberry Pi 5 (8GB)</option>
+                  <option value="rpi-5-16gb">Raspberry Pi 5 (16GB)</option>
+                  <option value="rpi-4-4gb">Raspberry Pi 4 (4GB+)</option>
+                  <option value="rpi-zero-2w">Raspberry Pi Zero 2W</option>
+                  <option value="esp32-wroom">ESP32 WROOM (WiFi)</option>
+                  <option value="windows">Windows / PC</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setRegisteringNode(null)} style={{ flex: 1 }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                  Register
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
