@@ -269,6 +269,34 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     expect(res.body.error).toContain('Unknown action');
   });
 
+  test('POST /execute: routes get_specifications to handleHostMachineTool', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    mockHandleHostMachineTool.mockResolvedValueOnce('mocked specifications report');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'get_specifications', params: { detail: true } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toBe('mocked specifications report');
+    expect(mockHandleHostMachineTool).toHaveBeenCalledWith('get_specifications', { detail: true }, 1);
+  });
+
+  test('POST /execute: routes get_service_status to handleHostMachineTool', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    mockHandleHostMachineTool.mockResolvedValueOnce('mocked service status');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'get_service_status', params: { serviceName: 'test-service' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toBe('mocked service status');
+    expect(mockHandleHostMachineTool).toHaveBeenCalledWith('get_service_status', { serviceName: 'test-service' }, 1);
+  });
+
   test('POST /execute: 500 on execution error exception', async () => {
     mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
     mockHandleHostMachineTool.mockRejectedValueOnce(new Error('Internal handler crash'));

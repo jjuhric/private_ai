@@ -12,8 +12,9 @@ jest.mock('@google/generative-ai', () => {
 let shouldDiskFail = false;
 let shouldPowerFail = false;
 let shouldTempFail = false;
+let shouldWindowsCommandsFail = false;
 
-// Link shouldPowerFail to global to be safely accessible in hoisted jest.mock
+// Link flags to global to be safely accessible in hoisted jest.mock
 Object.defineProperty(global, 'shouldPowerFail', {
   get: () => shouldPowerFail,
   set: (val) => { shouldPowerFail = val; },
@@ -23,6 +24,12 @@ Object.defineProperty(global, 'shouldPowerFail', {
 Object.defineProperty(global, 'shouldTempFail', {
   get: () => shouldTempFail,
   set: (val) => { shouldTempFail = val; },
+  configurable: true
+});
+
+Object.defineProperty(global, 'shouldWindowsCommandsFail', {
+  get: () => shouldWindowsCommandsFail,
+  set: (val) => { shouldWindowsCommandsFail = val; },
   configurable: true
 });
 
@@ -77,6 +84,10 @@ jest.mock('../tools/temp_tool', () => {
 // Mock child_process.exec before requiring modules
 const customPromisify = (cmd, opts) => {
   return new Promise((resolve, reject) => {
+    if (global.shouldWindowsCommandsFail) {
+      reject(new Error('Simulated Windows Command Failure'));
+      return;
+    }
     if (shouldDiskFail && (cmd.includes('Get-PSDrive') || cmd.includes('df -h'))) {
       reject(new Error('Disk check failed'));
       return;
@@ -259,14 +270,28 @@ describe('Multi-Agent System & Tools Tests', () => {
       const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('win32');
 
       const statusRes = await handleHostMachineTool('get_service_status', { service: 'private-ai' });
-      expect(statusRes).toContain('is only supported on devices with systemd');
+      expect(statusRes).toContain('Windows Server Task & Process Status');
+      expect(statusRes).toContain('Active Node Processes');
 
       const logsRes = await handleHostMachineTool('get_journal_logs', { service: 'private-ai' });
-      expect(logsRes).toContain('is only supported on devices with systemd');
+      expect(logsRes).toContain('Windows Event Logs (Application - Last 100 entries)');
 
       const restartRes = await handleHostMachineTool('restart_service', { service: 'private-ai' });
-      expect(restartRes).toContain('is only supported on devices with systemd');
+      expect(restartRes).toContain('Successfully restarted Windows scheduled task "PrivateAI-Assistant"');
 
+      // Test command failures on win32
+      global.shouldWindowsCommandsFail = true;
+
+      const statusFail = await handleHostMachineTool('get_service_status', { service: 'private-ai' });
+      expect(statusFail).toContain('Scheduled Task check failed');
+
+      const logsFail = await handleHostMachineTool('get_journal_logs', { service: 'private-ai' });
+      expect(logsFail).toContain('Error retrieving Windows Event Logs');
+
+      const restartFail = await handleHostMachineTool('restart_service', { service: 'private-ai' });
+      expect(restartFail).toContain('Error restarting Windows service/task');
+
+      global.shouldWindowsCommandsFail = false;
       platformSpy.mockRestore();
     });
 

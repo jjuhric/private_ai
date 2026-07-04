@@ -184,6 +184,33 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     const { service } = params;
     if (!service) return 'Error: "service" parameter is required.';
     try {
+      const platform = os.platform();
+      if (platform === 'win32') {
+        let taskOutput = '';
+        try {
+          const { stdout } = await execPromise(`powershell -Command "Get-ScheduledTask -TaskName PrivateAI-Assistant -ErrorAction SilentlyContinue | Select-Object TaskName, State | Format-List"`);
+          taskOutput = stdout.trim() || 'Scheduled Task "PrivateAI-Assistant" not found.';
+        } catch (e) {
+          taskOutput = `Scheduled Task check failed: ${e.message}`;
+        }
+        
+        let processOutput = '';
+        try {
+          const { stdout } = await execPromise(`powershell -Command "Get-Process -Name node -ErrorAction SilentlyContinue | Select-Object Id, CPU, ProcessName | Format-Table"`);
+          processOutput = stdout.trim() ? `\n\nActive Node Processes:\n${stdout.trim()}` : '\n\nNo active Node.js processes found.';
+        } catch (e) {}
+
+        let serviceOutput = '';
+        try {
+          const { stdout } = await execPromise(`powershell -Command "Get-Service -Name ${service} -ErrorAction SilentlyContinue | Format-List"`);
+          if (stdout.trim()) {
+            serviceOutput = `\n\nWindows Service "${service}":\n${stdout.trim()}`;
+          }
+        } catch (e) {}
+
+        return `### ⚙️ Windows Server Task & Process Status\n\`\`\`\n${taskOutput}${processOutput}${serviceOutput}\n\`\`\``;
+      }
+
       if (!capabilities.systemd) {
         return `Service status check for "${service}" is only supported on devices with systemd (current: ${deviceType}).`;
       }
@@ -198,6 +225,16 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     if (!service) return 'Error: "service" parameter is required.';
     const numLines = Math.max(Number(lines) || 1000, 1000);
     try {
+      const platform = os.platform();
+      if (platform === 'win32') {
+        try {
+          const { stdout } = await execPromise(`powershell -Command "Get-EventLog -LogName Application -Newest 100 | Format-Table TimeGenerated, EntryType, Source, Message -Wrap"`);
+          return `### 📜 Windows Event Logs (Application - Last 100 entries)\n\`\`\`\n${stdout.trim()}\n\`\`\``;
+        } catch (e) {
+          return `Error retrieving Windows Event Logs: ${e.message}`;
+        }
+      }
+
       if (!capabilities.systemd) {
         return `Service journal log check is only supported on devices with systemd (current: ${deviceType}).`;
       }
@@ -211,6 +248,22 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     const { service } = params;
     if (!service) return 'Error: "service" parameter is required.';
     try {
+      const platform = os.platform();
+      if (platform === 'win32') {
+        try {
+          await execPromise(`powershell -Command "Stop-ScheduledTask -TaskName PrivateAI-Assistant -ErrorAction SilentlyContinue"`);
+          await execPromise(`powershell -Command "Start-ScheduledTask -TaskName PrivateAI-Assistant -ErrorAction SilentlyContinue"`);
+          return `Successfully restarted Windows scheduled task "PrivateAI-Assistant".`;
+        } catch (e) {
+          try {
+            await execPromise(`powershell -Command "Restart-Service -Name ${service} -Force"`);
+            return `Successfully restarted Windows service "${service}".`;
+          } catch (err2) {
+            return `Error restarting Windows service/task: ${e.message} / ${err2.message}`;
+          }
+        }
+      }
+
       if (!capabilities.systemd) {
         return `Service restart is only supported on devices with systemd (current: ${deviceType}).`;
       }

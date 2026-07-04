@@ -79,7 +79,19 @@ router.post('/execute', authenticateBridge, async (req, res) => {
 
     // SECURITY CHECK: If this node is the Parent Node (Main Host), reject all remote network incoming commands immediately
     const settings = await db.get('SELECT is_main_host FROM user_settings LIMIT 1');
-    if (settings && settings.is_main_host === 1 && req.isBridge && action !== 'system_info') {
+    const ALLOWED_SYSTEM_INFO_ACTIONS = [
+      'system_info', 
+      'get_specifications', 
+      'get_power', 
+      'get_temperature', 
+      'get_network_info', 
+      'get_process_list', 
+      'get_service_status', 
+      'get_journal_logs', 
+      'security_scan',
+      'get_capabilities'
+    ];
+    if (settings && settings.is_main_host === 1 && req.isBridge && !ALLOWED_SYSTEM_INFO_ACTIONS.includes(action)) {
       console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
       return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' });
     }
@@ -170,6 +182,20 @@ router.post('/execute', authenticateBridge, async (req, res) => {
         child.unref();
       }
       output = 'Self-update initiated successfully in the background. The node will re-clone, restore configs, and restart on the latest version.';
+    } else if ([
+      'get_specifications', 
+      'get_power', 
+      'get_temperature', 
+      'get_network_info', 
+      'get_process_list', 
+      'get_service_status', 
+      'get_journal_logs', 
+      'restart_service',
+      'security_scan', 
+      'get_capabilities'
+    ].includes(action)) {
+      const { handleHostMachineTool } = require('../tools/host_machine_tool');
+      output = await handleHostMachineTool(action, params, req.user.id);
     } else if (action === 'write_file') {
       const { handleCoderTool } = require('../tools/coder_tools');
       output = await handleCoderTool('write_file', { filePath: params.filePath, content: params.content });
