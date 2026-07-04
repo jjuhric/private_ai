@@ -327,7 +327,10 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     } else {
       body = {
         model: modelName,
-        messages: [{ role: 'user', content: responderInstruction }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Based on the task: "${userMessage}"\nAnd these tool outputs:\n${JSON.stringify(toolOutputs)}\n\nGenerate a detailed final report summarizing your actions and findings. Make it clear and production-ready.` }
+        ],
         temperature: 0.2,
         max_tokens: 2048
       };
