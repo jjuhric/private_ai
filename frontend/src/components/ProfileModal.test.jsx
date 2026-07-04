@@ -158,14 +158,93 @@ describe('ProfileModal Component Tests', () => {
     expect(screen.getByText('Preferred Local Model')).toBeInTheDocument();
     expect(screen.getByText('Preferred Online Model')).toBeInTheDocument();
 
+    const selects = screen.getAllByRole('combobox');
+    const localSelect = selects.find(s => s.value === 'local-gemma-old');
+    fireEvent.change(localSelect, { target: { value: 'local-gemma-new' } });
+
     const saveBtn = screen.getByText('Save Profile');
     fireEvent.click(saveBtn);
 
     expect(mockSaveProfile).toHaveBeenCalled();
     expect(mockSaveSettings).toHaveBeenCalledWith({
       ...mockSettings,
-      preferred_local_model: 'local-gemma-old',
+      preferred_local_model: 'local-gemma-new',
       preferred_online_model: 'gemini-1.5-pro'
     });
+  });
+
+  test('handles escape keydown to close modal', () => {
+    const mockSetIsProfileOpen = vi.fn();
+    render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={mockSetIsProfileOpen} 
+        profile={defaultProfile} 
+        saveProfile={vi.fn()} 
+      />
+    );
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(mockSetIsProfileOpen).toHaveBeenCalledWith(false);
+  });
+
+  test('renders text input for local model preference when localModels is empty', () => {
+    const mockSaveSettings = vi.fn();
+    const mockSettings = {
+      local_url: 'http://localhost:1234/v1',
+      preferred_local_model: 'local-old'
+    };
+
+    render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={vi.fn()} 
+        profile={defaultProfile} 
+        saveProfile={vi.fn()} 
+        settings={mockSettings}
+        saveSettings={mockSaveSettings}
+        localModels={[]}
+        onlineModels={[]}
+      />
+    );
+
+    const input = screen.getByPlaceholderText('e.g. google/gemma-4-e4b');
+    expect(input.value).toBe('local-old');
+    fireEvent.change(input, { target: { value: 'local-new' } });
+
+    fireEvent.click(screen.getByText('Save Profile'));
+    expect(mockSaveSettings).toHaveBeenCalledWith(expect.objectContaining({
+      preferred_local_model: 'local-new'
+    }));
+  });
+
+  test('handles online model preference changes', () => {
+    const mockSaveSettings = vi.fn();
+    const mockSettings = {
+      online_key: 'some-key',
+      preferred_online_model: 'gemini-1.5-pro'
+    };
+
+    render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={vi.fn()} 
+        profile={defaultProfile} 
+        saveProfile={vi.fn()} 
+        settings={mockSettings}
+        saveSettings={mockSaveSettings}
+        localModels={[]}
+        onlineModels={['gemini-1.5-pro', 'gpt-4o']}
+      />
+    );
+
+    const selects = screen.getAllByRole('combobox');
+    const onlineSelect = selects.find(s => s.value === 'gemini-1.5-pro');
+    fireEvent.change(onlineSelect, { target: { value: 'gpt-4o' } });
+
+    fireEvent.click(screen.getByText('Save Profile'));
+    expect(mockSaveSettings).toHaveBeenCalledWith(expect.objectContaining({
+      preferred_online_model: 'gpt-4o'
+    }));
   });
 });
