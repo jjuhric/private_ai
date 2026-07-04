@@ -10,6 +10,14 @@ TARGET_DIR="$TARGET_PARENT_DIR/private_ai"
 SERVICE_NAME="private-ai"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
+# Parse CLI arguments
+NON_INTERACTIVE=false
+for arg in "$@"; do
+    if [ "$arg" = "--non-interactive" ]; then
+        NON_INTERACTIVE=true
+    fi
+done
+
 echo "===================================================="
 echo "  Private AI Assistant Setup & Update Utility V4.0.0 "
 echo "===================================================="
@@ -66,8 +74,11 @@ if [ -d "$TARGET_DIR" ]; then
     log "Project directory exists at $TARGET_DIR. Performing update..."
     cd "$TARGET_DIR"
     
-    log "Pulling latest updates from Github..."
-    git pull
+    # Check if there is a git remote first
+    if git remote &> /dev/null; then
+        log "Pulling latest updates from Github..."
+        git pull
+    fi
 else
     log "Project directory does not exist at $TARGET_DIR. Performing clean setup..."
     mkdir -p "$TARGET_PARENT_DIR"
@@ -79,63 +90,124 @@ else
     cd "$TARGET_DIR"
 fi
 
-# 4. Interactive Configuration
-echo -e "\n===================================================="
-echo "  Configuration Settings"
-echo "===================================================="
+# 4. Load existing defaults from .env and Database
+DEFAULT_DEVICE_TYPE="linux"
+DEFAULT_IS_MAIN_HOST="y"
+DEFAULT_ADMIN_USER="admin"
+DEFAULT_ADMIN_PASS="adminpassword"
+DEFAULT_LOCAL_URL="http://localhost:1234/v1"
+DEFAULT_LOCAL_KEY=""
+DEFAULT_ONLINE_KEY=""
+DEFAULT_ONLINE_PROVIDER="gemini"
+DEFAULT_GITHUB_TOKEN=""
+DEFAULT_BUILD_FE="y"
+DEFAULT_PORT="3000"
 
-# Device Type selection
-echo "Supported Device Types:"
-echo "  1) Windows"
-echo "  2) General Linux (default)"
-echo "  3) Raspberry Pi 5 (8GB)"
-echo "  4) Raspberry Pi 5 (15GB/16GB)"
-echo "  5) Raspberry Pi 4"
-echo "  6) Raspberry Pi Zero 2W"
-echo "  7) ESP32 Node"
-read -p "Select your device type [2]: " DEV_CHOICE
-case $DEV_CHOICE in
-    1) DEVICE_TYPE="windows" ;;
-    2|*) DEVICE_TYPE="linux" ;;
-    3) DEVICE_TYPE="rpi-5-8gb" ;;
-    4) DEVICE_TYPE="rpi-5-15gb" ;;
-    5) DEVICE_TYPE="rpi-4b-2gb" ;;
-    6) DEVICE_TYPE="rpi-zero-2w" ;;
-    7) DEVICE_TYPE="esp32" ;;
-esac
-
-# Main Host role prompt
-read -p "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [y]: " MAIN_HOST_YN
-MAIN_HOST_YN=${MAIN_HOST_YN:-y}
-if [[ "$MAIN_HOST_YN" =~ ^[Yy]$ ]]; then
-    IS_MAIN_HOST="1"
-else
-    IS_MAIN_HOST="0"
+if [ -f ".env" ]; then
+    DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
+    
+    # Try to load existing settings from database using read_settings.js helper
+    if [ -d "backend/node_modules" ]; then
+        db_settings=$(node backend/scripts/read_settings.js 2>/dev/null || echo "{}")
+        if [ ! -z "$db_settings" ] && [ "$db_settings" != "{}" ]; then
+            DEFAULT_ADMIN_USER=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.username || 'admin'); } catch(e) { console.log('admin'); }")
+            DEFAULT_DEVICE_TYPE=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.device_type || 'linux'); } catch(e) { console.log('linux'); }")
+            is_main=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.is_main_host); } catch(e) { console.log('1'); }")
+            if [ "$is_main" = "0" ]; then
+                DEFAULT_IS_MAIN_HOST="n"
+            else
+                DEFAULT_IS_MAIN_HOST="y"
+            fi
+            DEFAULT_LOCAL_URL=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_url || 'http://localhost:1234/v1'); } catch(e) { console.log('http://localhost:1234/v1'); }")
+            DEFAULT_LOCAL_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_key || ''); } catch(e) { console.log(''); }")
+            DEFAULT_ONLINE_PROVIDER=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_provider || 'gemini'); } catch(e) { console.log('gemini'); }")
+            DEFAULT_ONLINE_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_key || ''); } catch(e) { console.log(''); }")
+            DEFAULT_GITHUB_TOKEN=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.github_token || ''); } catch(e) { console.log(''); }")
+        fi
+    fi
 fi
 
-# Admin account registration
-read -p "Enter Admin Username [admin]: " ADMIN_USER
-ADMIN_USER=${ADMIN_USER:-admin}
+# 5. Configuration Settings
+if [ "$NON_INTERACTIVE" = true ]; then
+    log "Running in non-interactive mode. Utilizing existing configuration defaults."
+    DEVICE_TYPE="$DEFAULT_DEVICE_TYPE"
+    if [ "$DEFAULT_IS_MAIN_HOST" = "y" ]; then
+        IS_MAIN_HOST="1"
+    else
+        IS_MAIN_HOST="0"
+    fi
+    ADMIN_USER="$DEFAULT_ADMIN_USER"
+    ADMIN_PASS="$DEFAULT_ADMIN_PASS"
+    LOCAL_URL="$DEFAULT_LOCAL_URL"
+    LOCAL_KEY="$DEFAULT_LOCAL_KEY"
+    ONLINE_KEY="$DEFAULT_ONLINE_KEY"
+    GITHUB_TOKEN="$DEFAULT_GITHUB_TOKEN"
+    BUILD_FE_YN="y"
+    APP_PORT="$DEFAULT_PORT"
+else
+    echo -e "\n===================================================="
+    echo "  Configuration Settings"
+    echo "===================================================="
 
-read -p "Enter Admin Password [adminpassword]: " ADMIN_PASS
-ADMIN_PASS=${ADMIN_PASS:-adminpassword}
+    # Device Type selection
+    echo "Supported Device Types:"
+    echo "  1) Windows"
+    echo "  2) General Linux"
+    echo "  3) Raspberry Pi 5 (8GB)"
+    echo "  4) Raspberry Pi 5 (15GB/16GB)"
+    echo "  5) Raspberry Pi 4"
+    echo "  6) Raspberry Pi Zero 2W"
+    echo "  7) ESP32 Node"
+    read -p "Select your device type (current: ${DEFAULT_DEVICE_TYPE}): " DEV_CHOICE
+    case $DEV_CHOICE in
+        1) DEVICE_TYPE="windows" ;;
+        2) DEVICE_TYPE="linux" ;;
+        3) DEVICE_TYPE="rpi-5-8gb" ;;
+        4) DEVICE_TYPE="rpi-5-15gb" ;;
+        5) DEVICE_TYPE="rpi-4b-2gb" ;;
+        6) DEVICE_TYPE="rpi-zero-2w" ;;
+        7) DEVICE_TYPE="esp32" ;;
+        *) DEVICE_TYPE="$DEFAULT_DEVICE_TYPE" ;;
+    esac
 
-# Local LLM address
-read -p "Enter Local LLM Base URL [http://localhost:1234/v1]: " LOCAL_URL
-LOCAL_URL=${LOCAL_URL:-http://localhost:1234/v1}
+    # Main Host role prompt
+    read -p "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [${DEFAULT_IS_MAIN_HOST}]: " MAIN_HOST_YN
+    MAIN_HOST_YN=${MAIN_HOST_YN:-$DEFAULT_IS_MAIN_HOST}
+    if [[ "$MAIN_HOST_YN" =~ ^[Yy]$ ]]; then
+        IS_MAIN_HOST="1"
+    else
+        IS_MAIN_HOST="0"
+    fi
 
-# Optional API Keys / Tokens
-read -p "Enter Local LLM API Key (optional): " LOCAL_KEY
-read -p "Enter Online Gemini API Key (optional): " ONLINE_KEY
-read -p "Enter GitHub Access Token (optional): " GITHUB_TOKEN
+    # Admin account registration
+    read -p "Enter Admin Username [${DEFAULT_ADMIN_USER}]: " ADMIN_USER
+    ADMIN_USER=${ADMIN_USER:-$DEFAULT_ADMIN_USER}
 
-# Deployment mode / Frontend compilation check
-read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
-BUILD_FE_YN=${BUILD_FE_YN:-y}
+    read -p "Enter Admin Password [${DEFAULT_ADMIN_PASS}]: " ADMIN_PASS
+    ADMIN_PASS=${ADMIN_PASS:-$DEFAULT_ADMIN_PASS}
 
-# Server port configuration
-read -p "Enter Server PORT [3000]: " APP_PORT
-APP_PORT=${APP_PORT:-3000}
+    # Local LLM address
+    read -p "Enter Local LLM Base URL [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
+    LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
+
+    # Optional API Keys / Tokens
+    read -p "Enter Local LLM API Key (optional) [${DEFAULT_LOCAL_KEY}]: " LOCAL_KEY
+    LOCAL_KEY=${LOCAL_KEY:-$DEFAULT_LOCAL_KEY}
+
+    read -p "Enter Online Gemini API Key (optional) [${DEFAULT_ONLINE_KEY}]: " ONLINE_KEY
+    ONLINE_KEY=${ONLINE_KEY:-$DEFAULT_ONLINE_KEY}
+
+    read -p "Enter GitHub Access Token (optional) [${DEFAULT_GITHUB_TOKEN}]: " GITHUB_TOKEN
+    GITHUB_TOKEN=${GITHUB_TOKEN:-$DEFAULT_GITHUB_TOKEN}
+
+    # Deployment mode / Frontend compilation check
+    read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
+    BUILD_FE_YN=${BUILD_FE_YN:-y}
+
+    # Server port configuration
+    read -p "Enter Server PORT [${DEFAULT_PORT}]: " APP_PORT
+    APP_PORT=${APP_PORT:-$DEFAULT_PORT}
+fi
 
 # Create .env config file
 log "Configuring environment variables (.env)..."
@@ -165,11 +237,11 @@ if grep -q "$DEFAULT_SECRET" .env; then
     sed -i "s/$DEFAULT_SECRET/$NEW_SECRET/" .env
 fi
 
-# 5. Install Dependencies
+# 6. Install Dependencies
 log "Installing project dependencies (this may take a few minutes)..."
 npm run install:all
 
-# 6. Database Initialization & Seeding
+# 7. Database Initialization & Seeding
 log "Initializing database and seeding configuration..."
 node backend/scripts/seed_settings.js \
     --username="$ADMIN_USER" \
@@ -179,9 +251,10 @@ node backend/scripts/seed_settings.js \
     --local_url="$LOCAL_URL" \
     --local_key="$LOCAL_KEY" \
     --online_key="$ONLINE_KEY" \
-    --github_token="$GITHUB_TOKEN"
+    --github_token="$GITHUB_TOKEN" \
+    --online_provider="$DEFAULT_ONLINE_PROVIDER"
 
-# 7. Build Frontend (if requested)
+# 8. Build Frontend (if requested)
 if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
     log "Building frontend application..."
     npm run build
@@ -189,7 +262,7 @@ else
     log "Skipping frontend compilation (backend-only deployment)."
 fi
 
-# 8. Setup systemd Service (if not Windows/ESP32 choice)
+# 9. Setup systemd Service (if not Windows/ESP32 choice)
 if [ "$DEVICE_TYPE" != "windows" ] && [ "$DEVICE_TYPE" != "esp32" ]; then
     log "Configuring systemd background service..."
     NPM_PATH=$(which npm || echo "/usr/bin/npm")
@@ -235,7 +308,7 @@ echo -e "\n===================================================="
 echo "  Setup Completed Successfully!"
 echo "===================================================="
 echo "Device Type : $DEVICE_TYPE"
-echo "Main Host   : $MAIN_HOST_YN"
+echo "Main Host   : $IS_MAIN_HOST"
 echo "Port        : $APP_PORT"
 echo "Build UI    : $BUILD_FE_YN"
 echo "===================================================="

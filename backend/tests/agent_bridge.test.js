@@ -12,6 +12,13 @@ jest.mock('../db', () => ({
   getDb: jest.fn(() => Promise.resolve(mockDb))
 }));
 
+// Mock child_process spawn
+const mockSpawn = jest.fn(() => ({ unref: jest.fn() }));
+jest.mock('child_process', () => ({
+  ...jest.requireActual('child_process'),
+  spawn: (...args) => mockSpawn(...args)
+}));
+
 // Mock coder tools
 const mockHandleCoderTool = jest.fn();
 jest.mock('../tools/coder_tools', () => ({
@@ -165,6 +172,19 @@ describe('agent_bridge.js API Endpoint Tests', () => {
       'read_file',
       expect.objectContaining({ filePath: 'notes.txt' })
     );
+  });
+
+  test('POST /execute: triggers update_node background process', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'update_node' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('Self-update initiated successfully');
+    expect(mockSpawn).toHaveBeenCalled();
   });
 
   test('POST /execute: 400 on unrecognized action', async () => {
