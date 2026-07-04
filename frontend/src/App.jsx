@@ -95,6 +95,13 @@ function App() {
   }, [token]);
 
   useEffect(() => {
+    if (isSettingsOpen && token) {
+      fetchLocalModels(settings);
+      fetchOnlineModels();
+    }
+  }, [isSettingsOpen]);
+
+  useEffect(() => {
     const fetchVersion = async () => {
       try {
         const res = await fetch('/api/version');
@@ -273,9 +280,14 @@ function App() {
   };
 
   // Settings operations
-  const fetchLocalModels = async () => {
+  const fetchLocalModels = async (tempSettings) => {
     try {
-      const res = await fetch('/api/settings/local-models', {
+      const targetSettings = tempSettings || settings;
+      let url = '/api/settings/local-models';
+      if (targetSettings && targetSettings.local_url) {
+        url += `?localUrl=${encodeURIComponent(targetSettings.local_url)}&localApiKey=${encodeURIComponent(targetSettings.local_key || '')}&localApiStyle=${encodeURIComponent(targetSettings.local_api_style || '')}`;
+      }
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -822,6 +834,7 @@ function App() {
         setShowOnlineKey={setShowOnlineKey}
         showGithubToken={showGithubToken}
         setShowGithubToken={setShowGithubToken}
+        onFetchLocalModels={fetchLocalModels}
       />
 
       {/* Profile Modal */}

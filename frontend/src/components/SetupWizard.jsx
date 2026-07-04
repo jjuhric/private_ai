@@ -98,7 +98,8 @@ export default function SetupWizard({ token, onComplete }) {
 
   const fetchLocalModels = async () => {
     try {
-      const res = await fetch('/api/settings/local-models', {
+      const url = `/api/settings/local-models?localUrl=${encodeURIComponent(llmForm.local_url)}&localApiKey=${encodeURIComponent(llmForm.local_key || '')}&localApiStyle=${encodeURIComponent(llmForm.local_api_style || '')}`;
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -496,6 +497,28 @@ export default function SetupWizard({ token, onComplete }) {
                         {showLocalKey ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local Model Name</label>
+                    {localModels.length > 0 ? (
+                      <select
+                        className="form-control"
+                        value={llmForm.model_name || ''}
+                        onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
+                      >
+                        {localModels.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        value={llmForm.model_name || ''}
+                        onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
+                        placeholder="e.g. google/gemma-4-e4b"
+                      />
+                    )}
                   </div>
                 </>
               ) : (

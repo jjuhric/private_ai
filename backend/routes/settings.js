@@ -105,9 +105,22 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     const db = await getDb();
     const settings = await db.get('SELECT local_url, local_key, local_api_style FROM user_settings WHERE user_id = ?', [req.user.id]);
     const { decrypt } = require('../utils/crypto');
-    const localUrl = settings?.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
-    const localApiKey = decrypt(settings?.local_key) || process.env.LOCAL_LLM_KEY || '';
-    const localApiStyle = settings?.local_api_style || ((localUrl.includes(':1234') || localApiKey.startsWith('lm-')) ? 'lm-studio' : 'openai');
+    
+    const queryUrl = req.query.localUrl;
+    const queryKey = req.query.localApiKey;
+    const queryStyle = req.query.localApiStyle;
+
+    const localUrl = queryUrl || settings?.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
+    
+    let localApiKey = '';
+    if (queryKey !== undefined && queryKey !== null) {
+      localApiKey = queryKey;
+    } else {
+      localApiKey = settings?.local_key ? decrypt(settings.local_key) : '';
+    }
+    localApiKey = localApiKey || process.env.LOCAL_LLM_KEY || '';
+
+    const localApiStyle = queryStyle || settings?.local_api_style || ((localUrl.includes(':1234') || localApiKey.startsWith('lm-')) ? 'lm-studio' : 'openai');
     
     const authHeader = localApiKey && localApiKey !== 'lm-studio' ? { 'Authorization': `Bearer ${localApiKey}` } : {};
 

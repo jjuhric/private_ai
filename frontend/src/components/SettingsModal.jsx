@@ -14,7 +14,8 @@ export default function SettingsModal({
   showOnlineKey,
   setShowOnlineKey,
   showGithubToken,
-  setShowGithubToken
+  setShowGithubToken,
+  onFetchLocalModels
 }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -112,7 +113,16 @@ export default function SettingsModal({
                 />
               </div>
               <div className="form-group" style={{ margin: 0 }}>
-                <label>Local Model Name</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ margin: 0 }}>Local Model Name</label>
+                  <span
+                    role="button"
+                    onClick={() => onFetchLocalModels && onFetchLocalModels(settings)}
+                    style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 550 }}
+                  >
+                    ⚡ Scan Models
+                  </span>
+                </div>
                 {localModels.length > 0 ? (
                   <select
                     className="form-control"
