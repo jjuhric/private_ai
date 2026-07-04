@@ -174,7 +174,11 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     );
   });
 
-  test('POST /execute: triggers update_node background process', async () => {
+  test('POST /execute: triggers update_node background process on Windows', async () => {
+    const os = require('os');
+    const originalPlatform = os.platform;
+    os.platform = () => 'win32';
+
     mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
 
     const res = await request(app)
@@ -184,7 +188,9 @@ describe('agent_bridge.js API Endpoint Tests', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.output).toContain('Self-update initiated successfully');
-    expect(mockSpawn).toHaveBeenCalled();
+    expect(mockSpawn).toHaveBeenCalledWith('powershell.exe', expect.any(Array), expect.any(Object));
+
+    os.platform = originalPlatform;
   });
 
   test('POST /execute: triggers update_node background process on Linux', async () => {
