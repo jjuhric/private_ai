@@ -31,7 +31,7 @@ Your job is to list remote network nodes and route commands, files, or queries t
 - remote_node_bridge (params: { nodeId, action, actionParams: { command, filePath, content } })
 
 ### CRITICAL RULES:
-1. You can execute actions on remote nodes like Raspberry Pi or ESP32 by passing the appropriate action ('system_info', 'run_command', 'write_file', 'read_file').
+1. You can execute actions on remote nodes like Raspberry Pi or ESP32 by passing the appropriate action ('system_info', 'run_command', 'write_file', 'read_file', 'update_node').
 2. NOTHING is allowed to run commands on the Parent Node (the machine running the LLM). Any attempt to target the Parent Node must be rejected with access denied.
 3. If a command requires sudo, the system will automatically prompt the user on the Main Host for approval. Do not attempt to bypass this.`,
 

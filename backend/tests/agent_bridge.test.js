@@ -12,6 +12,13 @@ jest.mock('../db', () => ({
   getDb: jest.fn(() => Promise.resolve(mockDb))
 }));
 
+// Mock child_process spawn
+const mockSpawn = jest.fn(() => ({ unref: jest.fn() }));
+jest.mock('child_process', () => ({
+  ...jest.requireActual('child_process'),
+  spawn: (...args) => mockSpawn(...args)
+}));
+
 // Mock coder tools
 const mockHandleCoderTool = jest.fn();
 jest.mock('../tools/coder_tools', () => ({
@@ -165,6 +172,44 @@ describe('agent_bridge.js API Endpoint Tests', () => {
       'read_file',
       expect.objectContaining({ filePath: 'notes.txt' })
     );
+  });
+
+  test('POST /execute: triggers update_node background process on Windows', async () => {
+    const os = require('os');
+    const originalPlatform = os.platform;
+    os.platform = () => 'win32';
+
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'update_node' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('Self-update initiated successfully');
+    expect(mockSpawn).toHaveBeenCalledWith('powershell.exe', expect.any(Array), expect.any(Object));
+
+    os.platform = originalPlatform;
+  });
+
+  test('POST /execute: triggers update_node background process on Linux', async () => {
+    const os = require('os');
+    const originalPlatform = os.platform;
+    os.platform = () => 'linux';
+
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'update_node' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('Self-update initiated successfully');
+    expect(mockSpawn).toHaveBeenCalledWith('bash', expect.any(Array), expect.any(Object));
+
+    os.platform = originalPlatform;
   });
 
   test('POST /execute: 400 on unrecognized action', async () => {

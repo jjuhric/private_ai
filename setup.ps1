@@ -1,3 +1,8 @@
+[CmdletBinding()]
+param (
+    [switch]$NonInteractive
+)
+
 # Windows Setup & Update Script for Private AI Assistant
 # Requires PowerShell 5.1 or higher
 
@@ -38,41 +43,99 @@ if (Test-Path ".git") {
     & git pull
 }
 
-# 4. Interactive Prompts
-Write-Host "`n====================================================" -ForegroundColor Cyan
-Write-Host "  Configuration Settings" -ForegroundColor Cyan
-Write-Host "====================================================" -ForegroundColor Cyan
+# 4. Load existing defaults from .env and Database
+$defaultDeviceType = "windows"
+$defaultIsMainHostYN = "y"
+$defaultAdminUser = "admin"
+$defaultAdminPass = "adminpassword"
+$defaultLocalUrl = "http://localhost:1234/v1"
+$defaultLocalKey = ""
+$defaultOnlineKey = ""
+$defaultOnlineProvider = "gemini"
+$defaultGithubToken = ""
+$defaultBuildFe = "y"
+$defaultPort = "3000"
 
-$deviceType = Read-Host "Enter Device Type (windows, linux, rpi-5-8gb, rpi-5-15gb, rpi-zero-2w, esp32) [windows]"
-if ([string]::IsNullOrWhiteSpace($deviceType)) { $deviceType = "windows" }
-
-$isMainHostYN = Read-Host "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [y]"
-if ([string]::IsNullOrWhiteSpace($isMainHostYN)) { $isMainHostYN = "y" }
-$isMainHost = "0"
-if ($isMainHostYN -eq "y" -or $isMainHostYN -eq "Y") {
-    $isMainHost = "1"
+if (Test-Path ".env") {
+    $envLines = Get-Content ".env"
+    foreach ($line in $envLines) {
+        if ($line -match "^PORT=(\d+)") {
+            $defaultPort = $Matches[1]
+        }
+    }
+    
+    if (Test-Path "backend/node_modules") {
+        $dbSettingsJson = & node backend/scripts/read_settings.js *>$null
+        if ($dbSettingsJson -and $dbSettingsJson -ne "{}") {
+            try {
+                $dbSettings = ConvertFrom-Json $dbSettingsJson
+                if ($dbSettings.username) { $defaultAdminUser = $dbSettings.username }
+                if ($dbSettings.device_type) { $defaultDeviceType = $dbSettings.device_type }
+                if ($dbSettings.is_main_host -eq 0) { $defaultIsMainHostYN = "n" }
+                if ($dbSettings.local_url) { $defaultLocalUrl = $dbSettings.local_url }
+                if ($dbSettings.local_key) { $defaultLocalKey = $dbSettings.local_key }
+                if ($dbSettings.online_provider) { $defaultOnlineProvider = $dbSettings.online_provider }
+                if ($dbSettings.online_key) { $defaultOnlineKey = $dbSettings.online_key }
+                if ($dbSettings.github_token) { $defaultGithubToken = $dbSettings.github_token }
+            } catch {}
+        }
+    }
 }
 
-$adminUser = Read-Host "Enter Admin Username [admin]"
-if ([string]::IsNullOrWhiteSpace($adminUser)) { $adminUser = "admin" }
+# 5. Configuration Settings
+if ($NonInteractive) {
+    Write-Log "Running in non-interactive mode. Utilizing configuration defaults." "Yellow"
+    $deviceType = $defaultDeviceType
+    $isMainHost = if ($defaultIsMainHostYN -eq "y") { "1" } else { "0" }
+    $adminUser = $defaultAdminUser
+    $adminPass = $defaultAdminPass
+    $localUrl = $defaultLocalUrl
+    $localKey = $defaultLocalKey
+    $onlineKey = $defaultOnlineKey
+    $githubToken = $defaultGithubToken
+    $buildFeYN = "y"
+    $appPort = $defaultPort
+} else {
+    Write-Host "`n====================================================" -ForegroundColor Cyan
+    Write-Host "  Configuration Settings" -ForegroundColor Cyan
+    Write-Host "====================================================" -ForegroundColor Cyan
 
-$adminPass = Read-Host "Enter Admin Password [adminpassword]"
-if ([string]::IsNullOrWhiteSpace($adminPass)) { $adminPass = "adminpassword" }
+    $deviceType = Read-Host "Enter Device Type (windows, linux, rpi-5-8gb, rpi-5-15gb, rpi-zero-2w, esp32) [$defaultDeviceType]"
+    if ([string]::IsNullOrWhiteSpace($deviceType)) { $deviceType = $defaultDeviceType }
 
-$localUrl = Read-Host "Enter Local LLM Base URL [http://localhost:1234/v1]"
-if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = "http://localhost:1234/v1" }
+    $isMainHostYN = Read-Host "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [$defaultIsMainHostYN]"
+    if ([string]::IsNullOrWhiteSpace($isMainHostYN)) { $isMainHostYN = $defaultIsMainHostYN }
+    $isMainHost = "0"
+    if ($isMainHostYN -eq "y" -or $isMainHostYN -eq "Y") {
+        $isMainHost = "1"
+    }
 
-$localKey = Read-Host "Enter Local LLM API Key (optional)"
-$onlineKey = Read-Host "Enter Online Gemini API Key (optional)"
-$githubToken = Read-Host "Enter GitHub Access Token (optional)"
+    $adminUser = Read-Host "Enter Admin Username [$defaultAdminUser]"
+    if ([string]::IsNullOrWhiteSpace($adminUser)) { $adminUser = $defaultAdminUser }
 
-$buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
-if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
+    $adminPass = Read-Host "Enter Admin Password [$defaultAdminPass]"
+    if ([string]::IsNullOrWhiteSpace($adminPass)) { $adminPass = $defaultAdminPass }
 
-$appPort = Read-Host "Enter Server PORT [3000]"
-if ([string]::IsNullOrWhiteSpace($appPort)) { $appPort = "3000" }
+    $localUrl = Read-Host "Enter Local LLM Base URL [$defaultLocalUrl]"
+    if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
 
-# 5. Create or Configure .env
+    $localKey = Read-Host "Enter Local LLM API Key (optional) [$defaultLocalKey]"
+    if ([string]::IsNullOrWhiteSpace($localKey)) { $localKey = $defaultLocalKey }
+
+    $onlineKey = Read-Host "Enter Online Gemini API Key (optional) [$defaultOnlineKey]"
+    if ([string]::IsNullOrWhiteSpace($onlineKey)) { $onlineKey = $defaultOnlineKey }
+
+    $githubToken = Read-Host "Enter GitHub Access Token (optional) [$defaultGithubToken]"
+    if ([string]::IsNullOrWhiteSpace($githubToken)) { $githubToken = $defaultGithubToken }
+
+    $buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
+    if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
+
+    $appPort = Read-Host "Enter Server PORT [$defaultPort]"
+    if ([string]::IsNullOrWhiteSpace($appPort)) { $appPort = $defaultPort }
+}
+
+# 6. Create or Configure .env
 Write-Log "Writing configuration to .env file..."
 if (-not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
@@ -105,11 +168,11 @@ if ($envContent -like "*$defaultSecret*") {
 # Save env file
 Set-Content -Path ".env" -Value $envContent
 
-# 6. Install Dependencies
+# 7. Install Dependencies
 Write-Log "Installing NPM dependencies (this might take a few minutes)..."
 & npm run install:all
 
-# 7. Database Seeding
+# 8. Database Seeding
 Write-Log "Seeding local database..."
 $seedCmd = "backend/scripts/seed_settings.js"
 & node $seedCmd `
@@ -120,9 +183,10 @@ $seedCmd = "backend/scripts/seed_settings.js"
     --local_url="$localUrl" `
     --local_key="$localKey" `
     --online_key="$onlineKey" `
-    --github_token="$githubToken"
+    --github_token="$githubToken" `
+    --online_provider="$defaultOnlineProvider"
 
-# 8. Build Frontend
+# 9. Build Frontend
 if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
     Write-Log "Compiling frontend assets..."
     & npm run build
@@ -130,7 +194,7 @@ if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
     Write-Log "Skipped frontend compilation (backend-only deployment mode)."
 }
 
-# 9. Register Startup Task
+# 10. Register Startup Task
 Write-Log "Configuring Windows background service..."
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -157,7 +221,7 @@ Write-Host "`n====================================================" -ForegroundC
 Write-Host "  Setup Completed Successfully!" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
 Write-Host "Device Type : $deviceType" -ForegroundColor Green
-Write-Host "Main Host   : $isMainHostYN" -ForegroundColor Green
+Write-Host "Main Host   : $isMainHost" -ForegroundColor Green
 Write-Host "PORT        : $appPort" -ForegroundColor Green
 Write-Host "Build UI    : $buildFeYN" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
