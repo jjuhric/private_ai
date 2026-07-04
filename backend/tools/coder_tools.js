@@ -105,9 +105,10 @@ async function handleExecuteCommand(params, options = {}) {
   try {
     const workspaceRoot = path.resolve(process.cwd());
     let execCmd = command;
-    if (result && result.password && command.includes('sudo')) {
+    const sudoPassword = params.sudo_password || (result && result.password);
+    if (sudoPassword && command.includes('sudo')) {
       const cleanCmd = command.replace(/sudo\s+/g, '');
-      execCmd = `echo "${result.password.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
+      execCmd = `echo "${sudoPassword.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
     }
     const { stdout, stderr } = await execPromise(execCmd, { cwd: workspaceRoot });
     let output = '';

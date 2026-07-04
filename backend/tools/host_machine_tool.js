@@ -122,6 +122,7 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     'rpi-3b': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false },
     'rpi-4b-2gb': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false },
     'rpi-5-8gb': { gpio: true, i2c: true, systemd: true, nvme: true, powershell: false },
+    'rpi-5-15gb': { gpio: true, i2c: true, systemd: true, nvme: true, powershell: false },
     'esp32': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },
     'esp32-s2': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },
     'esp32-s3': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },

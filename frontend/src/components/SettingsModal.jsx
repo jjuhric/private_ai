@@ -65,7 +65,7 @@ export default function SettingsModal({
               if (currentOnlineProvider === 'openai' && looksLikeOpenAI && onlineModels.includes(settings.model_name)) isValidOnlineModel = true;
               if (currentOnlineProvider === 'anthropic' && looksLikeAnthropic && onlineModels.includes(settings.model_name)) isValidOnlineModel = true;
 
-              let defaultModel = 'gemini-2.5-flash';
+              let defaultModel = 'gemini-1.5-flash';
               if (currentOnlineProvider === 'openai') defaultModel = 'gpt-4o';
               else if (currentOnlineProvider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
 
@@ -179,7 +179,7 @@ export default function SettingsModal({
                     const looksLikeOpenAI = onlineModels.some(m => m.includes('gpt') || m.includes('o1'));
                     const looksLikeAnthropic = onlineModels.some(m => m.includes('claude'));
 
-                    let nextModel = 'gemini-2.5-flash';
+                    let nextModel = 'gemini-1.5-flash';
                     if (nextProvider === 'openai') nextModel = 'gpt-4o';
                     else if (nextProvider === 'anthropic') nextModel = 'claude-3-5-sonnet-latest';
 
@@ -230,7 +230,7 @@ export default function SettingsModal({
                     }
 
                     if (currentProvider === 'gemini') {
-                      return ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+                      return ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
                     } else if (currentProvider === 'openai') {
                       return ['gpt-4o', 'gpt-4o-mini', 'o1-mini'];
                     } else if (currentProvider === 'anthropic') {

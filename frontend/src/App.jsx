@@ -318,7 +318,10 @@ function App() {
           local_api_style: data.local_api_style || 'openai',
           online_url: data.online_url || '',
           online_key: data.online_key || '',
-          online_provider: data.online_provider || 'gemini'
+          online_provider: data.online_provider || 'gemini',
+          preferred_local_model: data.preferred_local_model || '',
+          preferred_online_model: data.preferred_online_model || '',
+          supervisor_model: data.supervisor_model || ''
         });
         setIsSetupComplete(data.is_setup_complete !== false);
       }

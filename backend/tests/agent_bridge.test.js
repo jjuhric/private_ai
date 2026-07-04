@@ -1,72 +1,194 @@
 const request = require('supertest');
 const express = require('express');
-const agentBridgeRouter = require('../routes/agent_bridge');
-const dbModule = require('../db');
+const jwt = require('jsonwebtoken');
 
-jest.mock('../middleware/auth', () => ({
-  authenticateToken: (req, res, next) => {
-    req.user = { id: 1, username: 'testuser' };
-    next();
-  }
+// Mock db
+let mockDb = {
+  get: jest.fn(),
+  all: jest.fn(),
+  run: jest.fn()
+};
+jest.mock('../db', () => ({
+  getDb: jest.fn(() => Promise.resolve(mockDb))
 }));
 
-jest.mock('../db', () => {
-  const mDb = {
-    get: jest.fn()
-  };
-  return { getDb: jest.fn(() => Promise.resolve(mDb)) };
-});
+// Mock coder tools
+const mockHandleCoderTool = jest.fn();
+jest.mock('../tools/coder_tools', () => ({
+  handleCoderTool: (...args) => mockHandleCoderTool(...args)
+}));
 
-const app = express();
-app.use(express.json());
-app.use('/api/agent-bridge', agentBridgeRouter);
+// Mock host machine tool
+const mockHandleHostMachineTool = jest.fn();
+jest.mock('../tools/host_machine_tool', () => ({
+  handleHostMachineTool: (...args) => mockHandleHostMachineTool(...args)
+}));
 
-describe('Agent Bridge API Tests', () => {
-  let mockDb;
+const JWT_SECRET = 'dev_secret_key_private_ai_assistant_2026';
+const testToken = jwt.sign({ id: 1 }, JWT_SECRET);
 
-  beforeEach(async () => {
-    mockDb = await dbModule.getDb();
+describe('agent_bridge.js API Endpoint Tests', () => {
+  let app;
+
+  beforeAll(() => {
+    app = express();
+    app.use(express.json());
+    const router = require('../routes/agent_bridge');
+    app.use('/api/bridge', router);
+  });
+
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('POST /api/agent-bridge/execute rejects if parameters missing', async () => {
+  test('POST /execute: 401 if missing Authorization header', async () => {
     const res = await request(app)
-      .post('/api/agent-bridge/execute')
-      .send({ nodeId: 1 });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain('required');
+      .post('/api/bridge/execute')
+      .send({ action: 'system_info' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toContain('Authorization header is required');
   });
 
-  test('POST /api/agent-bridge/execute returns 404 if node not found', async () => {
-    mockDb.get.mockResolvedValueOnce(null);
+  test('POST /execute: 401 if token is empty in header', async () => {
     const res = await request(app)
-      .post('/api/agent-bridge/execute')
-      .send({ nodeId: 99, command: 'gpio write 5 1' });
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Node not found');
+      .post('/api/bridge/execute')
+      .set('Authorization', 'Bearer ')
+      .send({ action: 'system_info' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toContain('Token is required');
   });
 
-  test('POST /api/agent-bridge/execute executes successfully (simulated)', async () => {
-    mockDb.get.mockResolvedValueOnce({
-      id: 1,
-      node_name: 'Test Node',
-      ip_address: '192.168.1.100',
-      port: 3000
-    });
+  test('POST /execute: 403 if invalid token', async () => {
+    mockDb.get.mockResolvedValueOnce(null); // No matching bridge secret either
+
     const res = await request(app)
-      .post('/api/agent-bridge/execute')
-      .send({ nodeId: 1, command: 'gpio write 5 1' });
+      .post('/api/bridge/execute')
+      .set('Authorization', 'Bearer invalid_token')
+      .send({ action: 'system_info' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain('Forbidden');
+  });
+
+  test('POST /execute: success via standard JWT token', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 }); // Settings check (not main host)
+    mockHandleHostMachineTool.mockResolvedValue('telemetry_report');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'system_info' });
+
     expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.simulated_output).toBeDefined();
+    expect(res.body.output).toContain('System telemetry details');
   });
 
-  test('POST /api/agent-bridge/execute handles database error', async () => {
-    mockDb.get.mockRejectedValueOnce(new Error('DB connection lost'));
+  test('POST /execute: success via bridge_secret', async () => {
+    // 1st get (in authenticateBridge): Match bridge_secret in network_nodes
+    mockDb.get.mockResolvedValueOnce({ id: 4, user_id: 1, node_name: 'MainCaller', bridge_secret: 'bridge_secret_123' });
+    // 2nd get (in route handler): Settings check (is_main_host = 0)
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    
+    mockHandleHostMachineTool.mockResolvedValue('telemetry_report');
+
     const res = await request(app)
-      .post('/api/agent-bridge/execute')
-      .send({ nodeId: 1, command: 'gpio write 5 1' });
+      .post('/api/bridge/execute')
+      .set('Authorization', 'Bearer bridge_secret_123')
+      .send({ action: 'system_info' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('System telemetry details');
+  });
+
+  test('POST /execute: blocks requests if target is the Parent Node (is_main_host = 1)', async () => {
+    // Authenticate via bridge_secret
+    mockDb.get.mockResolvedValueOnce({ id: 4, user_id: 1, node_name: 'MainCaller', bridge_secret: 'bridge_secret_123' });
+    // Settings check returns is_main_host = 1 (Parent node)
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 1 });
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', 'Bearer bridge_secret_123')
+      .send({ action: 'run_command', params: { command: 'ls' } });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain('Access denied: Commands cannot be routed to the Parent Node');
+  });
+
+  test('POST /execute: routes run_command to handleCoderTool', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    mockHandleCoderTool.mockResolvedValue('stdout: list of files');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'run_command', params: { command: 'ls -la', sudo_password: 'root_password' } });
+
+    expect(res.status).toBe(200);
+    expect(mockHandleCoderTool).toHaveBeenCalledWith(
+      'execute_command',
+      expect.objectContaining({ command: 'ls -la', sudo_password: 'root_password' }),
+      expect.any(Object)
+    );
+    expect(res.body.output).toBe('stdout: list of files');
+  });
+
+  test('POST /execute: routes write_file to handleCoderTool', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    mockHandleCoderTool.mockResolvedValue('Successfully wrote content');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'write_file', params: { filePath: 'notes.txt', content: 'hello world' } });
+
+    expect(res.status).toBe(200);
+    expect(mockHandleCoderTool).toHaveBeenCalledWith(
+      'write_file',
+      expect.objectContaining({ filePath: 'notes.txt', content: 'hello world' })
+    );
+  });
+
+  test('POST /execute: routes read_file to handleCoderTool', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    mockHandleCoderTool.mockResolvedValue('hello world content');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'read_file', params: { filePath: 'notes.txt' } });
+
+    expect(res.status).toBe(200);
+    expect(mockHandleCoderTool).toHaveBeenCalledWith(
+      'read_file',
+      expect.objectContaining({ filePath: 'notes.txt' })
+    );
+  });
+
+  test('POST /execute: 400 on unrecognized action', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'invalid_action' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Unknown action');
+  });
+
+  test('POST /execute: 500 on execution error exception', async () => {
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    mockHandleHostMachineTool.mockRejectedValueOnce(new Error('Internal handler crash'));
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'system_info' });
+
     expect(res.status).toBe(500);
-    expect(res.body.error).toBe('DB connection lost');
+    expect(res.body.error).toContain('Internal handler crash');
   });
 });

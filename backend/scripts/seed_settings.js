@@ -74,7 +74,7 @@ async function main(argv = process.argv) {
     // Determine default model names
     let modelName = 'google/gemma-4-e4b';
     if (provider === 'online') {
-      if (onlineProvider === 'gemini') modelName = 'gemini-2.5-flash';
+      if (onlineProvider === 'gemini') modelName = 'gemini-1.5-flash';
       else if (onlineProvider === 'openai') modelName = 'gpt-4o';
       else if (onlineProvider === 'anthropic') modelName = 'claude-3-5-sonnet-latest';
     }
@@ -112,8 +112,8 @@ async function main(argv = process.argv) {
       encryptedOnlineKey,
       onlineProvider,
       args.preferred_local_model || 'google/gemma-4-e4b',
-      args.preferred_online_model || 'gemini-2.5-flash',
-      args.supervisor_model || (onlineProvider === 'gemini' ? 'gemini-2.5-pro' : 'gpt-4o'),
+      args.preferred_online_model || 'gemini-1.5-flash',
+      args.supervisor_model || (onlineProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4o'),
       deviceType,
       isMainHost
     ]);

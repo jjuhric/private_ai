@@ -32,7 +32,7 @@ export default function SetupWizard({ token, onComplete }) {
   });
 
   const [localModels, setLocalModels] = useState([]);
-  const [onlineModels, setOnlineModels] = useState(['gemini-2.5-flash', 'gemini-2.5-pro', 'gpt-4o', 'claude-3-5-sonnet-latest']);
+  const [onlineModels, setOnlineModels] = useState(['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gpt-4o', 'claude-3-5-sonnet-latest']);
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
   const [showWeatherKey, setShowWeatherKey] = useState(false);
@@ -50,7 +50,7 @@ export default function SetupWizard({ token, onComplete }) {
       }));
     } else {
       const currentProvider = llmForm.online_provider;
-      let defaultModel = 'gemini-2.5-flash';
+      let defaultModel = 'gemini-1.5-flash';
       if (currentProvider === 'openai') defaultModel = 'gpt-4o';
       else if (currentProvider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
       setLlmForm(prev => ({
@@ -131,25 +131,28 @@ export default function SetupWizard({ token, onComplete }) {
       }
 
       // 2. Save Settings
-      const settingsRes = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          provider: llmForm.provider,
-          model_name: llmForm.model_name,
-          local_url: llmForm.local_url,
-          local_api_style: llmForm.local_api_style,
-          local_key: llmForm.local_key,
-          online_provider: llmForm.online_provider,
-          online_url: llmForm.online_url,
-          online_key: llmForm.online_key,
-          device_type: deviceForm.device_type,
-          is_main_host: deviceForm.is_main_host
-        })
-      });
+        const settingsRes = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            provider: llmForm.provider,
+            model_name: llmForm.model_name,
+            local_url: llmForm.local_url,
+            local_api_style: llmForm.local_api_style,
+            local_key: llmForm.local_key,
+            online_provider: llmForm.online_provider,
+            online_url: llmForm.online_url,
+            online_key: llmForm.online_key,
+            device_type: deviceForm.device_type,
+            is_main_host: deviceForm.is_main_host,
+            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'google/gemma-4-e4b',
+            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-1.5-flash',
+            supervisor_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-1.5-flash'
+          })
+        });
       if (!settingsRes.ok) {
         const errData = await settingsRes.json();
         throw new Error(errData.error || 'Failed to save settings');
@@ -276,7 +279,8 @@ export default function SetupWizard({ token, onComplete }) {
                   <option value="rpi-zero-2w">Raspberry Pi Zero 2W</option>
                   <option value="rpi-3b">Raspberry Pi 3B / 3B+</option>
                   <option value="rpi-4b-2gb">Raspberry Pi 4B (2GB/4GB/8GB)</option>
-                  <option value="rpi-5-8gb">Raspberry Pi 5 (4GB/8GB/16GB)</option>
+                  <option value="rpi-5-8gb">Raspberry Pi 5 (4GB/8GB)</option>
+                  <option value="rpi-5-15gb">Raspberry Pi 5 (15GB/16GB)</option>
                 </select>
                 <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
                   Executes GPIO, sensors, and scripts. Receives commands from the Main Host.
