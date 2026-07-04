@@ -85,6 +85,10 @@ async function getDb() {
     if (!hasEmbedding) {
       await dbConnection.run('ALTER TABLE memories ADD COLUMN embedding TEXT');
     }
+    const hasAgentName = memoriesColumns.some(col => col.name === 'agent_name');
+    if (!hasAgentName) {
+      await dbConnection.run('ALTER TABLE memories ADD COLUMN agent_name TEXT');
+    }
     
     console.log('Database initialized successfully.');
   } catch (error) {

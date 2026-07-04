@@ -108,6 +108,11 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  const streamAbortController = new AbortController();
+  req.on('close', () => {
+    streamAbortController.abort();
+  });
+
   let accumulatedThoughts = '';
   let accumulatedContent = '';
 
@@ -144,7 +149,8 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       onlineKey: decrypt(settings.online_key),
       geminiKey: decrypt(settings.gemini_key),
       onlineProvider: settings.online_provider || 'gemini',
-      isAborted: () => res.destroyed,
+      isAborted: () => streamAbortController.signal.aborted,
+      abortSignal: streamAbortController.signal,
       onThought: (thoughtChunk) => {
         accumulatedThoughts += thoughtChunk;
         sendEvent('thought', thoughtChunk);

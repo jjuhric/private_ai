@@ -205,7 +205,8 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     let res = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: settings.abortSignal
     });
 
     if (!res.ok && body.response_format) {
@@ -214,7 +215,8 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       res = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: settings.abortSignal
       });
     }
 
@@ -332,7 +334,8 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     const res = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: settings.abortSignal
     });
 
     if (!res.ok) {
@@ -354,8 +357,8 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
   const maxTurns = 5;
 
   while (turn < maxTurns) {
-    if (settings.onAgentStatus) {
-      settings.onAgentStatus({ agent: agentName, status: 'active' });
+    if (settings.abortSignal?.aborted) {
+      break;
     }
     const decision = await runAgentTurn(agentName, systemPrompt, settings, task, history);
     
@@ -395,7 +398,8 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       output = await handleGoogleNewsTool(decision.params?.query);
     } else if (decision.tool === 'memory') {
       const { handleMemoryTool } = require('../tools/memory_tool');
-      output = await handleMemoryTool(db, userId, decision.action, decision.params);
+      const toolParams = { ...decision.params, agentName };
+      output = await handleMemoryTool(db, userId, decision.action, toolParams);
     } else if (decision.tool === 'query_vault') {
       const { handleVaultTool } = require('../tools/vault_tool');
       output = await handleVaultTool(db, userId, 'query', decision.params);
