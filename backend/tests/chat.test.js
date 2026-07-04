@@ -307,4 +307,39 @@ describe('Chat Router Tests', () => {
     expect(res3.statusCode).toBe(200);
     expect(res3.body.success).toBe(true);
   });
+
+  test('POST /api/chat/stream - trigger callbacks and stream error catch block', async () => {
+    const db = await mockTestDb;
+    const insertRes = await db.run('INSERT INTO chats (user_id, title) VALUES (?, ?)', [userId, 'Stream Callbacks Chat']);
+    const chatId = insertRes.lastID;
+
+    // Test successful execution with callbacks triggered
+    mockRunAgentLoop.mockImplementationOnce(async (options) => {
+      options.onThought('Thinking chunk');
+      options.onContent('Content chunk');
+      options.onToolCall({ name: 'weather', arguments: {} });
+      options.onAgentStatus({ agent: 'supervisor', status: 'thinking' });
+      options.onCommandApprovalRequired({ commandId: 'cmd-1', command: 'whoami', safety_analysis: {} });
+      // Call isAborted and abortSignal to trigger coverage
+      options.isAborted();
+      const signal = options.abortSignal;
+    });
+
+    const res1 = await request(app)
+      .post('/api/chat/stream')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ chatId, message: 'Hello' });
+    expect(res1.statusCode).toBe(200);
+
+    // Test error path
+    mockRunAgentLoop.mockImplementationOnce(async (options) => {
+      throw new Error('Test runAgentLoop stream failure');
+    });
+
+    const res2 = await request(app)
+      .post('/api/chat/stream')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ chatId, message: 'Hello' });
+    expect(res2.statusCode).toBe(200); // SSE endpoints return 200 and write error to the stream
+  });
 });

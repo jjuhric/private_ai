@@ -40,6 +40,13 @@ describe('Nodes API', () => {
     expect(mockDb.all).toHaveBeenCalledWith(expect.any(String), [1]);
   });
 
+  test('GET /api/nodes handles database error', async () => {
+    mockDb.all.mockRejectedValueOnce(new Error('DB read error'));
+    const res = await request(app).get('/api/nodes');
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('DB read error');
+  });
+
   test('POST /api/nodes adds a node', async () => {
     mockDb.run.mockResolvedValueOnce({ lastID: 2 });
     const res = await request(app).post('/api/nodes').send({
@@ -53,10 +60,76 @@ describe('Nodes API', () => {
     expect(res.body.id).toBe(2);
   });
 
+  test('POST /api/nodes validation fails if parameters missing', async () => {
+    const res = await request(app).post('/api/nodes').send({
+      node_name: 'ESP32 Sensor'
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('required');
+  });
+
+  test('POST /api/nodes handles database error', async () => {
+    mockDb.run.mockRejectedValueOnce(new Error('DB write error'));
+    const res = await request(app).post('/api/nodes').send({
+      node_name: 'ESP32 Sensor',
+      device_type: 'esp32-wroom',
+      ip_address: '192.168.1.100'
+    });
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('DB write error');
+  });
+
+  test('PUT /api/nodes/:id updates a node', async () => {
+    mockDb.run.mockResolvedValueOnce();
+    const res = await request(app).put('/api/nodes/1').send({
+      node_name: 'New Node Name',
+      device_type: 'rpi-5',
+      ip_address: '192.168.1.101',
+      port: 8080,
+      is_online: 1
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('PUT /api/nodes/:id handles database error', async () => {
+    mockDb.run.mockRejectedValueOnce(new Error('DB update error'));
+    const res = await request(app).put('/api/nodes/1').send({
+      node_name: 'New Node Name',
+      device_type: 'rpi-5',
+      ip_address: '192.168.1.101',
+      port: 8080,
+      is_online: 1
+    });
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('DB update error');
+  });
+
   test('DELETE /api/nodes/:id deletes a node', async () => {
     mockDb.run.mockResolvedValueOnce();
     const res = await request(app).delete('/api/nodes/1');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  test('DELETE /api/nodes/:id handles database error', async () => {
+    mockDb.run.mockRejectedValueOnce(new Error('DB delete error'));
+    const res = await request(app).delete('/api/nodes/1');
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('DB delete error');
+  });
+
+  test('POST /api/nodes/:id/ping updates status', async () => {
+    mockDb.run.mockResolvedValueOnce();
+    const res = await request(app).post('/api/nodes/1/ping');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  test('POST /api/nodes/:id/ping handles database error', async () => {
+    mockDb.run.mockRejectedValueOnce(new Error('DB ping error'));
+    const res = await request(app).post('/api/nodes/1/ping');
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe('DB ping error');
   });
 });

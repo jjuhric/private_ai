@@ -93,6 +93,27 @@ describe('Calendar Router & Tool Tests', () => {
     expect(res.body[0].title).toBe('Meeting 1');
   });
 
+  test('GET /api/calendar - list calendar events without date query', async () => {
+    const res = await request(app)
+      .get('/api/calendar')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  test('POST /api/calendar - add calendar event without optional fields', async () => {
+    const res = await request(app)
+      .post('/api/calendar')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Minimal Event',
+        start_time: '2026-07-05 10:00'
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
   test('DELETE /api/calendar/:id - deletes calendar event', async () => {
     const db = await mockTestDb;
     const item = await db.get('SELECT id FROM calendar_events WHERE user_id = ? LIMIT 1', [userId]);
@@ -179,5 +200,14 @@ describe('Calendar Router & Tool Tests', () => {
     // Delete with missing eventId
     const delResultNoId = await handleCalendarTool(db, userId, 'delete', {});
     expect(JSON.parse(delResultNoId)).toHaveProperty('error', 'eventId is required');
+  });
+
+  test('POST /api/calendar - validation errors', async () => {
+    const res = await request(app)
+      .post('/api/calendar')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'No Time Meeting' });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toContain('required');
   });
 });

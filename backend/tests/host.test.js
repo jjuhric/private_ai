@@ -1,6 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const hostRouter = require('../routes/host');
+const hostMachineTool = require('../tools/host_machine_tool');
 
 // Mock auth middleware
 jest.mock('../middleware/auth', () => ({
@@ -12,14 +13,7 @@ jest.mock('../middleware/auth', () => ({
 
 // Mock host_machine_tool
 jest.mock('../tools/host_machine_tool', () => ({
-  handleHostMachineTool: jest.fn().mockImplementation((action, params) => {
-    if (action === 'get_temperature') return '42.5°C';
-    if (action === 'get_power') return 'Power telemetry output';
-    if (action === 'get_network_info') return 'Network info output';
-    if (action === 'restart_service') return 'Successfully restarted service "test-service".';
-    if (action === 'run_script') return 'Script output';
-    return '';
-  })
+  handleHostMachineTool: jest.fn()
 }));
 
 describe('Host Route Telemetry and Control Tests', () => {
@@ -31,9 +25,20 @@ describe('Host Route Telemetry and Control Tests', () => {
     app.use('/api/host', hostRouter);
   });
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   test('GET /api/host/status returns hardware telemetry successfully', async () => {
-    const res = await request(app)
-      .get('/api/host/status');
+    hostMachineTool.handleHostMachineTool.mockImplementation((action) => {
+      if (action === 'get_temperature') return Promise.resolve('42.5°C');
+      if (action === 'get_power') return Promise.resolve('Power telemetry output');
+      if (action === 'get_network_info') return Promise.resolve('Network info output');
+      if (action === 'get_capabilities') return Promise.resolve({ deviceType: 'rpi-5', isMainHost: 0, capabilities: { gpio: true } });
+      return Promise.resolve('');
+    });
+
+    const res = await request(app).get('/api/host/status');
 
     expect(res.statusCode).toBe(200);
     expect(res.body.cpu).toBeDefined();
@@ -42,13 +47,41 @@ describe('Host Route Telemetry and Control Tests', () => {
     expect(res.body.telemetry.power).toBe('Power telemetry output');
   });
 
+  test('GET /api/host/status handles failure', async () => {
+    hostMachineTool.handleHostMachineTool.mockRejectedValue(new Error('Telemetry failure'));
+    const res = await request(app).get('/api/host/status');
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toBe('Telemetry failure');
+  });
+
   test('POST /api/host/service/restart restarts whitelisted service', async () => {
+    hostMachineTool.handleHostMachineTool.mockResolvedValue('Successfully restarted service "test-service".');
     const res = await request(app)
       .post('/api/host/service/restart')
       .send({ service: 'test-service' });
 
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  test('POST /api/host/service/restart handles non-success response', async () => {
+    hostMachineTool.handleHostMachineTool.mockResolvedValue('Failed to restart service - systemd error.');
+    const res = await request(app)
+      .post('/api/host/service/restart')
+      .send({ service: 'test-service' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe('Failed to restart service - systemd error.');
+  });
+
+  test('POST /api/host/service/restart handles throw catch block', async () => {
+    hostMachineTool.handleHostMachineTool.mockRejectedValue(new Error('Restart throw error'));
+    const res = await request(app)
+      .post('/api/host/service/restart')
+      .send({ service: 'test-service' });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toBe('Restart throw error');
   });
 
   test('POST /api/host/service/restart returns 400 if service is missing', async () => {
@@ -60,6 +93,7 @@ describe('Host Route Telemetry and Control Tests', () => {
   });
 
   test('POST /api/host/gpio/run triggers safe script execution', async () => {
+    hostMachineTool.handleHostMachineTool.mockResolvedValue('Script output');
     const res = await request(app)
       .post('/api/host/gpio/run')
       .send({ scriptPath: 'script.py' });
@@ -67,6 +101,16 @@ describe('Host Route Telemetry and Control Tests', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.output).toBe('Script output');
+  });
+
+  test('POST /api/host/gpio/run handles throw catch block', async () => {
+    hostMachineTool.handleHostMachineTool.mockRejectedValue(new Error('Script throw error'));
+    const res = await request(app)
+      .post('/api/host/gpio/run')
+      .send({ scriptPath: 'script.py' });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toBe('Script throw error');
   });
 
   test('POST /api/host/gpio/run returns 400 if scriptPath is missing', async () => {

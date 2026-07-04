@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+// Use global fetch
 
 /**
  * Sends a command to an ESP32 node via HTTP.

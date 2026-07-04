@@ -419,4 +419,22 @@ describe('Settings Router Tests', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.is_setup_complete).toBeDefined();
   });
+
+  test('POST /api/settings/test-connection - headers with key and fetch rejection', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    let res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local', localUrl: 'http://localhost:1234/v1', localApiKey: 'real_secret_api_key' });
+    expect(res.statusCode).toBe(200);
+
+    // Mock fetch rejection to trigger catch block
+    global.fetch.mockRejectedValueOnce(new Error('Network error on local host'));
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local', localUrl: 'http://localhost:1234/v1' });
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toContain('Connection failed: Network error on local host');
+  });
 });

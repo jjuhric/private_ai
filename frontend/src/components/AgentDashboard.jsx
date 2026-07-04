@@ -331,6 +331,8 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
             )}
           </div>
         </div>
+      )}
+
       {activeSubTab === 'vault' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
           {/* Document Upload panel */}
