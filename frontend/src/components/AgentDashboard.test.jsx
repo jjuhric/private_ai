@@ -535,8 +535,23 @@ describe('AgentDashboard Component Tests', () => {
 
     // 3. Click Quick Register
     fireEvent.click(screen.getByText('Quick Register'));
+    expect(screen.getByText('Confirm Node Registration')).toBeInTheDocument();
 
-    // Check modal opens
+    // Click Cancel to cover cancel branch
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(screen.queryByText('Confirm Node Registration')).toBeNull();
+
+    // Click Quick Register again
+    fireEvent.click(screen.getByText('Quick Register'));
+    expect(screen.getByText('Confirm Node Registration')).toBeInTheDocument();
+
+    // Click close icon button (contains svg/X)
+    const closeBtn = container.querySelector('.modal-header button');
+    fireEvent.click(closeBtn);
+    expect(screen.queryByText('Confirm Node Registration')).toBeNull();
+
+    // Click Quick Register a third time to submit
+    fireEvent.click(screen.getByText('Quick Register'));
     expect(screen.getByText('Confirm Node Registration')).toBeInTheDocument();
 
     // Select Device Type dropdown in register modal

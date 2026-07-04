@@ -55,6 +55,7 @@ $defaultOnlineProvider = "gemini"
 $defaultGithubToken = ""
 $defaultBuildFe = "y"
 $defaultPort = "3000"
+$defaultMainHostIp = "uhrick-home.local"
 
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
@@ -65,6 +66,7 @@ if (Test-Path ".env") {
         if ($line -match "^GEMINI_API_KEY=(.*)") { $defaultOnlineKey = $Matches[1].Trim() }
         if ($line -match "^GITHUB_TOKEN=(.*)") { $defaultGithubToken = $Matches[1].Trim() }
         if ($line -match "^ONLINE_PROVIDER=(.*)") { $defaultOnlineProvider = $Matches[1].Trim() }
+        if ($line -match "^MAIN_HOST_IP=(.*)") { $defaultMainHostIp = $Matches[1].Trim() }
     }
     
     if (Test-Path "backend/node_modules") {
@@ -90,6 +92,7 @@ if ($NonInteractive) {
     Write-Log "Running in non-interactive mode. Utilizing configuration defaults." "Yellow"
     $deviceType = $defaultDeviceType
     $isMainHost = if ($defaultIsMainHostYN -eq "y") { "1" } else { "0" }
+    $mainHostIp = $defaultMainHostIp
     $adminUser = $defaultAdminUser
     $adminPass = $defaultAdminPass
     $localUrl = $defaultLocalUrl
@@ -111,6 +114,12 @@ if ($NonInteractive) {
     $isMainHost = "0"
     if ($isMainHostYN -eq "y" -or $isMainHostYN -eq "Y") {
         $isMainHost = "1"
+    }
+
+    $mainHostIp = ""
+    if ($isMainHost -eq "0") {
+        $mainHostIp = Read-Host "Enter Main Host IP address (optional) [$defaultMainHostIp]"
+        if ([string]::IsNullOrWhiteSpace($mainHostIp)) { $mainHostIp = $defaultMainHostIp }
     }
 
     $adminUser = Read-Host "Enter Admin Username [$defaultAdminUser]"
@@ -176,6 +185,9 @@ Write-EnvVar "GITHUB_TOKEN" $githubToken
 Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 Write-EnvVar "SUPERVISOR_MODEL" "gemini-1.5-pro"
+if ($isMainHost -eq "0") {
+    Write-EnvVar "MAIN_HOST_IP" $mainHostIp
+}
 
 # Read env content
 $envContent = Get-Content ".env" -Raw

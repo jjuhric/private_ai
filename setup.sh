@@ -102,6 +102,7 @@ DEFAULT_ONLINE_PROVIDER="gemini"
 DEFAULT_GITHUB_TOKEN=""
 DEFAULT_BUILD_FE="y"
 DEFAULT_PORT="3000"
+DEFAULT_MAIN_HOST_IP="uhrick-home.local"
 
 if [ -f ".env" ]; then
     DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
@@ -110,6 +111,7 @@ if [ -f ".env" ]; then
     DEFAULT_ONLINE_KEY=$(grep -E "^GEMINI_API_KEY=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_ONLINE_PROVIDER=$(grep -E "^ONLINE_PROVIDER=" .env | cut -d'=' -f2 || echo "gemini")
+    DEFAULT_MAIN_HOST_IP=$(grep -E "^MAIN_HOST_IP=" .env | cut -d'=' -f2 || echo "uhrick-home.local")
     
     # Try to load existing settings from database using read_settings.js helper (to override .env defaults if DB is populated)
     if [ -d "backend/node_modules" ]; then
@@ -141,6 +143,7 @@ if [ "$NON_INTERACTIVE" = true ]; then
     else
         IS_MAIN_HOST="0"
     fi
+    MAIN_HOST_IP="$DEFAULT_MAIN_HOST_IP"
     ADMIN_USER="$DEFAULT_ADMIN_USER"
     ADMIN_PASS="$DEFAULT_ADMIN_PASS"
     LOCAL_URL="$DEFAULT_LOCAL_URL"
@@ -182,6 +185,12 @@ else
         IS_MAIN_HOST="1"
     else
         IS_MAIN_HOST="0"
+    fi
+
+    MAIN_HOST_IP=""
+    if [ "$IS_MAIN_HOST" = "0" ]; then
+        read -p "Enter Main Host IP address (optional) [${DEFAULT_MAIN_HOST_IP}]: " MAIN_HOST_IP
+        MAIN_HOST_IP=${MAIN_HOST_IP:-$DEFAULT_MAIN_HOST_IP}
     fi
 
     # Admin account registration
@@ -240,6 +249,9 @@ write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
 write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
+if [ "$IS_MAIN_HOST" = "0" ]; then
+    write_env_var "MAIN_HOST_IP" "${MAIN_HOST_IP}"
+fi
 
 if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
     sed -i "s/^DEPLOY_MODE=.*/# DEPLOY_MODE=backend-only/" .env

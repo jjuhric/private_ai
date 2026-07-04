@@ -134,6 +134,64 @@ describe('network_node_tool.js Tests', () => {
     expect(res).toContain('Error: Remote execution failed with status 500');
   });
 
+  test('list_network_nodes: database error handling', async () => {
+    mockDb.all.mockRejectedValueOnce(new Error('DB Query Failed'));
+    const res = await handleNetworkNodeTool('list_network_nodes', {}, { userId: 1 });
+    expect(res).toContain('Error listing network nodes: DB Query Failed');
+  });
+
+  test('remote_node_bridge: uses process.env.BRIDGE_SECRET fallback', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 3, node_name: 'RPi-Fallback', is_main_host: 0, ip_address: '192.168.1.102', port: 3000, bridge_secret: null });
+    process.env.BRIDGE_SECRET = 'env_secret_123';
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ output: 'Env secret worked' })
+    });
+
+    const res = await handleNetworkNodeTool('remote_node_bridge', { nodeId: 3, action: 'system_info' }, { userId: 1 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer env_secret_123'
+        })
+      })
+    );
+    expect(res).toContain('Env secret worked');
+    delete process.env.BRIDGE_SECRET;
+  });
+
+  test('remote_node_bridge: uses local_key from settings fallback', async () => {
+    mockDb.get
+      .mockResolvedValueOnce({ id: 3, node_name: 'RPi-Fallback', is_main_host: 0, ip_address: '192.168.1.102', port: 3000, bridge_secret: null }) // select node
+      .mockResolvedValueOnce({ local_key: 'settings_key_123' }); // select local_key
+    
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ output: 'Settings key worked' })
+    });
+
+    const res = await handleNetworkNodeTool('remote_node_bridge', { nodeId: 3, action: 'system_info' }, { userId: 1 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer settings_key_123'
+        })
+      })
+    );
+    expect(res).toContain('Settings key worked');
+  });
+
+  test('remote_node_bridge: handles fetch connection errors', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 3, node_name: 'RPi-Fail', is_main_host: 0, ip_address: '192.168.1.103', port: 3000, bridge_secret: 'some_key' });
+    mockFetch.mockRejectedValueOnce(new Error('Connection timed out'));
+
+    const res = await handleNetworkNodeTool('remote_node_bridge', { nodeId: 3, action: 'system_info' }, { userId: 1 });
+    expect(res).toContain('Error routing command to remote node: Connection timed out');
+  });
+
   test('handleNetworkNodeTool: error on unknown tool action', async () => {
     const res = await handleNetworkNodeTool('invalid_tool_action', {}, { userId: 1 });
     expect(res).toContain('Error: Unknown network node tool action');

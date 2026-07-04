@@ -283,13 +283,20 @@ describe('ProfileModal Component Tests', () => {
     expect(screen.getByDisplayValue('Democrat')).toBeInTheDocument();
     expect(screen.getByText('AI')).toBeInTheDocument();
 
-    // Add interest
+    // Trigger change events to cover onChange branches
+    fireEvent.change(screen.getByDisplayValue('1990-05-15'), { target: { value: '1995-10-10' } });
+    fireEvent.change(screen.getByDisplayValue('Female'), { target: { value: 'Male' } });
+    fireEvent.change(screen.getByDisplayValue('Democrat'), { target: { value: 'Republican' } });
+
+    // Add duplicate interest to cover duplicate check (lines 80-83)
     const interestInput = screen.getByPlaceholderText('Add an interest (e.g. AI News, Cycling)');
-    fireEvent.change(interestInput, { target: { value: 'Baking' } });
-    
-    // Click plus button (second child of display:flex container)
+    fireEvent.change(interestInput, { target: { value: 'AI' } });
     const addBtn = screen.getByPlaceholderText('Add an interest (e.g. AI News, Cycling)').nextSibling;
     fireEvent.click(addBtn);
+
+    // Add interest via Enter keypress (covers line 344)
+    fireEvent.change(interestInput, { target: { value: 'Baking' } });
+    fireEvent.keyDown(interestInput, { key: 'Enter', code: 'Enter', charCode: 13 });
     expect(screen.getByText('Baking')).toBeInTheDocument();
 
     // Remove interest
@@ -300,9 +307,9 @@ describe('ProfileModal Component Tests', () => {
     // Save profile
     fireEvent.click(screen.getByText('Save Profile'));
     expect(mockSaveProfile).toHaveBeenCalledWith(expect.objectContaining({
-      dob: '1990-05-15',
-      gender: 'Female',
-      political_leaning: 'Democrat',
+      dob: '1995-10-10',
+      gender: 'Male',
+      political_leaning: 'Republican',
       interests: ['Baking']
     }));
   });

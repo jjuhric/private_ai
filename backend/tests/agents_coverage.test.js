@@ -335,4 +335,33 @@ describe('Agents Coverage Extender Tests', () => {
 
     expect(mockDb.all).toHaveBeenCalled();
   });
+
+  test('runWorkerAgent abortSignal and non-ok LLM response handling', async () => {
+    const settings = {
+      provider: 'local',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key',
+      localApiStyle: 'openai',
+      model_name: 'test-model',
+      abortSignal: { aborted: true }
+    };
+
+    const res = await runWorkerAgent('weather_expert', settings, 'Test abort', {}, 1, 'token');
+    expect(res).toBe('');
+
+    const badSettings = {
+      provider: 'local',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key',
+      localApiStyle: 'openai',
+      model_name: 'test-model'
+    };
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      text: async () => 'Service Unavailable'
+    });
+
+    await expect(runWorkerAgent('weather_expert', badSettings, 'Test fail', {}, 1, 'token')).rejects.toThrow('LLM Error: 503');
+  });
 });
