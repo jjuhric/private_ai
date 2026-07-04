@@ -35,7 +35,7 @@ describe('Daily Briefing Generation Tests', () => {
           return { id: 1, username: 'testuser', name: 'Test User', weather_api_key: 'enc_key', zipcode: '90210', temp_unit: 'celsius', country: 'CA' };
         }
         if (query.includes('FROM user_settings')) {
-          return { provider: 'gemini', model_name: 'gemini-2.5-flash', supervisor_model: 'custom-supervisor-model' };
+          return { provider: 'gemini', model_name: 'gemini-2.5-flash', preferred_online_model: 'custom-supervisor-model' };
         }
         if (query.includes('FROM chats')) {
           return { id: 42, title: 'Daily Briefings' };

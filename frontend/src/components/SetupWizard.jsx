@@ -107,10 +107,16 @@ export default function SetupWizard({ token, onComplete }) {
         if (data && data.length > 0) {
           setLocalModels(data);
           setLlmForm(prev => ({ ...prev, model_name: data[0] }));
+        } else {
+          alert('No models found on the local LLM server. Please load a model in LM Studio/Ollama first.');
         }
+      } else {
+        const errData = await res.json();
+        alert(`Failed to fetch local models: ${errData.error || 'Connection failed'}`);
       }
     } catch (err) {
       console.error('Failed to fetch local models:', err);
+      alert('Failed to fetch local models: Connection failed');
     }
   };
 
@@ -150,8 +156,7 @@ export default function SetupWizard({ token, onComplete }) {
             device_type: deviceForm.device_type,
             is_main_host: deviceForm.is_main_host,
             preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'google/gemma-4-e4b',
-            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-1.5-flash',
-            supervisor_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-1.5-flash'
+            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-1.5-flash'
           })
         });
       if (!settingsRes.ok) {

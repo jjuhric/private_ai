@@ -272,23 +272,6 @@ export default function SettingsModal({
                           onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
                         />
                       )}
-
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label>Supervisor Model Override (Optional)</label>
-                        <select
-                          className="form-control"
-                          value={settings.supervisor_model || ''}
-                          onChange={e => setSettings(prev => ({ ...prev, supervisor_model: e.target.value }))}
-                        >
-                          <option value="">(Same as Active Model)</option>
-                          {displayModels.map(model => (
-                            <option key={model} value={model}>{model}</option>
-                          ))}
-                        </select>
-                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '2px', display: 'block' }}>
-                          Select a high-reasoning model (e.g. Gemini Pro) for orchestration. Workers will run on the standard model above.
-                        </small>
-                      </div>
                     </div>
                   );
                 })()}

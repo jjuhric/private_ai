@@ -293,9 +293,18 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setLocalModels(data);
+        if (data.length === 0) {
+          showToast('No models are currently loaded in LM Studio/Ollama.', 'warning');
+        } else {
+          showToast('Local models scanned successfully.', 'success');
+        }
+      } else {
+        const errData = await res.json();
+        showToast(`Failed to scan local models: ${errData.error || 'Connection failed'}`, 'error');
       }
     } catch (err) {
       console.error(err);
+      showToast('Failed to scan local models: Connection failed', 'error');
     }
   };
 
@@ -332,8 +341,7 @@ function App() {
           online_key: data.online_key || '',
           online_provider: data.online_provider || 'gemini',
           preferred_local_model: data.preferred_local_model || '',
-          preferred_online_model: data.preferred_online_model || '',
-          supervisor_model: data.supervisor_model || ''
+          preferred_online_model: data.preferred_online_model || ''
         });
         setIsSetupComplete(data.is_setup_complete !== false);
       }
