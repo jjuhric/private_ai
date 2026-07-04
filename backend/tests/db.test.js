@@ -49,7 +49,7 @@ describe('Database Migration Tests', () => {
     // Create minimal schema manually
     await db.exec(`
       CREATE TABLE users (id INTEGER PRIMARY KEY);
-      CREATE TABLE user_settings (id INTEGER PRIMARY KEY);
+      CREATE TABLE user_settings (id INTEGER PRIMARY KEY, model_name TEXT, preferred_online_model TEXT);
       CREATE TABLE memories (id INTEGER PRIMARY KEY);
     `);
     await db.close();
