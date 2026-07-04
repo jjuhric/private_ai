@@ -65,6 +65,10 @@ jobs:
     steps:
       - name: Trigger Pi Auto-Update Webhook
         run: |
+          if [ -z "${{ secrets.PI_WEBHOOK_URL }}" ]; then
+            echo "PI_WEBHOOK_URL secret is not configured. Skipping webhook trigger."
+            exit 0
+          fi
           PAYLOAD='{"ref":"${{ github.sha }}"}'
           SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "${{ secrets.UPDATE_WEBHOOK_SECRET }}" | awk '{print "sha256="$2}')
           curl -X POST "${{ secrets.PI_WEBHOOK_URL }}/api/update" \
