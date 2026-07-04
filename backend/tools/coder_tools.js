@@ -83,16 +83,17 @@ async function handleListDir(params) {
 async function handleExecuteCommand(params, options = {}) {
   let { command } = params;
   if (!command) return 'Error: "command" parameter is required.';
+  let result = null;
 
   // If command approval is enabled, wait for the user to approve
   if (options.onCommandApprovalRequired) {
     const commandId = 'cmd_' + Math.random().toString(36).substring(2, 15);
     
     // Fire event to client via SSE callback
-    options.onCommandApprovalRequired({ commandId, command });
+    options.onCommandApprovalRequired({ commandId, command, safety_analysis: params.safety_analysis });
 
     const { registerPendingCommand } = require('../utils/commandApproval');
-    const result = await registerPendingCommand(commandId, command, options.userId);
+    result = await registerPendingCommand(commandId, command, options.userId);
 
     if (!result.approved) {
       return `Command execution rejected by user. Command was: "${command}"`;
@@ -103,7 +104,12 @@ async function handleExecuteCommand(params, options = {}) {
 
   try {
     const workspaceRoot = path.resolve(process.cwd());
-    const { stdout, stderr } = await execPromise(command, { cwd: workspaceRoot });
+    let execCmd = command;
+    if (result && result.password && command.includes('sudo')) {
+      const cleanCmd = command.replace(/sudo\s+/g, '');
+      execCmd = `echo "${result.password.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
+    }
+    const { stdout, stderr } = await execPromise(execCmd, { cwd: workspaceRoot });
     let output = '';
     if (stdout) output += `### Stdout:\n${stdout}\n`;
     if (stderr) output += `### Stderr:\n${stderr}\n`;

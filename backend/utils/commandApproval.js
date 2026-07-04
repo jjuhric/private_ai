@@ -28,11 +28,11 @@ function registerPendingCommand(commandId, command, userId) {
  * @param {string} [editedCommand] Custom/modified command edited by user
  * @returns {boolean} True if successfully resolved, false if not found
  */
-function resolveCommand(commandId, approved, editedCommand) {
+function resolveCommand(commandId, approved, editedCommand, password) {
   const pending = pendingCommands.get(commandId);
   if (!pending) return false;
   pendingCommands.delete(commandId);
-  pending.resolve({ approved, command: editedCommand || pending.command });
+  pending.resolve({ approved, command: editedCommand || pending.command, password });
   return true;
 }
 

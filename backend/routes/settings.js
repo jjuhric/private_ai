@@ -20,12 +20,19 @@ router.get('/', authenticateToken, async (req, res) => {
       return dec.substring(0, 4) + '••••••••' + dec.substring(dec.length - 4);
     };
 
+    const decOnlineKey = settings.online_key ? decrypt(settings.online_key) : '';
+    const isSetupComplete = !!(
+      (settings.local_url && settings.local_url.startsWith('http')) ||
+      (decOnlineKey && decOnlineKey.length > 5)
+    );
+
     const responseSettings = {
       ...settings,
       github_token: settings.github_token ? maskKey(settings.github_token) : '',
       gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : '',
       local_key: settings.local_key ? maskKey(settings.local_key) : '',
-      online_key: settings.online_key ? maskKey(settings.online_key) : ''
+      online_key: settings.online_key ? maskKey(settings.online_key) : '',
+      is_setup_complete: isSetupComplete
     };
 
     res.json(responseSettings);
@@ -35,7 +42,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 router.put('/', authenticateToken, async (req, res) => {
-  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider } = req.body;
+  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host } = req.body;
   try {
     const db = await getDb();
     const { encrypt } = require('../utils/crypto');
@@ -51,9 +58,10 @@ router.put('/', authenticateToken, async (req, res) => {
     await db.run(
       `INSERT INTO user_settings (
          user_id, provider, model_name, github_token, gemini_key, local_key, 
-         local_url, local_api_style, online_url, online_key, online_provider
+         local_url, local_api_style, online_url, online_key, online_provider,
+         preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET
          provider = excluded.provider,
          model_name = excluded.model_name,
@@ -64,10 +72,17 @@ router.put('/', authenticateToken, async (req, res) => {
          local_api_style = COALESCE(excluded.local_api_style, local_api_style),
          online_url = COALESCE(excluded.online_url, online_url),
          online_key = excluded.online_key,
-         online_provider = COALESCE(excluded.online_provider, online_provider)`,
+         online_provider = COALESCE(excluded.online_provider, online_provider),
+         preferred_local_model = COALESCE(excluded.preferred_local_model, preferred_local_model),
+         preferred_online_model = COALESCE(excluded.preferred_online_model, preferred_online_model),
+         supervisor_model = COALESCE(excluded.supervisor_model, supervisor_model),
+         device_type = COALESCE(excluded.device_type, device_type),
+         is_main_host = COALESCE(excluded.is_main_host, is_main_host)`,
       [
         req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', finalGithub, finalGemini, finalLocal,
-        local_url || 'http://192.168.1.42:1234/v1', local_api_style || 'openai', online_url, finalOnline, online_provider || 'gemini'
+        local_url || 'http://192.168.1.42:1234/v1', local_api_style || 'openai', online_url, finalOnline, online_provider || 'gemini',
+        preferred_local_model, preferred_online_model, supervisor_model,
+        device_type || 'windows', typeof is_main_host === 'number' ? is_main_host : 0
       ]
     );
     res.json({ success: true, message: 'Settings updated successfully.' });
@@ -197,5 +212,67 @@ function getDefaultOnlineModels(provider) {
   }
   return [];
 }
+
+router.post('/test-connection', authenticateToken, async (req, res) => {
+  const { provider, localUrl, localApiKey, onlineKey, onlineProvider, onlineUrl } = req.body;
+  try {
+    if (provider === 'local') {
+      const url = localUrl || 'http://localhost:1234/v1';
+      const fetchUrl = `${url.replace(/\/$/, '')}/models`;
+      const headers = {};
+      if (localApiKey && !localApiKey.includes('••')) {
+        headers['Authorization'] = `Bearer ${localApiKey}`;
+      }
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      
+      const testRes = await fetch(fetchUrl, { headers, signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (testRes.ok) {
+        return res.json({ success: true, message: 'Local connection successful' });
+      } else {
+        return res.status(400).json({ error: `Connection failed with status ${testRes.status}` });
+      }
+    } else {
+      const activeProvider = onlineProvider || 'gemini';
+      if (activeProvider === 'gemini') {
+        const key = onlineKey;
+        if (!key) return res.status(400).json({ error: 'API key is required' });
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        
+        const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (testRes.ok) {
+          return res.json({ success: true, message: 'Gemini connection successful' });
+        } else {
+          return res.status(400).json({ error: `Gemini verification failed with status ${testRes.status}` });
+        }
+      } else {
+        const baseUrl = onlineUrl || 'https://api.openai.com/v1';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        
+        const testRes = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, {
+          headers: { 'Authorization': `Bearer ${onlineKey}` },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (testRes.ok) {
+          return res.json({ success: true, message: `${activeProvider} connection successful` });
+        } else {
+          return res.status(400).json({ error: `API verification failed with status ${testRes.status}` });
+        }
+      }
+    }
+  } catch (err) {
+    res.status(500).json({ error: `Connection failed: ${err.message}` });
+  }
+});
 
 module.exports = router;

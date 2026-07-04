@@ -230,7 +230,7 @@ export default function SettingsModal({
                     }
 
                     if (currentProvider === 'gemini') {
-                      return ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
+                      return ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
                     } else if (currentProvider === 'openai') {
                       return ['gpt-4o', 'gpt-4o-mini', 'o1-mini'];
                     } else if (currentProvider === 'anthropic') {
@@ -241,24 +241,45 @@ export default function SettingsModal({
 
                   const displayModels = getDisplayOnlineModels();
 
-                  return displayModels.length > 0 ? (
-                    <select
-                      className="form-control"
-                      value={settings.model_name}
-                      onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
-                    >
-                      {displayModels.map(model => (
-                        <option key={model} value={model}>{model}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Enter model name"
-                      value={settings.model_name}
-                      onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
-                    />
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {displayModels.length > 0 ? (
+                        <select
+                          className="form-control"
+                          value={settings.model_name}
+                          onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
+                        >
+                          {displayModels.map(model => (
+                            <option key={model} value={model}>{model}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Enter model name"
+                          value={settings.model_name}
+                          onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
+                        />
+                      )}
+
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label>Supervisor Model Override (Optional)</label>
+                        <select
+                          className="form-control"
+                          value={settings.supervisor_model || ''}
+                          onChange={e => setSettings(prev => ({ ...prev, supervisor_model: e.target.value }))}
+                        >
+                          <option value="">(Same as Active Model)</option>
+                          {displayModels.map(model => (
+                            <option key={model} value={model}>{model}</option>
+                          ))}
+                        </select>
+                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '2px', display: 'block' }}>
+                          Select a high-reasoning model (e.g. Gemini Pro) for orchestration. Workers will run on the standard model above.
+                        </small>
+                      </div>
+                    </div>
                   );
                 })()}
               </div>

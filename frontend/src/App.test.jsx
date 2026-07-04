@@ -53,7 +53,8 @@ global.fetch = vi.fn().mockImplementation((url, options) => {
         local_api_style: 'openai',
         online_url: '',
         online_key: '',
-        online_provider: 'gemini'
+        online_provider: 'gemini',
+        is_setup_complete: true
       })
     });
   }
@@ -116,5 +117,30 @@ describe('Main App Component Tests', () => {
     expect(screen.getAllByText('Private AI Assistant').length).toBeGreaterThan(0);
     expect(screen.getByText('👤 appuser')).toBeInTheDocument();
     expect(screen.getByText('App Chat One')).toBeInTheDocument();
+  });
+
+  test('renders SetupWizard when setup is not complete', async () => {
+    // Override fetch mock for this test
+    const customFetch = vi.fn().mockImplementation((url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('/api/settings')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ is_setup_complete: false })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({})
+      });
+    });
+    global.fetch = customFetch;
+
+    let rendered;
+    await act(async () => {
+      rendered = render(<App />);
+    });
+
+    expect(screen.getByText('Device Selection')).toBeInTheDocument();
   });
 });

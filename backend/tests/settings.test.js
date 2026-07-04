@@ -355,4 +355,86 @@ describe('Settings Router Tests', () => {
     expect(resUnknown.statusCode).toBe(200);
     expect(resUnknown.body).toEqual([]);
   });
+
+  test('POST /api/settings/test-connection - local provider success and fail', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    let res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local', localUrl: 'http://localhost:1234/v1' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local', localUrl: 'http://localhost:1234/v1' });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('POST /api/settings/test-connection - online gemini success and fail', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    let res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'gemini', onlineKey: 'gemini_test_key' });
+    expect(res.statusCode).toBe(200);
+
+    // Missing key error
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'gemini' });
+    expect(res.statusCode).toBe(400);
+
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 403 });
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'gemini', onlineKey: 'invalid' });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('POST /api/settings/test-connection - online openai success and fail', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    let res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'openai', onlineKey: 'op_key', onlineUrl: 'https://api.openai.com/v1' });
+    expect(res.statusCode).toBe(200);
+
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'openai', onlineKey: 'invalid', onlineUrl: 'https://api.openai.com/v1' });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('GET /api/settings includes is_setup_complete flag', async () => {
+    const res = await request(app)
+      .get('/api/settings')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.is_setup_complete).toBeDefined();
+  });
+
+  test('POST /api/settings/test-connection - headers with key and fetch rejection', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    let res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local', localUrl: 'http://localhost:1234/v1', localApiKey: 'real_secret_api_key' });
+    expect(res.statusCode).toBe(200);
+
+    // Mock fetch rejection to trigger catch block
+    global.fetch.mockRejectedValueOnce(new Error('Network error on local host'));
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'local', localUrl: 'http://localhost:1234/v1' });
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toContain('Connection failed: Network error on local host');
+  });
 });

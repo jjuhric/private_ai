@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   country TEXT DEFAULT 'US',
   temp_unit TEXT DEFAULT 'imperial',
   weather_api_key TEXT,
+  last_briefing_at DATETIME,
+  briefing_hour INTEGER DEFAULT 7,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -52,6 +54,25 @@ CREATE TABLE IF NOT EXISTS user_settings (
   online_url TEXT,
   online_key TEXT,
   online_provider TEXT DEFAULT 'gemini', -- 'gemini', 'openai', 'anthropic', 'custom'
+  preferred_local_model TEXT,
+  preferred_online_model TEXT,
+  supervisor_model TEXT,
+  device_type TEXT DEFAULT 'windows',
+  is_main_host INTEGER DEFAULT 0,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS network_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  node_name TEXT NOT NULL,
+  device_type TEXT NOT NULL,
+  ip_address TEXT NOT NULL,
+  port INTEGER DEFAULT 3000,
+  bridge_secret TEXT,
+  last_seen DATETIME,
+  is_online INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

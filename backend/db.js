@@ -55,6 +55,12 @@ async function getDb() {
     if (!columns.some(col => col.name === 'country')) {
       await dbConnection.run("ALTER TABLE users ADD COLUMN country TEXT DEFAULT 'US'");
     }
+    if (!columns.some(col => col.name === 'last_briefing_at')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN last_briefing_at DATETIME");
+    }
+    if (!columns.some(col => col.name === 'briefing_hour')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN briefing_hour INTEGER DEFAULT 7");
+    }
 
     // Migrate user_settings to add local_key column if missing
     const settingsColumns = await dbConnection.all('PRAGMA table_info(user_settings)');
@@ -77,6 +83,21 @@ async function getDb() {
     }
     if (!settingsColumns.some(col => col.name === 'online_provider')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN online_provider TEXT DEFAULT 'gemini'");
+    }
+    if (!settingsColumns.some(col => col.name === 'preferred_local_model')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN preferred_local_model TEXT");
+    }
+    if (!settingsColumns.some(col => col.name === 'preferred_online_model')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN preferred_online_model TEXT");
+    }
+    if (!settingsColumns.some(col => col.name === 'supervisor_model')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN supervisor_model TEXT");
+    }
+    if (!settingsColumns.some(col => col.name === 'device_type')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN device_type TEXT DEFAULT 'windows'");
+    }
+    if (!settingsColumns.some(col => col.name === 'is_main_host')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN is_main_host INTEGER DEFAULT 0");
     }
 
     // Migrate memories to add embedding column if missing

@@ -203,6 +203,107 @@ describe('Multi-Agent System & Tools Tests', () => {
       expect(result).toContain('Failed to read CPU temperature');
       shouldTempFail = false;
     });
+
+    test('host_machine_tool new actions - get_network_info, get_process_list, check_updates on win32', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('win32');
+      
+      const netRes = await handleHostMachineTool('get_network_info');
+      expect(netRes).toContain('Windows Network Information');
+
+      const procRes = await handleHostMachineTool('get_process_list');
+      expect(procRes).toContain('Host Process List');
+
+      const updRes = await handleHostMachineTool('check_updates');
+      expect(updRes).toContain('System package update check is only supported on Debian/Ubuntu Linux.');
+
+      platformSpy.mockRestore();
+    });
+
+    test('host_machine_tool new actions - get_network_info, get_process_list, check_updates on linux', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('linux');
+      
+      const netRes = await handleHostMachineTool('get_network_info');
+      expect(netRes).toContain('Linux Network Information');
+
+      const procRes = await handleHostMachineTool('get_process_list');
+      expect(procRes).toContain('Host Process List');
+
+      const updRes = await handleHostMachineTool('check_updates');
+      expect(updRes).toContain('Dry Run System Package Updates');
+
+      platformSpy.mockRestore();
+    });
+
+    test('host_machine_tool new actions - get_service_status, get_journal_logs, restart_service on linux', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('linux');
+      process.env.DEVICE_TYPE_OVERRIDE = 'rpi-5-8gb'; // Just to bypass if it reads from db/env
+
+      const statusRes = await handleHostMachineTool('get_service_status', { service: 'private-ai' });
+      expect(statusRes).toContain('Service Status: private-ai');
+
+      const logsRes = await handleHostMachineTool('get_journal_logs', { service: 'private-ai', lines: 10 });
+      expect(logsRes).toContain('Journal Logs for private-ai');
+
+      const restartRes = await handleHostMachineTool('restart_service', { service: 'private-ai' });
+      expect(restartRes).toContain('Successfully restarted service "private-ai".');
+
+      platformSpy.mockRestore();
+      delete process.env.DEVICE_TYPE_OVERRIDE;
+    });
+
+    test('host_machine_tool new actions - get_service_status, get_journal_logs, restart_service on win32', async () => {
+      const os = require('os');
+      const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('win32');
+
+      const statusRes = await handleHostMachineTool('get_service_status', { service: 'private-ai' });
+      expect(statusRes).toContain('is only supported on devices with systemd');
+
+      const logsRes = await handleHostMachineTool('get_journal_logs', { service: 'private-ai' });
+      expect(logsRes).toContain('is only supported on devices with systemd');
+
+      const restartRes = await handleHostMachineTool('restart_service', { service: 'private-ai' });
+      expect(restartRes).toContain('is only supported on devices with systemd');
+
+      platformSpy.mockRestore();
+    });
+
+    test('host_machine_tool run_script executes safe script files', async () => {
+      const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+
+      const pythonRes = await handleHostMachineTool('run_script', { scriptPath: 'script.py' });
+      expect(pythonRes).toContain('Command output');
+
+      const bashRes = await handleHostMachineTool('run_script', { scriptPath: 'script.sh' });
+      expect(bashRes).toContain('Command output');
+
+      existsSpy.mockRestore();
+    });
+
+    test('host_machine_tool run_script returns error on missing or invalid script', async () => {
+      const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+
+      const missingRes = await handleHostMachineTool('run_script', { scriptPath: 'missing.py' });
+      expect(missingRes).toContain('Error: Script not found');
+
+      existsSpy.mockRestore();
+    });
+
+    test('host_machine_tool new actions missing parameters', async () => {
+      const statusRes = await handleHostMachineTool('get_service_status', {});
+      expect(statusRes).toContain('Error: "service" parameter is required.');
+
+      const logsRes = await handleHostMachineTool('get_journal_logs', {});
+      expect(logsRes).toContain('Error: "service" parameter is required.');
+
+      const restartRes = await handleHostMachineTool('restart_service', {});
+      expect(restartRes).toContain('Error: "service" parameter is required.');
+
+      const scriptRes = await handleHostMachineTool('run_script', {});
+      expect(scriptRes).toContain('Error: "scriptPath" parameter is required.');
+    });
   });
 
   describe('Coder Tools', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import AgentDashboard from './AgentDashboard';
 
 // Mock fetch
@@ -15,6 +15,7 @@ describe('AgentDashboard Component Tests', () => {
 
   beforeEach(() => {
     mockFetch.mockReset();
+    mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
   });
 
   test('renders active agent grid registry and tool timeline', () => {
@@ -292,5 +293,189 @@ describe('AgentDashboard Component Tests', () => {
       expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
       unmount();
     });
+  });
+
+  test('renders System Control subtab with mock telemetry data and triggers service restart', async () => {
+    const alertSpy = vi.spyOn(global, 'alert').mockImplementation(() => {});
+    const localMockFetch = vi.fn().mockImplementation(async (url, options) => {
+      const urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+      if (urlStr.includes('/api/vault')) {
+        return { ok: true, json: async () => [] };
+      }
+      if (urlStr.includes('/api/host/service/restart')) {
+        if (options?.body?.includes('fail-service')) {
+          return { ok: false, json: async () => ({ error: 'Service not found' }) };
+        }
+        if (options?.body?.includes('throw-service')) {
+          return Promise.reject(new Error('Connection interrupted'));
+        }
+        return { ok: true, json: async () => ({ message: 'Service restarted successfully' }) };
+      }
+      if (urlStr.includes('/api/host/status')) {
+        return {
+          ok: true,
+          json: async () => ({
+            cpu: { model: 'ARM Cortex-A72', cores: 4, loadAvg: [0.1, 0.2, 0.3] },
+            memory: { total: 1024, free: 512, used: 512, percentage: '50.0' },
+            uptime: 3600,
+            telemetry: {
+              temperature: '45.0°C',
+              power: 'Power readings',
+              network: 'Network info'
+            }
+          })
+        };
+      }
+      return { ok: false };
+    });
+    vi.stubGlobal('fetch', localMockFetch);
+
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+    
+    // Switch sub-tab
+    await act(async () => {
+      fireEvent.click(screen.getByText('System Control'));
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    expect(localMockFetch).toHaveBeenCalledWith('/api/host/status', expect.any(Object));
+    await waitFor(() => {
+      expect(screen.getByText('CPU Specifications')).toBeInTheDocument();
+      expect(screen.getByText(/ARM Cortex-A72/)).toBeInTheDocument();
+      expect(screen.getByText(/4 Cores/)).toBeInTheDocument();
+      expect(screen.getByText(/50.0% Used/)).toBeInTheDocument();
+    });
+
+    // Test restart service success path
+    const restartBtn = screen.getByText('🔄 Restart Service');
+    await act(async () => {
+      fireEvent.click(restartBtn);
+    });
+    expect(alertSpy).toHaveBeenCalledWith('Service restarted successfully');
+
+    // Test restart service fail path
+    const serviceInput = screen.getByPlaceholderText('e.g. private-ai');
+    fireEvent.change(serviceInput, { target: { value: 'fail-service' } });
+    await act(async () => {
+      fireEvent.click(restartBtn);
+    });
+    expect(alertSpy).toHaveBeenCalledWith('Failed to restart service: Service not found');
+
+    // Test restart service throw path
+    fireEvent.change(serviceInput, { target: { value: 'throw-service' } });
+    await act(async () => {
+      fireEvent.click(restartBtn);
+    });
+    expect(alertSpy).toHaveBeenCalledWith('Error restarting service: Connection interrupted');
+
+    alertSpy.mockRestore();
+  });
+
+  test('manages Field Nodes registry tab list, add, delete, and alert errors', async () => {
+    const alertSpy = vi.spyOn(global, 'alert').mockImplementation(() => {});
+    const confirmSpy = vi.spyOn(global, 'confirm').mockImplementation(() => true);
+
+    const localMockFetch = vi.fn().mockImplementation((url, options) => {
+      const urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+      if (urlStr.includes('/api/nodes')) {
+        if (options?.method === 'POST') {
+          if (options.body.includes('fail-add')) {
+            return Promise.resolve({ ok: false, json: async () => ({ error: 'Database constraint failed' }) });
+          }
+          if (options.body.includes('throw-add')) {
+            return Promise.reject(new Error('Network disconnected'));
+          }
+          return Promise.resolve({ ok: true, json: async () => ({ success: true, id: 5 }) });
+        }
+        if (options?.method === 'DELETE') {
+          if (urlStr.includes('/999')) {
+            return Promise.reject(new Error('Network delete failure'));
+          }
+          return Promise.resolve({ ok: true, json: async () => ({ success: true }) });
+        }
+        // GET nodes
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            { id: 1, node_name: 'Living Room ESP', device_type: 'esp32-wroom', ip_address: '192.168.1.100', port: 80, is_online: 1, last_seen: '2026-07-04T00:00:00Z' },
+            { id: 999, node_name: 'Living Room ESP 2', device_type: 'esp32-wroom', ip_address: '192.168.1.101', port: 80, is_online: 1, last_seen: '2026-07-04T00:00:00Z' }
+          ]
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => [] });
+    });
+    vi.stubGlobal('fetch', localMockFetch);
+
+    const { container } = render(<AgentDashboard token={token} toolLogs={[]} />);
+
+    // Click Field Nodes tab
+    await act(async () => {
+      fireEvent.click(screen.getByText('Field Nodes'));
+    });
+
+    // Check node details rendered
+    await waitFor(() => {
+      expect(screen.getByText('Distributed Field Nodes')).toBeInTheDocument();
+      expect(screen.getByText('Living Room ESP')).toBeInTheDocument();
+      expect(screen.getByText('Living Room ESP 2')).toBeInTheDocument();
+    });
+
+    // Toggle Add Node Form
+    fireEvent.click(screen.getByText('Add Node'));
+    expect(screen.getByPlaceholderText('e.g. Living Room Pi')).toBeInTheDocument();
+
+    // Fill form successfully
+    fireEvent.change(screen.getByPlaceholderText('e.g. Living Room Pi'), { target: { value: 'Pi Zero Node' } });
+    fireEvent.change(screen.getByPlaceholderText('192.168.1.50'), { target: { value: '192.168.1.55' } });
+    fireEvent.change(screen.getByPlaceholderText('Optional Auth Token'), { target: { value: 'mypassword' } });
+
+    // Select device type (to cover line 448 in AgentDashboard.jsx)
+    const select = container.querySelector('form select');
+    fireEvent.change(select, { target: { value: 'rpi-zero-2w' } });
+
+    // Submit form successfully
+    await act(async () => {
+      fireEvent.submit(container.querySelector('form'));
+    });
+
+    expect(localMockFetch).toHaveBeenCalledWith('/api/nodes', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('Pi Zero Node')
+    }));
+
+    // Test failed add node path (returns status not ok)
+    fireEvent.click(screen.getByText('Add Node'));
+    fireEvent.change(screen.getByPlaceholderText('e.g. Living Room Pi'), { target: { value: 'fail-add' } });
+    fireEvent.change(screen.getByPlaceholderText('192.168.1.50'), { target: { value: '192.168.1.55' } });
+    await act(async () => {
+      fireEvent.submit(container.querySelector('form'));
+    });
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to add node: Database constraint failed'));
+
+    // Test thrown error add node path
+    fireEvent.change(screen.getByPlaceholderText('e.g. Living Room Pi'), { target: { value: 'throw-add' } });
+    fireEvent.change(screen.getByPlaceholderText('192.168.1.50'), { target: { value: '192.168.1.55' } });
+    await act(async () => {
+      fireEvent.submit(container.querySelector('form'));
+    });
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Error adding node: Network disconnected'));
+
+    // Delete node success path (first row, node 1)
+    const deleteButtons = container.querySelectorAll('button.btn-icon');
+    await act(async () => {
+      fireEvent.click(deleteButtons[0]);
+    });
+    expect(localMockFetch).toHaveBeenCalledWith('/api/nodes/1', expect.objectContaining({
+      method: 'DELETE'
+    }));
+
+    // Delete node error throw path (second row, node 999)
+    await act(async () => {
+      fireEvent.click(deleteButtons[1]);
+    });
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Error deleting node: Network delete failure'));
+
+    alertSpy.mockRestore();
+    confirmSpy.mockRestore();
   });
 });

@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import ExpandableThoughts from './ExpandableThoughts';
 
 export default function ChatPane({
+  settings,
   messages,
   activeChatId,
   isStreaming,
@@ -93,6 +94,15 @@ export default function ChatPane({
             {toolLogs.map((log, idx) => {
               if (log.type === 'command_approval') {
                 const currentCmd = editedCommands[log.commandId] !== undefined ? editedCommands[log.commandId] : log.command;
+                const sa = log.safety_analysis;
+                const riskColors = {
+                  low: '#51cf66',
+                  medium: '#fcc419',
+                  high: '#ff6b6b'
+                };
+                const riskColor = sa && sa.risk_level ? riskColors[sa.risk_level.toLowerCase()] || '#ff6b6b' : '#ff6b6b';
+                const riskLabel = sa && sa.risk_level ? sa.risk_level.toUpperCase() : 'UNKNOWN';
+
                 return (
                   <div key={idx} className="memory-card" style={{ 
                     margin: '10px 0', 
@@ -104,11 +114,39 @@ export default function ChatPane({
                     flexDirection: 'column',
                     gap: '12px'
                   }}>
-                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', color: '#ff6b6b' }}>
-                      🛡️ Host Script Execution Request
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', color: '#ff6b6b', margin: 0 }}>
+                        🛡️ Host Script Execution Request
+                        {settings?.is_main_host === 1 && (
+                          <span style={{ fontSize: '0.75rem', background: '#ff4444', color: '#fff', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>
+                            WINDOWS STRICT MODE
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        fontWeight: 'bold', 
+                        color: riskColor, 
+                        border: `1px solid ${riskColor}`, 
+                        padding: '2px 8px', 
+                        borderRadius: '12px',
+                        background: 'rgba(0,0,0,0.2)'
+                      }}>
+                        {riskLabel} RISK
+                      </span>
                     </div>
+                    {sa && (
+                      <div style={{ fontSize: '0.8rem', color: '#eee', display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(0,0,0,0.15)', padding: '10px', borderRadius: '8px' }}>
+                        {sa.reason && <div><strong>What it does:</strong> {sa.reason}</div>}
+                        {sa.potential_harm && <div><strong>Potential Harm:</strong> {sa.potential_harm}</div>}
+                        {sa.recommendation && <div><strong>Recommendation:</strong> <span style={{ color: riskColor }}>{sa.recommendation.replace(/_/g, ' ').toUpperCase()}</span></div>}
+                      </div>
+                    )}
                     <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--text-secondary)' }}>
-                      The AI wants to execute a terminal command. You can review, edit, or reject this request.
+                      {settings?.is_main_host === 1
+                        ? "⚠️ STRICT MODE: The AI wants to execute a terminal command on the Main Host. Because Windows runs the LLM, any system changes here are inherently risky. Please review carefully."
+                        : "The AI wants to execute a terminal command. You can review, edit, or reject this request."
+                      }
                     </p>
                     
                     {log.status === 'pending' ? (

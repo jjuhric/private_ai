@@ -115,6 +115,26 @@ describe('Auth Router Tests', () => {
     expect(res.body).toHaveProperty('error', 'Invalid username or password.');
   });
 
+  test('POST /api/auth/login - missing username or password', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'loginuser' });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toContain('required');
+  });
+
+  test('POST /api/auth/login - incorrect password', async () => {
+    await request(app)
+      .post('/api/auth/register')
+      .send({ username: 'passuser', password: 'correctpassword' });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'passuser', password: 'wrongpassword' });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe('Invalid username or password.');
+  });
+
   test('GET /api/auth/me - authenticated', async () => {
     // Register and login
     await request(app)

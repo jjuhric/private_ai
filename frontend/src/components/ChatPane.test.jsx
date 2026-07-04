@@ -175,6 +175,36 @@ describe('ChatPane Component Tests', () => {
     expect(screen.getByText('Status: REJECTED')).toBeInTheDocument();
   });
 
+  test('renders command approval with safety analysis details', () => {
+    const logs = [
+      {
+        type: 'command_approval',
+        commandId: 'cmd_123',
+        command: 'rm -rf /tmp/cache',
+        status: 'pending',
+        safety_analysis: {
+          risk_level: 'high',
+          reason: 'Clears the temporary cache directory.',
+          potential_harm: 'Destructive deletion of files under /tmp/cache.',
+          recommendation: 'review_carefully'
+        }
+      }
+    ];
+
+    render(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        toolLogs={logs}
+      />
+    );
+
+    expect(screen.getByText('HIGH RISK')).toBeInTheDocument();
+    expect(screen.getByText('Clears the temporary cache directory.')).toBeInTheDocument();
+    expect(screen.getByText('Destructive deletion of files under /tmp/cache.')).toBeInTheDocument();
+    expect(screen.getByText('REVIEW CAREFULLY')).toBeInTheDocument();
+  });
+
   test('clicking starter chips updates input text', () => {
     const mockSetInputText = vi.fn();
     render(<ChatPane {...defaultProps} messages={[]} setInputText={mockSetInputText} />);

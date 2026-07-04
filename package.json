@@ -1,6 +1,6 @@
 {
   "name": "private-ai-assistant",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Local and Online AI Assistant with multi-agent orchestration and tools",
   "main": "backend/server.js",
   "scripts": {
@@ -13,7 +13,7 @@
     "test:backend": "npm run test --prefix backend",
     "test:frontend": "npm run test --prefix frontend",
     "test": "npm run test:backend && npm run test:frontend",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build && node -e \"const fs = require('fs'); ['backend/test_database.db', 'backend/test_database.db-shm', 'backend/test_database.db-wal'].forEach(f => fs.existsSync(f) && fs.unlinkSync(f))\" && playwright test",
     "coverage:backend": "npm run test:coverage --prefix backend",
     "coverage:frontend": "npm run test:coverage --prefix frontend",
     "coverage": "npm run coverage:backend && npm run coverage:frontend"

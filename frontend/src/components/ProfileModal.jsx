@@ -5,7 +5,11 @@ export default function ProfileModal({
   isProfileOpen,
   setIsProfileOpen,
   profile,
-  saveProfile
+  saveProfile,
+  settings,
+  saveSettings,
+  localModels = [],
+  onlineModels = []
 }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -13,6 +17,10 @@ export default function ProfileModal({
     country: 'US',
     temp_unit: 'imperial',
     weather_api_key: ''
+  });
+  const [formSettings, setFormSettings] = useState({
+    preferred_local_model: '',
+    preferred_online_model: ''
   });
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -26,6 +34,12 @@ export default function ProfileModal({
         weather_api_key: profile.weather_api_key || ''
       });
     }
+    if (settings) {
+      setFormSettings({
+        preferred_local_model: settings.preferred_local_model || '',
+        preferred_online_model: settings.preferred_online_model || ''
+      });
+    }
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isProfileOpen) {
@@ -34,13 +48,20 @@ export default function ProfileModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [profile, isProfileOpen, setIsProfileOpen]);
+  }, [profile, settings, isProfileOpen, setIsProfileOpen]);
 
   if (!isProfileOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     saveProfile(formData);
+    if (saveSettings && settings) {
+      saveSettings({
+        ...settings,
+        preferred_local_model: formSettings.preferred_local_model,
+        preferred_online_model: formSettings.preferred_online_model
+      });
+    }
   };
 
   return (
@@ -135,6 +156,53 @@ export default function ProfileModal({
             <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
               Used to query weather for your local area. Get a key at <a href="https://openweathermap.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)' }}>openweathermap.org</a>.
             </small>
+          </div>
+
+          {/* Preferred Models Section */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)' }}>AI Model Preferences</h4>
+            
+            {settings?.local_url && (
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Preferred Local Model</label>
+                {localModels.length > 0 ? (
+                  <select
+                    className="form-control"
+                    value={formSettings.preferred_local_model}
+                    onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
+                  >
+                    <option value="">(Default Active Model)</option>
+                    {localModels.map(model => (
+                      <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. google/gemma-4-e4b"
+                    value={formSettings.preferred_local_model}
+                    onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
+                  />
+                )}
+              </div>
+            )}
+
+            {settings?.online_key && (
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Preferred Online Model</label>
+                <select
+                  className="form-control"
+                  value={formSettings.preferred_online_model}
+                  onChange={e => setFormSettings(prev => ({ ...prev, preferred_online_model: e.target.value }))}
+                >
+                  <option value="">(Default Active Model)</option>
+                  {(onlineModels.length > 0 ? onlineModels : ['gemini-2.5-flash', 'gemini-2.5-pro', 'gpt-4o', 'claude-3-5-sonnet-latest']).map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <button type="submit" className="btn-primary" style={{ marginTop: 8 }}>
