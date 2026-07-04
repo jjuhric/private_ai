@@ -152,7 +152,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       userId: req.user.id,
       provider: settings.provider,
       modelName: actualModel,
-      supervisorModel: settings.supervisor_model || actualModel,
+      supervisorModel: actualModel,
       userMessage: message,
       history,
       githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',

@@ -420,4 +420,18 @@ describe('SettingsModal Component Tests', () => {
     fireEvent.change(overrideSelect, { target: { value: 'gemini-2.5-pro' } });
     expect(mockSetSettings).toHaveBeenCalled();
   });
+
+  test('triggers onFetchLocalModels when Scan Models is clicked', () => {
+    const mockOnFetchLocalModels = vi.fn();
+    const { container } = render(
+      <SettingsModal 
+        {...defaultProps} 
+        onFetchLocalModels={mockOnFetchLocalModels}
+      />
+    );
+    const scanBtn = container.querySelector('span[role="button"]');
+    expect(scanBtn).toBeInTheDocument();
+    fireEvent.click(scanBtn);
+    expect(mockOnFetchLocalModels).toHaveBeenCalledWith(defaultSettings);
+  });
 });
