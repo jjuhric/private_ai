@@ -21,8 +21,11 @@ async function authenticateBridge(req, res, next) {
   const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_private_ai_assistant_2026';
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    return next();
+    const userExists = await db.get('SELECT id FROM users WHERE id = ?', [decoded.id]);
+    if (userExists) {
+      req.user = decoded;
+      return next();
+    }
   } catch (err) {
     // Not a valid JWT, continue to bridge secret verification
   }
