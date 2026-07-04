@@ -1,5 +1,37 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+async function resolveLocalModelName(baseUrl, apiKey, requestedModel) {
+  try {
+    const urlObj = new URL(baseUrl);
+    const origin = urlObj.origin;
+    let endpoint = `${origin}/api/v1/models`;
+    const headers = {};
+    if (apiKey && apiKey !== 'lm-studio') {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
+    let response = await fetch(endpoint, { headers }).catch(() => null);
+    if (!response || !response.ok) {
+      endpoint = `${baseUrl.replace(/\/$/, '')}/models`;
+      response = await fetch(endpoint, { headers }).catch(() => null);
+    }
+    
+    if (response && response.ok) {
+      const data = await response.json();
+      if (data && Array.isArray(data.data) && data.data.length > 0) {
+        const loadedModels = data.data.map(m => m.id);
+        if (requestedModel && loadedModels.includes(requestedModel)) {
+          return requestedModel;
+        }
+        return loadedModels[0];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to resolve local model name:', err.message);
+  }
+  return requestedModel;
+}
+
 const AGENT_PROMPTS = {
   supervisor: `You are the Supervisor Agent of the Private AI system.
 Your job is to orchestrate, delegate tasks to specialized sub-agents, gather their findings, and compile the final response.
@@ -174,6 +206,11 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
 
+    let resolvedModelName = modelName;
+    if (provider === 'local') {
+      resolvedModelName = await resolveLocalModelName(targetUrl, targetKey, modelName);
+    }
+
     let endpoint = '';
     let headers = { 'Content-Type': 'application/json' };
     if (targetKey && targetKey !== 'lm-studio') {
@@ -202,14 +239,14 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
-        model: modelName,
+        model: resolvedModelName,
         system: systemPrompt,
         messages: [{ role: 'user', content: fullPrompt }],
         max_tokens: 1024
       };
     } else {
       body = {
-        model: modelName,
+        model: resolvedModelName,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: fullPrompt }

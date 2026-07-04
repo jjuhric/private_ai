@@ -7,6 +7,38 @@ const { handleWeatherTool } = require('./tools/weather_tool');
 const { handleMemoryTool } = require('./tools/memory_tool');
 const { handleTimeTool } = require('./tools/time_tool');
 
+async function resolveLocalModelName(baseUrl, apiKey, requestedModel) {
+  try {
+    const urlObj = new URL(baseUrl);
+    const origin = urlObj.origin;
+    let endpoint = `${origin}/api/v1/models`;
+    const headers = {};
+    if (apiKey && apiKey !== 'lm-studio') {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
+    let response = await fetch(endpoint, { headers }).catch(() => null);
+    if (!response || !response.ok) {
+      endpoint = `${baseUrl.replace(/\/$/, '')}/models`;
+      response = await fetch(endpoint, { headers }).catch(() => null);
+    }
+    
+    if (response && response.ok) {
+      const data = await response.json();
+      if (data && Array.isArray(data.data) && data.data.length > 0) {
+        const loadedModels = data.data.map(m => m.id);
+        if (requestedModel && loadedModels.includes(requestedModel)) {
+          return requestedModel;
+        }
+        return loadedModels[0];
+      }
+    }
+  } catch (err) {
+    console.error('Failed to resolve local model name:', err.message);
+  }
+  return requestedModel;
+}
+
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
 async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk, abortSignal) {
   const localStyle = apiStyle || 'openai';
@@ -418,6 +450,7 @@ Make sure to answer the user query directly and clearly.`;
       targetUrl = localBaseUrl || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
       targetKey = localApiKey;
       targetStyle = localApiStyle || 'openai';
+      modelName = await resolveLocalModelName(targetUrl, targetKey, modelName);
     } else {
       targetUrl = onlineUrl || 'https://api.openai.com/v1';
       targetKey = onlineKey;
