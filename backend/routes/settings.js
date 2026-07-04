@@ -107,7 +107,8 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     const { decrypt } = require('../utils/crypto');
     
     const queryUrl = req.query.localUrl;
-    const queryKey = req.query.localApiKey;
+    const isMasked = (val) => val && val.includes('•');
+    const queryKey = isMasked(req.query.localApiKey) ? undefined : req.query.localApiKey;
     const queryStyle = req.query.localApiStyle;
 
     const localUrl = queryUrl || settings?.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
