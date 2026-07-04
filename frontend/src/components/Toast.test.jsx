@@ -42,4 +42,13 @@ describe('Toast Component Tests', () => {
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  test('defaults to info icon for unsupported toast types', () => {
+    const { container } = render(<Toast message="Custom notification" type="warning" onClose={() => {}} />);
+    expect(screen.getByText('Custom notification')).toBeInTheDocument();
+    
+    // Check that warning class is applied
+    const notification = screen.getByText('Custom notification').closest('.toast-notification');
+    expect(notification).toHaveClass('warning');
+  });
 });

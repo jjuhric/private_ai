@@ -44,16 +44,28 @@ describe('SetupWizard Component Tests', () => {
     fireEvent.click(screen.getByText('Continue'));
 
     // Select Local API URL test connection
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, message: 'Local connection successful' })
-    });
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, message: 'Local connection successful' })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ['qwen/qwen3.8-9b', 'meta/llama3']
+      });
 
     const testBtn = screen.getByText('⚡ Test Connection');
     fireEvent.click(testBtn);
 
     await waitFor(() => {
       expect(screen.getByText('Local connection successful')).toBeInTheDocument();
+    });
+
+    // Verify local models dropdown rendered and is selectable
+    await waitFor(() => {
+      const select = screen.getAllByRole('combobox')[1];
+      expect(select).toBeInTheDocument();
+      fireEvent.change(select, { target: { value: 'meta/llama3' } });
     });
   });
 
@@ -264,6 +276,40 @@ describe('SetupWizard Component Tests', () => {
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Database locked'));
+    });
+
+    alertSpy.mockRestore();
+  });
+
+  test('Step 1 selects Windows card option', async () => {
+    render(<SetupWizard token="test_token" onComplete={mockOnComplete} />);
+
+    // Select Windows card
+    const windowsCard = screen.getByText('Windows (Main Host)').closest('div');
+    fireEvent.click(windowsCard);
+    expect(screen.getByText('Device Selection')).toBeInTheDocument();
+  });
+
+  test('Step 4 handle profile save failures', async () => {
+    const alertSpy = vi.spyOn(global, 'alert').mockImplementation(() => {});
+    render(<SetupWizard token="test_token" onComplete={mockOnComplete} />);
+
+    // Step 1 -> Step 2 -> Step 3 -> Step 4
+    fireEvent.click(screen.getByText('Continue'));
+    fireEvent.change(screen.getByPlaceholderText('Jeffery'), { target: { value: 'Tester' } });
+    fireEvent.click(screen.getByText('Continue'));
+    fireEvent.click(screen.getByText('Continue'));
+
+    // Mock Profile save fail
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Profile DB error' })
+    });
+
+    fireEvent.click(screen.getByText('Launch Private AI 🚀'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Profile DB error'));
     });
 
     alertSpy.mockRestore();

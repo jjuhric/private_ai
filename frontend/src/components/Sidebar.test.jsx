@@ -216,10 +216,8 @@ describe('Sidebar Component Tests', () => {
         setActiveTab={mockSetActiveTab}
       />
     );
-    const editingItem = screen.getByText('New Chat').closest('.chat-item'); // Wait, select chat item wrapper or child input
-    // The input text has autoFocus. Let's click it or the item
-    const chatItem = screen.getAllByRole('textbox')[0];
-    fireEvent.click(chatItem);
+    const editingItem = screen.getAllByRole('textbox')[0].closest('.chat-item');
+    fireEvent.click(editingItem);
     expect(mockSetActiveChatId).not.toHaveBeenCalled();
   });
 });
