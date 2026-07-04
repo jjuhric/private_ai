@@ -122,7 +122,8 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     { name: 'Coding Agent', desc: 'Inspects and modifies workspace files, integrates with GitHub API, and executes approved terminal scripts.', status: 'Idle', type: 'dev' },
     { name: 'QA Engineer', desc: 'Reviews code syntax, checks files for security issues, and runs project build verification tests.', status: 'Idle', type: 'qa' },
     { name: 'Weather Expert', desc: 'Resolves zipcodes to coordinates and pulls current, hourly, and daily forecasts.', status: 'Idle', type: 'weather' },
-    { name: 'Host Specialist', desc: 'Queries CPU telemetry, memory usage, disk allocation, and live battery power specs.', status: 'Idle', type: 'host' }
+    { name: 'Host Specialist', desc: 'Queries CPU telemetry, memory usage, disk allocation, and live battery power specs.', status: 'Idle', type: 'host' },
+    { name: 'Node Agent', desc: 'Lists remote network nodes and routes commands, files, or system queries to distributed field devices (RPi, ESP32).', status: 'Idle', type: 'node' }
   ];
 
   useEffect(() => {
@@ -219,6 +220,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     if (agentType === 'qa' && currentAgent === 'qa_engineer') return 'Active';
     if (agentType === 'weather' && (currentAgent === 'weather_expert' || currentAgent === 'weather')) return 'Active';
     if (agentType === 'host' && (currentAgent === 'host_specialist' || currentAgent === 'host_machine')) return 'Active';
+    if (agentType === 'node' && (currentAgent === 'node_agent' || currentAgent === 'network_node' || currentAgent === 'list_network_nodes' || currentAgent === 'remote_node_bridge')) return 'Active';
 
     return 'Idle';
   };
