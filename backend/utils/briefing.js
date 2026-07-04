@@ -100,9 +100,13 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
     };
 
     // Use supervisor model if override is present
-    if (activeSettings.supervisor_model) {
-      llmSettings.modelName = activeSettings.supervisor_model;
+    let actualModel = activeSettings.model_name;
+    if (activeSettings.provider === 'local' && activeSettings.preferred_local_model) {
+      actualModel = activeSettings.preferred_local_model;
+    } else if (activeSettings.provider !== 'local' && activeSettings.preferred_online_model) {
+      actualModel = activeSettings.preferred_online_model;
     }
+    llmSettings.modelName = actualModel;
 
     const aiResponse = await runWorkerAgent(
       'daily_briefing',

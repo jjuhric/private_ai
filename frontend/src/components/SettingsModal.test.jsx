@@ -399,28 +399,6 @@ describe('SettingsModal Component Tests', () => {
     expect(mockSetIsSettingsOpen).toHaveBeenCalledWith(false);
   });
 
-  test('changes Supervisor Model Override option', () => {
-    const mockSetSettings = vi.fn();
-    const onlineSettings = {
-      ...defaultSettings,
-      provider: 'gemini'
-    };
-    render(
-      <SettingsModal 
-        {...defaultProps} 
-        settings={onlineSettings}
-        isSettingsOpen={true}
-        setSettings={mockSetSettings}
-      />
-    );
-    
-    // Select the select element next to the label
-    const selects = screen.getAllByRole('combobox');
-    const overrideSelect = selects[selects.length - 1];
-    fireEvent.change(overrideSelect, { target: { value: 'gemini-2.5-pro' } });
-    expect(mockSetSettings).toHaveBeenCalled();
-  });
-
   test('triggers onFetchLocalModels when Scan Models is clicked', () => {
     const mockOnFetchLocalModels = vi.fn();
     const { container } = render(
