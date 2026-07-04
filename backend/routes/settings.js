@@ -62,7 +62,7 @@ router.put('/', authenticateToken, async (req, res) => {
 
     const resolvedLocalKey = isMasked(local_key) ? decrypt(existing.local_key) : local_key;
     const resolvedUrl = local_url || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
-    const resolvedStyle = local_api_style || ((resolvedUrl.includes(':1234') || (resolvedLocalKey && resolvedLocalKey.startsWith('lm-'))) ? 'lm-studio' : 'openai');
+    const resolvedStyle = local_api_style || 'openai';
 
     await db.run(
       `INSERT INTO user_settings (
@@ -121,7 +121,7 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     }
     localApiKey = localApiKey || process.env.LOCAL_LLM_KEY || '';
 
-    const localApiStyle = queryStyle || settings?.local_api_style || ((localUrl.includes(':1234') || localApiKey.startsWith('lm-')) ? 'lm-studio' : 'openai');
+    const localApiStyle = queryStyle || settings?.local_api_style || 'openai';
 
     const authHeader = localApiKey && localApiKey !== 'lm-studio' ? { 'Authorization': `Bearer ${localApiKey}` } : {};
 
