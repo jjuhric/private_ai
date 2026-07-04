@@ -35,7 +35,7 @@ router.get('/', authenticateToken, async (req, res) => {
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_url: settings.local_url || process.env.LOCAL_LLM_URL || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1'),
       preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
-      preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash',
+      preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
       is_setup_complete: isSetupComplete
     };
@@ -229,7 +229,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
 
 function getDefaultOnlineModels(provider) {
   if (provider === 'gemini') {
-    return ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+    return ['gemini-2.0-flash', 'gemini-1.5-pro'];
   } else if (provider === 'openai') {
     return ['gpt-4o', 'gpt-4o-mini', 'o1-mini'];
   } else if (provider === 'anthropic') {

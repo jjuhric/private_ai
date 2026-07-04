@@ -32,7 +32,7 @@ export default function SetupWizard({ token, onComplete }) {
   });
 
   const [localModels, setLocalModels] = useState([]);
-  const [onlineModels, setOnlineModels] = useState(['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gpt-4o', 'claude-3-5-sonnet-latest']);
+  const [onlineModels, setOnlineModels] = useState(['gemini-2.0-flash', 'gemini-1.5-pro', 'gpt-4o', 'claude-3-5-sonnet-latest']);
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
   const [showWeatherKey, setShowWeatherKey] = useState(false);
@@ -50,7 +50,7 @@ export default function SetupWizard({ token, onComplete }) {
       }));
     } else {
       const currentProvider = llmForm.online_provider;
-      let defaultModel = 'gemini-1.5-flash';
+      let defaultModel = 'gemini-2.0-flash';
       if (currentProvider === 'openai') defaultModel = 'gpt-4o';
       else if (currentProvider === 'anthropic') defaultModel = 'claude-3-5-sonnet-latest';
       setLlmForm(prev => ({
@@ -156,7 +156,7 @@ export default function SetupWizard({ token, onComplete }) {
             device_type: deviceForm.device_type,
             is_main_host: deviceForm.is_main_host,
             preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'google/gemma-4-e4b',
-            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-1.5-flash'
+            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-2.0-flash'
           })
         });
       if (!settingsRes.ok) {

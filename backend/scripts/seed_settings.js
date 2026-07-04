@@ -74,7 +74,7 @@ async function main(argv = process.argv) {
     // Determine default model names
     let modelName = process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b';
     if (provider === 'online') {
-      if (onlineProvider === 'gemini') modelName = process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash';
+      if (onlineProvider === 'gemini') modelName = process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash';
       else if (onlineProvider === 'openai') modelName = 'gpt-4o';
       else if (onlineProvider === 'anthropic') modelName = 'claude-3-5-sonnet-latest';
     }
@@ -112,7 +112,7 @@ async function main(argv = process.argv) {
       encryptedOnlineKey,
       onlineProvider,
       args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
-      args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash',
+      args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       args.supervisor_model || process.env.SUPERVISOR_MODEL || (onlineProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4o'),
       deviceType,
       isMainHost

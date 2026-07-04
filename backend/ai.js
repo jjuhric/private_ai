@@ -131,7 +131,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
 async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk, abortSignal) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: modelName || 'gemini-1.5-flash',
+    model: modelName || 'gemini-2.0-flash',
     systemInstruction: systemInstruction
   });
 

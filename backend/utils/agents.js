@@ -162,7 +162,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     if (!activeKey) throw new Error('Gemini API key is not configured.');
     const genAI = new GoogleGenerativeAI(activeKey);
     const model = genAI.getGenerativeModel({
-      model: modelName || 'gemini-1.5-flash',
+      model: modelName || 'gemini-2.0-flash',
       generationConfig: { responseMimeType: 'application/json' }
     });
     const result = await model.generateContent(fullPrompt);
