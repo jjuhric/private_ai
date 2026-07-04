@@ -132,14 +132,22 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       [chatId, 'user', message]
     );
 
+    // Resolve preferred model names dynamically
+    let actualModel = settings.model_name;
+    if (settings.provider === 'local' && settings.preferred_local_model) {
+      actualModel = settings.preferred_local_model;
+    } else if (settings.provider !== 'local' && settings.preferred_online_model) {
+      actualModel = settings.preferred_online_model;
+    }
+
     // Trigger AI orchestration loop
     const { decrypt } = require('../utils/crypto');
     await runAgentLoop({
       db,
       userId: req.user.id,
       provider: settings.provider,
-      modelName: settings.model_name,
-      supervisorModel: settings.supervisor_model,
+      modelName: actualModel,
+      supervisorModel: settings.supervisor_model || actualModel,
       userMessage: message,
       history,
       githubToken: decrypt(settings.github_token),

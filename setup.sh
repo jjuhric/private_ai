@@ -88,18 +88,20 @@ echo "===================================================="
 echo "Supported Device Types:"
 echo "  1) Windows"
 echo "  2) General Linux (default)"
-echo "  3) Raspberry Pi 5"
-echo "  4) Raspberry Pi 4"
-echo "  5) Raspberry Pi Zero 2W"
-echo "  6) ESP32 Node"
+echo "  3) Raspberry Pi 5 (8GB)"
+echo "  4) Raspberry Pi 5 (15GB/16GB)"
+echo "  5) Raspberry Pi 4"
+echo "  6) Raspberry Pi Zero 2W"
+echo "  7) ESP32 Node"
 read -p "Select your device type [2]: " DEV_CHOICE
 case $DEV_CHOICE in
     1) DEVICE_TYPE="windows" ;;
     2|*) DEVICE_TYPE="linux" ;;
     3) DEVICE_TYPE="rpi-5-8gb" ;;
-    4) DEVICE_TYPE="rpi-4b-2gb" ;;
-    5) DEVICE_TYPE="rpi-zero-2w" ;;
-    6) DEVICE_TYPE="esp32" ;;
+    4) DEVICE_TYPE="rpi-5-15gb" ;;
+    5) DEVICE_TYPE="rpi-4b-2gb" ;;
+    6) DEVICE_TYPE="rpi-zero-2w" ;;
+    7) DEVICE_TYPE="esp32" ;;
 esac
 
 # Main Host role prompt

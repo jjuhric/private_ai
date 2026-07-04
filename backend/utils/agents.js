@@ -13,14 +13,27 @@ Your job is to orchestrate, delegate tasks to specialized sub-agents, gather the
 6. delegate_to_weather_expert (params: { action, zipcode, country }): Best for retrieving current, hourly, or daily forecasts.
 7. delegate_to_host_specialist (params: { query }): Best for inspecting local computer system details (CPU, memory, disk, OS, networks, processes), checking power/battery status, restarting services, and running scripts.
 8. delegate_to_document_vault (params: { query }): Best for querying local private files, notes, or uploaded documents in the Vault.
+9. delegate_to_node_agent (params: { task }): Best for listing remote network nodes, querying their system information, or executing commands/files remotely on them (RPi, ESP32, etc.).
 
 ### Direct Core Tools:
 - time (action: 'current_time' or 'lookup_timezone'): Use to find the current date/time.
 
 ### CRITICAL RULES:
-1. Delegation first: Do not answer questions yourself if they require external actions (searching, coding, calendar, host specs, weather, vault query). Always delegate to the appropriate specialized agent.
+1. Delegation first: Do not answer questions yourself if they require external actions (searching, coding, calendar, host specs, weather, vault query, remote node execution). Always delegate to the appropriate specialized agent.
 2. Inspect Memories & Profile: You will receive the user's profile details and core identity/location memories. If you need other custom user facts or past context, delegate to the memory agent first to recall them.
 3. Iterative Decision: Review the sub-agent's structured report. Decide if it has compiled enough information to answer the user request or if further delegation/turns are needed.`,
+
+  node_agent: `You are the Network Node Routing Agent.
+Your job is to list remote network nodes and route commands, files, or queries to them.
+
+### Available Tools:
+- list_network_nodes (params: {})
+- remote_node_bridge (params: { nodeId, action, actionParams: { command, filePath, content } })
+
+### CRITICAL RULES:
+1. You can execute actions on remote nodes like Raspberry Pi or ESP32 by passing the appropriate action ('system_info', 'run_command', 'write_file', 'read_file').
+2. NOTHING is allowed to run commands on the Parent Node (the machine running the LLM). Any attempt to target the Parent Node must be rejected with access denied.
+3. If a command requires sudo, the system will automatically prompt the user on the Main Host for approval. Do not attempt to bypass this.`,
 
   memory_agent: `You are the Memory Agent.
 Your job is to manage the user's memories (recall facts, save new memories, or forget old ones).
@@ -414,6 +427,12 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     } else if (decision.tool === 'query_vault') {
       const { handleVaultTool } = require('../tools/vault_tool');
       output = await handleVaultTool(db, userId, 'query', decision.params);
+    } else if (['list_network_nodes', 'remote_node_bridge'].includes(decision.tool)) {
+      const { handleNetworkNodeTool } = require('../tools/network_node_tool');
+      output = await handleNetworkNodeTool(decision.tool, decision.params, {
+        userId,
+        onCommandApprovalRequired: settings.onCommandApprovalRequired
+      });
     } else {
       output = `Error: Tool "${decision.tool}" is not accessible to this agent.`;
     }
