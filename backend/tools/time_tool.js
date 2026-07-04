@@ -17,7 +17,22 @@ async function handleTimeTool(db, userId, action, params) {
     });
     
     const formatted = formatter.format(now);
-    return `Current UTC Time: ${formatted} (ISO: ${utcISO})`;
+
+    // Format local system date & time
+    const localFormatter = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+    const localFormatted = localFormatter.format(now);
+    const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+
+    return `Current UTC Time: ${formatted} (ISO: ${utcISO})\nLocal System Time: ${localFormatted} (Timezone: ${localTimezone})`;
   }
 
   if (action === 'lookup_timezone') {
