@@ -132,8 +132,8 @@ read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
 BUILD_FE_YN=${BUILD_FE_YN:-y}
 
 # Server port configuration
-read -p "Enter Server PORT [5173]: " APP_PORT
-APP_PORT=${APP_PORT:-5173}
+read -p "Enter Server PORT [3000]: " APP_PORT
+APP_PORT=${APP_PORT:-3000}
 
 # Create .env config file
 log "Configuring environment variables (.env)..."

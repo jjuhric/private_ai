@@ -69,8 +69,8 @@ $githubToken = Read-Host "Enter GitHub Access Token (optional)"
 $buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
 if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
 
-$appPort = Read-Host "Enter Server PORT [5173]"
-if ([string]::IsNullOrWhiteSpace($appPort)) { $appPort = "5173" }
+$appPort = Read-Host "Enter Server PORT [3000]"
+if ([string]::IsNullOrWhiteSpace($appPort)) { $appPort = "3000" }
 
 # 5. Create or Configure .env
 Write-Log "Writing configuration to .env file..."
