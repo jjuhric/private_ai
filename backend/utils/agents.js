@@ -189,7 +189,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       const urlObj = new URL(targetUrl);
       const origin = urlObj.origin;
       if (targetStyle === 'lm-studio') {
-        endpoint = `${origin}/api/v1/chat`;
+        endpoint = `${origin}/v1/chat/completions`;
       } else if (targetStyle === 'anthropic') {
         endpoint = `${origin}/v1/messages`;
       } else {
@@ -322,7 +322,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
       const urlObj = new URL(targetUrl);
       const origin = urlObj.origin;
       if (targetStyle === 'lm-studio') {
-        endpoint = `${origin}/api/v1/chat`;
+        endpoint = `${origin}/v1/chat/completions`;
       } else if (targetStyle === 'anthropic') {
         endpoint = `${origin}/v1/messages`;
       } else {

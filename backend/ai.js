@@ -31,7 +31,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     const origin = urlObj.origin;
 
     if (localStyle === 'lm-studio') {
-      endpoint = `${origin}/api/v1/chat`;
+      endpoint = `${origin}/v1/chat/completions`;
     } else if (localStyle === 'anthropic') {
       endpoint = `${origin}/v1/messages`;
     } else {
