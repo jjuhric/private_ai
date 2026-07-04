@@ -234,6 +234,7 @@ describe('AgentDashboard Component Tests', () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
     const logs = [
       { tool: 'memory', action: 'recall', agent: 'memory_agent' },
+      { tool: 'calendar', action: 'list', agent: 'calendar_handler' },
       { tool: 'search_web', action: 'query', agent: 'web_searcher' },
       { tool: 'query_vault', action: 'query', agent: 'document_vault' },
       { tool: 'read_file', action: 'read', agent: 'coder' },
@@ -260,6 +261,7 @@ describe('AgentDashboard Component Tests', () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
     const logs = [
       { tool: 'memory', action: 'recall' },
+      { tool: 'calendar', action: 'list' },
       { tool: 'search_web', action: 'query' },
       { tool: 'read_file', action: 'read' },
       { tool: 'weather', action: 'forecast' },
@@ -267,5 +269,28 @@ describe('AgentDashboard Component Tests', () => {
     ];
     render(<AgentDashboard token={token} toolLogs={logs} />);
     expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
+  });
+
+  test('cycles through all possible activeAgent props to cover status branches', () => {
+    const agentsToTest = [
+      'supervisor',
+      'memory_agent',
+      'calendar_handler',
+      'web_searcher',
+      'document_vault',
+      'coder',
+      'qa_engineer',
+      'weather_expert',
+      'host_specialist'
+    ];
+
+    agentsToTest.forEach(agent => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+      const { unmount } = render(
+        <AgentDashboard token={token} toolLogs={[]} activeAgent={agent} isStreaming={true} />
+      );
+      expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
+      unmount();
+    });
   });
 });

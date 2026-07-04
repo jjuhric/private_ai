@@ -13,6 +13,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
   const agents = [
     { name: 'Supervisor Agent', desc: 'Orchestrates conversation flow, delegates subtasks, and generates final user reports.', status: 'Idle', type: 'supervisor' },
     { name: 'Memory Agent', desc: 'Manages user memories, recalls preferences, stores facts, and cleans up expired short-term logs.', status: 'Idle', type: 'memory' },
+    { name: 'Calendar Agent', desc: 'Manages calendar events, schedules meetings, lists appointments, and resolves scheduling conflicts.', status: 'Idle', type: 'calendar' },
     { name: 'Web Searcher', desc: 'Crawls Google and DuckDuckGo search results, retrieves top articles, and decodes news feeds.', status: 'Idle', type: 'crawler' },
     { name: 'Document Vault Agent', desc: 'Queries the local Document Vault using semantic RAG vector similarity to fetch private context.', status: 'Idle', type: 'rag' },
     { name: 'Coding Agent', desc: 'Inspects and modifies workspace files, integrates with GitHub API, and executes approved terminal scripts.', status: 'Idle', type: 'dev' },
@@ -108,6 +109,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
 
     if (agentType === 'supervisor' && currentAgent === 'supervisor') return 'Active';
     if (agentType === 'memory' && (currentAgent === 'memory_agent' || currentAgent === 'memory')) return 'Active';
+    if (agentType === 'calendar' && (currentAgent === 'calendar_handler' || currentAgent === 'calendar')) return 'Active';
     if (agentType === 'crawler' && (currentAgent === 'web_searcher' || currentAgent === 'search_web' || currentAgent === 'google_news')) return 'Active';
     if (agentType === 'rag' && (currentAgent === 'document_vault' || currentAgent === 'query_vault')) return 'Active';
     if (agentType === 'dev' && (currentAgent === 'coder' || currentAgent === 'read_file' || currentAgent === 'write_file' || currentAgent === 'execute_command' || currentAgent === 'github')) return 'Active';
