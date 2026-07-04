@@ -20,18 +20,23 @@ router.get('/', authenticateToken, async (req, res) => {
       return dec.substring(0, 4) + '••••••••' + dec.substring(dec.length - 4);
     };
 
-    const decOnlineKey = settings.online_key ? decrypt(settings.online_key) : '';
+    const decOnlineKey = settings.online_key ? decrypt(settings.online_key) : (process.env.GEMINI_API_KEY || '');
     const isSetupComplete = !!(
       (settings.local_url && settings.local_url.startsWith('http')) ||
+      process.env.LOCAL_LLM_URL ||
       (decOnlineKey && decOnlineKey.length > 5)
     );
 
     const responseSettings = {
       ...settings,
-      github_token: settings.github_token ? maskKey(settings.github_token) : '',
-      gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : '',
-      local_key: settings.local_key ? maskKey(settings.local_key) : '',
-      online_key: settings.online_key ? maskKey(settings.online_key) : '',
+      github_token: settings.github_token ? maskKey(settings.github_token) : (process.env.GITHUB_TOKEN ? maskKey(process.env.GITHUB_TOKEN) : ''),
+      gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
+      local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
+      online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
+      local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1',
+      preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
+      preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash',
+      supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
       is_setup_complete: isSetupComplete
     };
 
@@ -128,12 +133,14 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     res.json(models);
   } catch (err) {
     console.error('Failed to fetch local models:', err.message);
-    res.json([
+    const fallbackModels = [
+      process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
       'google/gemma-4-e4b',
       'google/gemma-4-e2b',
       'google/gemma-4-12b-qat',
       'qwen/qwen3.5-9b'
-    ]);
+    ];
+    res.json([...new Set(fallbackModels)]);
   }
 });
 
@@ -145,7 +152,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
     const url = settings?.online_url;
 
     const { decrypt } = require('../utils/crypto');
-    const key = decrypt(settings?.online_key);
+    const key = decrypt(settings?.online_key) || process.env.GEMINI_API_KEY;
 
     if (!key) {
       return res.json(getDefaultOnlineModels(provider));
@@ -204,7 +211,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
 
 function getDefaultOnlineModels(provider) {
   if (provider === 'gemini') {
-    return ['gemini-2.5-flash'];
+    return ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
   } else if (provider === 'openai') {
     return ['gpt-4o', 'gpt-4o-mini', 'o1-mini'];
   } else if (provider === 'anthropic') {

@@ -59,9 +59,12 @@ $defaultPort = "3000"
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
     foreach ($line in $envLines) {
-        if ($line -match "^PORT=(\d+)") {
-            $defaultPort = $Matches[1]
-        }
+        if ($line -match "^PORT=(.*)") { $defaultPort = $Matches[1].Trim() }
+        if ($line -match "^LOCAL_LLM_URL=(.*)") { $defaultLocalUrl = $Matches[1].Trim() }
+        if ($line -match "^LOCAL_LLM_KEY=(.*)") { $defaultLocalKey = $Matches[1].Trim() }
+        if ($line -match "^GEMINI_API_KEY=(.*)") { $defaultOnlineKey = $Matches[1].Trim() }
+        if ($line -match "^GITHUB_TOKEN=(.*)") { $defaultGithubToken = $Matches[1].Trim() }
+        if ($line -match "^ONLINE_PROVIDER=(.*)") { $defaultOnlineProvider = $Matches[1].Trim() }
     }
     
     if (Test-Path "backend/node_modules") {
@@ -141,11 +144,41 @@ if (-not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
 }
 
+# 6. Create or Configure .env
+Write-Log "Writing configuration to .env file..."
+if (-not (Test-Path ".env")) {
+    Copy-Item ".env.example" ".env"
+}
+
+# Helper to write/update key-value pair in .env
+function Write-EnvVar ($Key, $Val) {
+    $envPath = ".env"
+    $lines = Get-Content $envPath
+    $found = $false
+    for ($i=0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i] -match "^$Key=") {
+            $lines[$i] = "$Key=$Val"
+            $found = $true
+            break
+        }
+    }
+    if (-not $found) {
+        $lines += "$Key=$Val"
+    }
+    Set-Content -Path $envPath -Value $lines
+}
+
+Write-EnvVar "PORT" $appPort
+Write-EnvVar "LOCAL_LLM_URL" $localUrl
+Write-EnvVar "LOCAL_LLM_KEY" $localKey
+Write-EnvVar "GEMINI_API_KEY" $onlineKey
+Write-EnvVar "GITHUB_TOKEN" $githubToken
+Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.8-9b"
+Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-1.5-flash"
+Write-EnvVar "SUPERVISOR_MODEL" "gemini-1.5-pro"
+
 # Read env content
 $envContent = Get-Content ".env" -Raw
-
-# Replace PORT and DEPLOY_MODE
-$envContent = $envContent -replace "PORT=\d+", "PORT=$appPort"
 
 if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
     $envContent = $envContent -replace "DEPLOY_MODE=backend-only", "# DEPLOY_MODE=backend-only"

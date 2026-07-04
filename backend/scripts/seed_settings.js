@@ -23,11 +23,11 @@ async function main(argv = process.argv) {
   const deviceType = args.device_type || 'windows';
   const isMainHost = args.is_main_host === '1' || args.is_main_host === 'true' ? 1 : 0;
   
-  const localUrl = args.local_url || 'http://localhost:1234/v1';
-  const localKey = args.local_key || null;
-  const onlineProvider = args.online_provider || 'gemini';
-  const onlineKey = args.online_key || null;
-  const githubToken = args.github_token || null;
+  const localUrl = args.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1';
+  const localKey = args.local_key || process.env.LOCAL_LLM_KEY || null;
+  const onlineProvider = args.online_provider || process.env.ONLINE_PROVIDER || 'gemini';
+  const onlineKey = args.online_key || process.env.GEMINI_API_KEY || null;
+  const githubToken = args.github_token || process.env.GITHUB_TOKEN || null;
 
   if (username.length === 0) {
     console.error('Error: Username cannot be empty.');
@@ -72,9 +72,9 @@ async function main(argv = process.argv) {
     const provider = onlineKey ? 'online' : 'local';
     
     // Determine default model names
-    let modelName = 'google/gemma-4-e4b';
+    let modelName = process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b';
     if (provider === 'online') {
-      if (onlineProvider === 'gemini') modelName = 'gemini-1.5-flash';
+      if (onlineProvider === 'gemini') modelName = process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash';
       else if (onlineProvider === 'openai') modelName = 'gpt-4o';
       else if (onlineProvider === 'anthropic') modelName = 'claude-3-5-sonnet-latest';
     }
@@ -111,9 +111,9 @@ async function main(argv = process.argv) {
       args.local_api_style || 'openai',
       encryptedOnlineKey,
       onlineProvider,
-      args.preferred_local_model || 'google/gemma-4-e4b',
-      args.preferred_online_model || 'gemini-1.5-flash',
-      args.supervisor_model || (onlineProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4o'),
+      args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
+      args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash',
+      args.supervisor_model || process.env.SUPERVISOR_MODEL || (onlineProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4o'),
       deviceType,
       isMainHost
     ]);

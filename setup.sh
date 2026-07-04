@@ -105,8 +105,13 @@ DEFAULT_PORT="3000"
 
 if [ -f ".env" ]; then
     DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
+    DEFAULT_LOCAL_URL=$(grep -E "^LOCAL_LLM_URL=" .env | cut -d'=' -f2 || echo "http://localhost:1234/v1")
+    DEFAULT_LOCAL_KEY=$(grep -E "^LOCAL_LLM_KEY=" .env | cut -d'=' -f2 || echo "")
+    DEFAULT_ONLINE_KEY=$(grep -E "^GEMINI_API_KEY=" .env | cut -d'=' -f2 || echo "")
+    DEFAULT_GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" .env | cut -d'=' -f2 || echo "")
+    DEFAULT_ONLINE_PROVIDER=$(grep -E "^ONLINE_PROVIDER=" .env | cut -d'=' -f2 || echo "gemini")
     
-    # Try to load existing settings from database using read_settings.js helper
+    # Try to load existing settings from database using read_settings.js helper (to override .env defaults if DB is populated)
     if [ -d "backend/node_modules" ]; then
         db_settings=$(node backend/scripts/read_settings.js 2>/dev/null || echo "{}")
         if [ ! -z "$db_settings" ] && [ "$db_settings" != "{}" ]; then
@@ -118,11 +123,11 @@ if [ -f ".env" ]; then
             else
                 DEFAULT_IS_MAIN_HOST="y"
             fi
-            DEFAULT_LOCAL_URL=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_url || 'http://localhost:1234/v1'); } catch(e) { console.log('http://localhost:1234/v1'); }")
-            DEFAULT_LOCAL_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_key || ''); } catch(e) { console.log(''); }")
-            DEFAULT_ONLINE_PROVIDER=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_provider || 'gemini'); } catch(e) { console.log('gemini'); }")
-            DEFAULT_ONLINE_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_key || ''); } catch(e) { console.log(''); }")
-            DEFAULT_GITHUB_TOKEN=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.github_token || ''); } catch(e) { console.log(''); }")
+            DEFAULT_LOCAL_URL=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_url || '$DEFAULT_LOCAL_URL'); } catch(e) { console.log('$DEFAULT_LOCAL_URL'); }")
+            DEFAULT_LOCAL_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_key || '$DEFAULT_LOCAL_KEY'); } catch(e) { console.log('$DEFAULT_LOCAL_KEY'); }")
+            DEFAULT_ONLINE_PROVIDER=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_provider || '$DEFAULT_ONLINE_PROVIDER'); } catch(e) { console.log('$DEFAULT_ONLINE_PROVIDER'); }")
+            DEFAULT_ONLINE_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_key || '$DEFAULT_ONLINE_KEY'); } catch(e) { console.log('$DEFAULT_ONLINE_KEY'); }")
+            DEFAULT_GITHUB_TOKEN=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.github_token || '$DEFAULT_GITHUB_TOKEN'); } catch(e) { console.log('$DEFAULT_GITHUB_TOKEN'); }")
         fi
     fi
 fi
@@ -215,8 +220,26 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
 fi
 
-# Write PORT and DEPLOY_MODE into .env
-sed -i "s/^PORT=.*/PORT=${APP_PORT}/" .env || echo "PORT=${APP_PORT}" >> .env
+write_env_var() {
+    local key=$1
+    local val=$2
+    if grep -q "^${key}=" .env; then
+        # Replace existing key (using | to handle URLs with slashes)
+        sed -i "s|^${key}=.*|${key}=${val}|" .env
+    else
+        # Append new key
+        echo "${key}=${val}" >> .env
+    fi
+}
+
+write_env_var "PORT" "${APP_PORT}"
+write_env_var "LOCAL_LLM_URL" "${LOCAL_URL}"
+write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
+write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
+write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
+write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.8-9b"
+write_env_var "PREFERRED_ONLINE_MODEL" "gemini-1.5-flash"
+write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
 
 if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
     sed -i "s/^DEPLOY_MODE=.*/# DEPLOY_MODE=backend-only/" .env

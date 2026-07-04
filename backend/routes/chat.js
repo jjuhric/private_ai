@@ -142,6 +142,11 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
 
     // Trigger AI orchestration loop
     const { decrypt } = require('../utils/crypto');
+    const decryptedGithub = decrypt(settings.github_token);
+    const decryptedLocalKey = decrypt(settings.local_key);
+    const decryptedOnlineKey = decrypt(settings.online_key);
+    const decryptedGeminiKey = decrypt(settings.gemini_key);
+
     await runAgentLoop({
       db,
       userId: req.user.id,
@@ -150,13 +155,13 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       supervisorModel: settings.supervisor_model || actualModel,
       userMessage: message,
       history,
-      githubToken: decrypt(settings.github_token),
-      localBaseUrl: settings.local_url || 'http://localhost:1234/v1',
-      localApiKey: decrypt(settings.local_key),
+      githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
+      localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1',
+      localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
       localApiStyle: settings.local_api_style || 'openai',
       onlineUrl: settings.online_url,
-      onlineKey: decrypt(settings.online_key),
-      geminiKey: decrypt(settings.gemini_key),
+      onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+      geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
       onlineProvider: settings.online_provider || 'gemini',
       isAborted: () => streamAbortController.signal.aborted,
       abortSignal: streamAbortController.signal,
