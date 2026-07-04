@@ -51,7 +51,7 @@ describe('SetupWizard Component Tests', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ['qwen/qwen3.8-9b', 'meta/llama3']
+        json: async () => ['qwen/qwen3.5-9b', 'meta/llama3']
       });
 
     const testBtn = screen.getByText('⚡ Test Connection');

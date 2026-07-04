@@ -173,8 +173,8 @@ Write-EnvVar "LOCAL_LLM_URL" $localUrl
 Write-EnvVar "LOCAL_LLM_KEY" $localKey
 Write-EnvVar "GEMINI_API_KEY" $onlineKey
 Write-EnvVar "GITHUB_TOKEN" $githubToken
-Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.8-9b"
-Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-1.5-flash"
+Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
+Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 Write-EnvVar "SUPERVISOR_MODEL" "gemini-1.5-pro"
 
 # Read env content
@@ -206,6 +206,25 @@ Write-Log "Installing NPM dependencies (this might take a few minutes)..."
 & npm run install:all
 
 # 8. Database Seeding
+$resetDb = $false
+if (-not $NonInteractive) {
+    $resetDbYN = Read-Host "Do you want to reset the database and start fresh (deletes all users)? (y/n) [n]"
+    if ($resetDbYN -eq "y" -or $resetDbYN -eq "Y") {
+        $resetDb = $true
+    }
+}
+
+if ($resetDb) {
+    Write-Log "Wiping existing database for a fresh setup..." "Yellow"
+    $dbPath = "backend/database.db"
+    foreach ($suffix in ("", "-wal", "-shm")) {
+        $file = $dbPath + $suffix
+        if (Test-Path $file) {
+            Remove-Item $file -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Write-Log "Seeding local database..."
 $seedCmd = "backend/scripts/seed_settings.js"
 & node $seedCmd `

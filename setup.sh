@@ -237,8 +237,8 @@ write_env_var "LOCAL_LLM_URL" "${LOCAL_URL}"
 write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
 write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
 write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
-write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.8-9b"
-write_env_var "PREFERRED_ONLINE_MODEL" "gemini-1.5-flash"
+write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
+write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
 
 if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
@@ -265,6 +265,20 @@ log "Installing project dependencies (this may take a few minutes)..."
 npm run install:all
 
 # 7. Database Initialization & Seeding
+RESET_DB=false
+if [ "$NON_INTERACTIVE" = false ]; then
+    read -p "Do you want to reset the database and start fresh (deletes all users)? (y/n) [n]: " RESET_DB_YN
+    RESET_DB_YN=${RESET_DB_YN:-n}
+    if [[ "$RESET_DB_YN" =~ ^[Yy]$ ]]; then
+        RESET_DB=true
+    fi
+fi
+
+if [ "$RESET_DB" = true ]; then
+    log "Wiping existing database for a fresh setup..."
+    rm -f backend/database.db backend/database.db-wal backend/database.db-shm
+fi
+
 log "Initializing database and seeding configuration..."
 node backend/scripts/seed_settings.js \
     --username="$ADMIN_USER" \

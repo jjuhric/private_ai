@@ -34,7 +34,7 @@ router.get('/', authenticateToken, async (req, res) => {
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_url: settings.local_url || process.env.LOCAL_LLM_URL || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1'),
-      preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
+      preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.5-9b',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
       is_setup_complete: isSetupComplete
@@ -152,11 +152,10 @@ router.get('/local-models', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch local models:', err.message);
     const fallbackModels = [
-      process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
+      process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.5-9b',
       'google/gemma-4-e4b',
       'google/gemma-4-e2b',
-      'google/gemma-4-12b-qat',
-      'qwen/qwen3.5-9b'
+      'google/gemma-4-12b-qat'
     ];
     res.json([...new Set(fallbackModels)]);
   }
