@@ -50,7 +50,7 @@ router.put('/', authenticateToken, async (req, res) => {
   const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host } = req.body;
   try {
     const db = await getDb();
-    const { encrypt } = require('../utils/crypto');
+    const { encrypt, decrypt } = require('../utils/crypto');
     
     const existing = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
     const isMasked = (val) => val && val.includes('••');
@@ -59,6 +59,10 @@ router.put('/', authenticateToken, async (req, res) => {
     const finalGemini = isMasked(gemini_key) ? existing.gemini_key : (gemini_key ? encrypt(gemini_key) : null);
     const finalLocal = isMasked(local_key) ? existing.local_key : (local_key ? encrypt(local_key) : null);
     const finalOnline = isMasked(online_key) ? existing.online_key : (online_key ? encrypt(online_key) : null);
+    
+    const resolvedLocalKey = isMasked(local_key) ? decrypt(existing.local_key) : local_key;
+    const resolvedUrl = local_url || 'http://192.168.1.42:1234/v1';
+    const resolvedStyle = local_api_style || ((resolvedUrl.includes(':1234') || (resolvedLocalKey && resolvedLocalKey.startsWith('lm-'))) ? 'lm-studio' : 'openai');
 
     await db.run(
       `INSERT INTO user_settings (
@@ -85,7 +89,7 @@ router.put('/', authenticateToken, async (req, res) => {
          is_main_host = COALESCE(excluded.is_main_host, is_main_host)`,
       [
         req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', finalGithub, finalGemini, finalLocal,
-        local_url || 'http://192.168.1.42:1234/v1', local_api_style || 'openai', online_url, finalOnline, online_provider || 'gemini',
+        resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
         device_type || 'windows', typeof is_main_host === 'number' ? is_main_host : 0
       ]
@@ -100,11 +104,11 @@ router.get('/local-models', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
     const settings = await db.get('SELECT local_url, local_key, local_api_style FROM user_settings WHERE user_id = ?', [req.user.id]);
-    const localUrl = settings?.local_url || 'http://192.168.1.42:1234/v1';
-    const localApiStyle = settings?.local_api_style || 'openai';
-    
     const { decrypt } = require('../utils/crypto');
-    const localApiKey = decrypt(settings?.local_key);
+    const localUrl = settings?.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
+    const localApiKey = decrypt(settings?.local_key) || process.env.LOCAL_LLM_KEY || '';
+    const localApiStyle = settings?.local_api_style || ((localUrl.includes(':1234') || localApiKey.startsWith('lm-')) ? 'lm-studio' : 'openai');
+    
     const authHeader = localApiKey && localApiKey !== 'lm-studio' ? { 'Authorization': `Bearer ${localApiKey}` } : {};
 
     let endpoint = '';

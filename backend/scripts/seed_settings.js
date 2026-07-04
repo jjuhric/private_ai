@@ -108,7 +108,7 @@ async function main(argv = process.argv) {
       encryptedGithubToken,
       encryptedLocalKey,
       localUrl,
-      args.local_api_style || 'openai',
+      args.local_api_style || ((localUrl.includes(':1234') || (localKey && localKey.startsWith('lm-'))) ? 'lm-studio' : 'openai'),
       encryptedOnlineKey,
       onlineProvider,
       args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
