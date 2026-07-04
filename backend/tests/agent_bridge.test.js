@@ -93,9 +93,11 @@ describe('agent_bridge.js API Endpoint Tests', () => {
   });
 
   test('POST /execute: success via bridge_secret', async () => {
-    // 1st get (in authenticateBridge): Match bridge_secret in network_nodes
+    // 1st get (in authenticateBridge: settings):
+    mockDb.get.mockResolvedValueOnce({ local_key: null });
+    // 2nd get (in authenticateBridge: network_nodes): Match bridge_secret in network_nodes
     mockDb.get.mockResolvedValueOnce({ id: 4, user_id: 1, node_name: 'MainCaller', bridge_secret: 'bridge_secret_123' });
-    // 2nd get (in route handler): Settings check (is_main_host = 0)
+    // 3rd get (in route handler): Settings check (is_main_host = 0)
     mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
     
     mockHandleHostMachineTool.mockResolvedValue('telemetry_report');
@@ -109,10 +111,53 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     expect(res.body.output).toContain('System telemetry details');
   });
 
+  test('POST /execute: success via BRIDGE_SECRET environment variable', async () => {
+    process.env.BRIDGE_SECRET = 'env_secret_999';
+    // 1st get (in authenticateBridge for firstUser):
+    mockDb.get.mockResolvedValueOnce({ id: 1 });
+    // 2nd get (in route handler): Settings check (is_main_host = 0)
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    
+    mockHandleHostMachineTool.mockResolvedValue('telemetry_report');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', 'Bearer env_secret_999')
+      .send({ action: 'system_info' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('System telemetry details');
+    delete process.env.BRIDGE_SECRET;
+  });
+
+  test('POST /execute: success via decrypted local_key in user_settings', async () => {
+    const { encrypt } = require('../utils/crypto');
+    const encryptedKey = encrypt('my_local_key_token_888');
+
+    // 1st get (in authenticateBridge: settings):
+    mockDb.get.mockResolvedValueOnce({ local_key: encryptedKey });
+    // 2nd get (in authenticateBridge: firstUser):
+    mockDb.get.mockResolvedValueOnce({ id: 1 });
+    // 3rd get (in route handler): Settings check (is_main_host = 0)
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+    
+    mockHandleHostMachineTool.mockResolvedValue('telemetry_report');
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', 'Bearer my_local_key_token_888')
+      .send({ action: 'system_info' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('System telemetry details');
+  });
+
   test('POST /execute: blocks requests if target is the Parent Node (is_main_host = 1)', async () => {
-    // Authenticate via bridge_secret
+    // 1st get (in authenticateBridge: settings):
+    mockDb.get.mockResolvedValueOnce({ local_key: null });
+    // 2nd get (in authenticateBridge: network_nodes): Authenticate via bridge_secret
     mockDb.get.mockResolvedValueOnce({ id: 4, user_id: 1, node_name: 'MainCaller', bridge_secret: 'bridge_secret_123' });
-    // Settings check returns is_main_host = 1 (Parent node)
+    // 3rd get (in route handler): Settings check returns is_main_host = 1 (Parent node)
     mockDb.get.mockResolvedValueOnce({ is_main_host: 1 });
 
     const res = await request(app)
