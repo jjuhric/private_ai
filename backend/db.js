@@ -111,6 +111,10 @@ async function getDb() {
       await dbConnection.run('ALTER TABLE memories ADD COLUMN agent_name TEXT');
     }
     
+    // Auto-migrate deprecated gemini-1.5-flash entries to gemini-2.0-flash
+    await dbConnection.run("UPDATE user_settings SET model_name = 'gemini-2.0-flash' WHERE model_name = 'gemini-1.5-flash'");
+    await dbConnection.run("UPDATE user_settings SET preferred_online_model = 'gemini-2.0-flash' WHERE preferred_online_model = 'gemini-1.5-flash'");
+
     console.log('Database initialized successfully.');
   } catch (error) {
     console.error('Error initializing database:', error);
