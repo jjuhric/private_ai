@@ -415,7 +415,7 @@ Make sure to answer the user query directly and clearly.`;
     let targetStyle = '';
 
     if (provider === 'local') {
-      targetUrl = localBaseUrl || 'http://localhost:1234/v1';
+      targetUrl = localBaseUrl || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
       targetKey = localApiKey;
       targetStyle = localApiStyle || 'openai';
     } else {

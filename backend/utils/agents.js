@@ -162,14 +162,14 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     if (!activeKey) throw new Error('Gemini API key is not configured.');
     const genAI = new GoogleGenerativeAI(activeKey);
     const model = genAI.getGenerativeModel({
-      model: modelName || 'gemini-2.5-flash',
+      model: modelName || 'gemini-1.5-flash',
       generationConfig: { responseMimeType: 'application/json' }
     });
     const result = await model.generateContent(fullPrompt);
     respText = result.response.text();
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://localhost:1234/v1') 
+      ? (localBaseUrl || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1')) 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
@@ -302,7 +302,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     return result.response.text();
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://localhost:1234/v1') 
+      ? (localBaseUrl || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1')) 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
