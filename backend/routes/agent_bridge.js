@@ -27,7 +27,33 @@ async function authenticateBridge(req, res, next) {
     // Not a valid JWT, continue to bridge secret verification
   }
 
-  // 2. Check if the token matches any registered node's bridge_secret in network_nodes
+  // 2. Check process.env.BRIDGE_SECRET
+  if (process.env.BRIDGE_SECRET && token === process.env.BRIDGE_SECRET) {
+    req.isBridge = true;
+    const firstUser = await db.get('SELECT id FROM users ORDER BY id LIMIT 1');
+    req.user = { id: firstUser ? firstUser.id : 1 };
+    return next();
+  }
+
+  // 3. Check if the token matches the remote node's own local_key in user_settings
+  const settings = await db.get('SELECT local_key FROM user_settings LIMIT 1');
+  if (settings && settings.local_key) {
+    const { decrypt } = require('../utils/crypto');
+    let decryptedKey = '';
+    try {
+      decryptedKey = decrypt(settings.local_key);
+    } catch (e) {
+      decryptedKey = settings.local_key;
+    }
+    if (decryptedKey && token === decryptedKey) {
+      req.isBridge = true;
+      const firstUser = await db.get('SELECT id FROM users ORDER BY id LIMIT 1');
+      req.user = { id: firstUser ? firstUser.id : 1 };
+      return next();
+    }
+  }
+
+  // 4. Check if the token matches any registered node's bridge_secret in network_nodes
   const node = await db.get('SELECT * FROM network_nodes WHERE bridge_secret = ?', [token]);
   if (node) {
     req.isBridge = true;
