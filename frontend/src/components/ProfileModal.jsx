@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, Eye, EyeOff, Plus } from 'lucide-react';
 
 export default function ProfileModal({
   isProfileOpen,
@@ -11,18 +11,24 @@ export default function ProfileModal({
   localModels = [],
   onlineModels = []
 }) {
+  const [activeTab, setActiveTab] = useState('general'); // 'general', 'models', 'personal'
   const [formData, setFormData] = useState({
     name: '',
     zipcode: '',
     country: 'US',
     temp_unit: 'imperial',
-    weather_api_key: ''
+    weather_api_key: '',
+    dob: '',
+    gender: '',
+    political_leaning: 'Undecided',
+    interests: []
   });
   const [formSettings, setFormSettings] = useState({
     preferred_local_model: '',
     preferred_online_model: ''
   });
   const [showApiKey, setShowApiKey] = useState(false);
+  const [newInterest, setNewInterest] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -31,7 +37,11 @@ export default function ProfileModal({
         zipcode: profile.zipcode || '',
         country: profile.country || 'US',
         temp_unit: profile.temp_unit || 'imperial',
-        weather_api_key: profile.weather_api_key || ''
+        weather_api_key: profile.weather_api_key || '',
+        dob: profile.dob || '',
+        gender: profile.gender || '',
+        political_leaning: profile.political_leaning || 'Undecided',
+        interests: Array.isArray(profile.interests) ? profile.interests : []
       });
     }
     if (settings) {
@@ -64,150 +74,332 @@ export default function ProfileModal({
     }
   };
 
+  const handleAddInterest = (e) => {
+    e.preventDefault();
+    if (!newInterest.trim()) return;
+    if (formData.interests.includes(newInterest.trim())) {
+      setNewInterest('');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      interests: [...prev.interests, newInterest.trim()]
+    }));
+    setNewInterest('');
+  };
+
+  const handleRemoveInterest = (interestToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.filter(item => item !== interestToRemove)
+    }));
+  };
+
   return (
     <div className="modal-overlay" onClick={() => setIsProfileOpen(false)}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>User Profile Settings</h3>
+      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', width: '90%' }}>
+        <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>User Profile Settings</h3>
           <button className="btn-icon" onClick={() => setIsProfileOpen(false)}>
             <X size={20} />
           </button>
         </div>
 
+        {/* Tab Selection */}
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '16px' }}>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('general')}
+            style={{
+              padding: '10px 16px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'general' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+              color: activeTab === 'general' ? '#fff' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'general' ? 600 : 400,
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            General
+          </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('models')}
+            style={{
+              padding: '10px 16px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'models' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+              color: activeTab === 'models' ? '#fff' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'models' ? 600 : 400,
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            AI Models
+          </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('personal')}
+            style={{
+              padding: '10px 16px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'personal' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+              color: activeTab === 'personal' ? '#fff' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'personal' ? 600 : 400,
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            Personalization
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label>Name</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="Your preferred name"
-              value={formData.name}
-              onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label>Zipcode</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="e.g. 32421"
-              value={formData.zipcode}
-              onChange={e => setFormData(prev => ({ ...prev, zipcode: e.target.value }))}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label>Country Code (e.g. US, GB, CA, IT)</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              placeholder="US"
-              maxLength={3}
-              value={formData.country}
-              onChange={e => setFormData(prev => ({ ...prev, country: e.target.value.toUpperCase().trim() }))}
-            />
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label>Temperature Units</label>
-            <select 
-              className="form-control"
-              value={formData.temp_unit}
-              onChange={e => setFormData(prev => ({ ...prev, temp_unit: e.target.value }))}
-            >
-              <option value="imperial">Imperial (°F, mph)</option>
-              <option value="metric">Metric (°C, m/s)</option>
-              <option value="standard">Standard (Kelvin, m/s)</option>
-            </select>
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label>OpenWeatherMap API Key</label>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type={showApiKey ? 'text' : 'password'} 
-                className="form-control" 
-                style={{ paddingRight: '40px' }}
-                placeholder="Enter OpenWeatherMap API key"
-                value={formData.weather_api_key}
-                onChange={e => setFormData(prev => ({ ...prev, weather_api_key: e.target.value }))}
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: 0
-                }}
-              >
-                {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-              Used to query weather for your local area. Get a key at <a href="https://openweathermap.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)' }}>openweathermap.org</a>.
-            </small>
-          </div>
-
-          {/* Preferred Models Section */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--accent-primary)' }}>AI Model Preferences</h4>
-            
-            {settings?.local_url && (
+          {activeTab === 'general' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label>Preferred Local Model</label>
-                {localModels.length > 0 ? (
+                <label>Name</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="Your preferred name"
+                  value={formData.name}
+                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Zipcode</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="e.g. 32421"
+                  value={formData.zipcode}
+                  onChange={e => setFormData(prev => ({ ...prev, zipcode: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Country Code (e.g. US, GB, CA, IT)</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="US"
+                  maxLength={3}
+                  value={formData.country}
+                  onChange={e => setFormData(prev => ({ ...prev, country: e.target.value.toUpperCase().trim() }))}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Temperature Units</label>
+                <select 
+                  className="form-control"
+                  value={formData.temp_unit}
+                  onChange={e => setFormData(prev => ({ ...prev, temp_unit: e.target.value }))}
+                >
+                  <option value="imperial">Imperial (°F, mph)</option>
+                  <option value="metric">Metric (°C, m/s)</option>
+                  <option value="standard">Standard (Kelvin, m/s)</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>OpenWeatherMap API Key</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showApiKey ? 'text' : 'password'} 
+                    className="form-control" 
+                    style={{ paddingRight: '40px' }}
+                    placeholder="Enter OpenWeatherMap API key"
+                    value={formData.weather_api_key}
+                    onChange={e => setFormData(prev => ({ ...prev, weather_api_key: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                  >
+                    {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                  Used to query weather for your local area. Get a key at <a href="https://openweathermap.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-primary)' }}>openweathermap.org</a>.
+                </small>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'models' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {settings?.local_url && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label>Preferred Local Model</label>
+                  {localModels.length > 0 ? (
+                    <select
+                      className="form-control"
+                      value={formSettings.preferred_local_model}
+                      onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
+                    >
+                      <option value="">(Default Active Model)</option>
+                      {localModels.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. google/gemma-4-e4b"
+                      value={formSettings.preferred_local_model}
+                      onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
+                    />
+                  )}
+                </div>
+              )}
+
+              {settings?.online_key && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label>Preferred Online Model</label>
                   <select
                     className="form-control"
-                    value={formSettings.preferred_local_model}
-                    onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
+                    value={formSettings.preferred_online_model}
+                    onChange={e => setFormSettings(prev => ({ ...prev, preferred_online_model: e.target.value }))}
                   >
                     <option value="">(Default Active Model)</option>
-                    {localModels.map(model => (
+                    {(onlineModels.length > 0 ? onlineModels : ['gemini-2.0-flash', 'gemini-2.0-pro', 'gpt-4o', 'claude-3-5-sonnet-latest']).map(model => (
                       <option key={model} value={model}>{model}</option>
                     ))}
                   </select>
-                ) : (
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. google/gemma-4-e4b"
-                    value={formSettings.preferred_local_model}
-                    onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
-                  />
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+          )}
 
-            {settings?.online_key && (
+          {activeTab === 'personal' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label>Preferred Online Model</label>
-                <select
+                <label>Date of Birth (Optional)</label>
+                <input 
+                  type="date" 
+                  className="form-control" 
+                  value={formData.dob}
+                  onChange={e => setFormData(prev => ({ ...prev, dob: e.target.value }))}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Gender (Optional)</label>
+                <select 
                   className="form-control"
-                  value={formSettings.preferred_online_model}
-                  onChange={e => setFormSettings(prev => ({ ...prev, preferred_online_model: e.target.value }))}
+                  value={formData.gender}
+                  onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value }))}
                 >
-                  <option value="">(Default Active Model)</option>
-                  {(onlineModels.length > 0 ? onlineModels : ['gemini-2.5-flash', 'gemini-2.5-pro', 'gpt-4o', 'claude-3-5-sonnet-latest']).map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Non-Binary">Non-Binary</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
                 </select>
               </div>
-            )}
-          </div>
 
-          <button type="submit" className="btn-primary" style={{ marginTop: 8 }}>
-            Save Profile
-          </button>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Political Leaning</label>
+                <select 
+                  className="form-control"
+                  value={formData.political_leaning}
+                  onChange={e => setFormData(prev => ({ ...prev, political_leaning: e.target.value }))}
+                >
+                  <option value="Undecided">Undecided</option>
+                  <option value="Republican">Republican</option>
+                  <option value="Democrat">Democrat</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Interests List</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Add an interest (e.g. AI News, Cycling)"
+                    value={newInterest}
+                    onChange={e => setNewInterest(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddInterest(e)}
+                  />
+                  <button type="button" className="btn btn-primary" onClick={handleAddInterest} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px' }}>
+                    <Plus size={18} />
+                  </button>
+                </div>
+                
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  {formData.interests.length > 0 ? (
+                    formData.interests.map((interest, idx) => (
+                      <span 
+                        key={idx} 
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '16px',
+                          padding: '4px 10px',
+                          fontSize: '0.8rem',
+                          color: '#fff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {interest}
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveInterest(interest)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontSize: '0.9rem',
+                            lineHeight: 1
+                          }}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      No interests added yet. Add some to get personalized news digests!
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px', marginTop: '8px' }}>
+            <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px' }}>
+              Save Profile
+            </button>
+          </div>
         </form>
       </div>
     </div>

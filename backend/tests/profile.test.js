@@ -79,7 +79,11 @@ describe('Profile Router Tests', () => {
       zipcode: null,
       country: 'US',
       temp_unit: 'imperial',
-      weather_api_key: null
+      weather_api_key: null,
+      dob: null,
+      gender: null,
+      political_leaning: 'Undecided',
+      interests: []
     });
   });
 
@@ -89,7 +93,11 @@ describe('Profile Router Tests', () => {
       zipcode: '90210',
       country: 'CA',
       temp_unit: 'metric',
-      weather_api_key: 'apikey123'
+      weather_api_key: 'apikey123',
+      dob: '1990-01-01',
+      gender: 'Male',
+      political_leaning: 'Democrat',
+      interests: ['Artificial Intelligence', 'Cycling']
     };
 
     const res = await request(app)
@@ -111,6 +119,10 @@ describe('Profile Router Tests', () => {
     expect(getRes.body.country).toBe(payload.country);
     expect(getRes.body.temp_unit).toBe(payload.temp_unit);
     expect(getRes.body.weather_api_key).toBe('apik••••••••y123');
+    expect(getRes.body.dob).toBe(payload.dob);
+    expect(getRes.body.gender).toBe(payload.gender);
+    expect(getRes.body.political_leaning).toBe(payload.political_leaning);
+    expect(getRes.body.interests).toEqual(payload.interests);
   });
 
   test('PUT /api/profile - preserves existing key when masked key is submitted', async () => {

@@ -238,13 +238,17 @@ async function runAgentLoop({
   // Fetch user profile details
   let profileContext = '';
   try {
-    const profile = await db.get('SELECT name, zipcode, country, temp_unit FROM users WHERE id = ?', [userId]);
+    const profile = await db.get('SELECT name, zipcode, country, temp_unit, dob, gender, political_leaning, interests FROM users WHERE id = ?', [userId]);
     if (profile) {
       profileContext = `### User Profile Details:
 - Profile Name: ${profile.name || 'Not set'}
 - Profile Zipcode: ${profile.zipcode || 'Not set'}
 - Profile Country: ${profile.country || 'US'}
-- Profile Temp Unit: ${profile.temp_unit || 'imperial'}`;
+- Profile Temp Unit: ${profile.temp_unit || 'imperial'}
+- Date of Birth (DOB): ${profile.dob || 'Not set'}
+- Gender: ${profile.gender || 'Not set'}
+- Political Leaning: ${profile.political_leaning || 'Undecided'}
+- Specific Interests: ${profile.interests || '[]'}`;
     }
   } catch (err) {
     console.error('Failed to load user profile in agent loop:', err);

@@ -65,6 +65,26 @@ async function handleRemoteNodeBridge(params, options = {}) {
       }
     }
 
+    // Resolve authentication token: 
+    // 1. Registered node bridge_secret
+    // 2. Local environment BRIDGE_SECRET
+    // 3. Local decrypted local_key
+    let tokenToSend = node.bridge_secret;
+    if (!tokenToSend) {
+      tokenToSend = process.env.BRIDGE_SECRET;
+    }
+    if (!tokenToSend) {
+      const settings = await db.get('SELECT local_key FROM user_settings LIMIT 1');
+      if (settings && settings.local_key) {
+        const { decrypt } = require('../utils/crypto');
+        try {
+          tokenToSend = decrypt(settings.local_key);
+        } catch (e) {
+          tokenToSend = settings.local_key;
+        }
+      }
+    }
+
     // Call the remote node API
     const targetUrl = `http://${node.ip_address}:${node.port || 3000}/api/bridge/execute`;
     console.log(`[Network Bridge] Routing action "${action}" to Node "${node.node_name}" at ${targetUrl}`);
@@ -73,7 +93,7 @@ async function handleRemoteNodeBridge(params, options = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${node.bridge_secret}`
+        'Authorization': `Bearer ${tokenToSend || ''}`
       },
       body: JSON.stringify({
         action,

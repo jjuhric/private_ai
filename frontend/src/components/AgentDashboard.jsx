@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor } from 'lucide-react';
+import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen } from 'lucide-react';
 
 export default function AgentDashboard({ token, toolLogs, activeAgent, isStreaming }) {
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
@@ -19,6 +19,60 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
   const [loadingHost, setLoadingHost] = useState(false);
   const [restartServiceName, setRestartServiceName] = useState('private-ai');
   const [restartingService, setRestartingService] = useState(false);
+
+  // Scanner and Walkthrough State
+  const [scanning, setScanning] = useState(false);
+  const [discoveredNodes, setDiscoveredNodes] = useState([]);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [selectedGuideDevice, setSelectedGuideDevice] = useState('rpi-5-8gb');
+
+  const handleScanNodes = async () => {
+    setScanning(true);
+    setDiscoveredNodes([]);
+    try {
+      const res = await fetch('/api/nodes/scan', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDiscoveredNodes(data.nodes || []);
+      } else {
+        alert('Failed to scan local network.');
+      }
+    } catch (err) {
+      alert(`Error scanning network: ${err.message}`);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleQuickRegisterNode = async (discoveredNode) => {
+    const defaultName = `${discoveredNode.device_type.toUpperCase()} Node`;
+    const regNode = {
+      node_name: defaultName,
+      device_type: discoveredNode.device_type,
+      ip_address: discoveredNode.ip_address,
+      port: discoveredNode.port,
+      bridge_secret: '' // Automatically uses fallback pairing token
+    };
+    try {
+      const res = await fetch('/api/nodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(regNode)
+      });
+      if (res.ok) {
+        fetchNodes();
+        setDiscoveredNodes(prev => prev.filter(n => n.ip_address !== discoveredNode.ip_address));
+      } else {
+        const data = await res.json();
+        alert(`Failed to register discovered node: ${data.error}`);
+      }
+    } catch (err) {
+      alert(`Error registering node: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
     if (activeSubTab === 'host') {
@@ -431,12 +485,126 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
       {activeSubTab === 'nodes' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div className="memory-card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.1rem', color: '#fff' }}>Distributed Field Nodes</h3>
-              <button className="btn btn-primary" onClick={() => setShowAddNode(!showAddNode)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
-                <Plus size={14} /> Add Node
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <h3 style={{ fontSize: '1.1rem', color: '#fff', margin: 0 }}>Distributed Field Nodes</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn btn-secondary" onClick={() => setShowInstallGuide(!showInstallGuide)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
+                  <BookOpen size={14} /> Install Guide
+                </button>
+                <button className="btn btn-secondary" onClick={handleScanNodes} disabled={scanning} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
+                  <Search size={14} /> {scanning ? 'Scanning...' : 'Scan LAN'}
+                </button>
+                <button className="btn btn-primary" onClick={() => setShowAddNode(!showAddNode)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
+                  <Plus size={14} /> Add Node
+                </button>
+              </div>
             </div>
+
+            {showInstallGuide && (
+              <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '0.95rem' }}>Device Setup Walkthrough Guide</h4>
+                  <select 
+                    className="form-control" 
+                    value={selectedGuideDevice} 
+                    onChange={e => setSelectedGuideDevice(e.target.value)}
+                    style={{ width: 'auto', padding: '4px 8px', fontSize: '0.85rem' }}
+                  >
+                    <option value="rpi-5-8gb">Raspberry Pi 5 (8GB)</option>
+                    <option value="rpi-5-16gb">Raspberry Pi 5 (16GB)</option>
+                    <option value="esp32">ESP32 (MicroPython)</option>
+                    <option value="windows">Windows / PC</option>
+                  </select>
+                </div>
+
+                {selectedGuideDevice.startsWith('rpi') && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    <p><strong>To set up this Raspberry Pi as a Field Node:</strong></p>
+                    <ol style={{ paddingLeft: '20px', margin: '0 0 10px 0' }}>
+                      <li>Open a terminal on your Raspberry Pi.</li>
+                      <li>Clone the project repository:<br />
+                        <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#38bdf8' }}>
+                          git clone https://github.com/jjuhric/private_ai.git
+                        </code>
+                      </li>
+                      <li>Run the setup script:<br />
+                        <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#38bdf8' }}>
+                          cd private_ai && ./setup.sh
+                        </code>
+                      </li>
+                      <li>Choose <strong>Field Node</strong> (Option 2) when prompted for role, and select your Raspberry Pi device type.</li>
+                      <li>Enter your Main Host IP address when prompted:<br />
+                        <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#34d399' }}>
+                          {window.location.hostname || '192.168.1.42'}
+                        </code>
+                      </li>
+                    </ol>
+                    <p style={{ margin: 0 }}>💡 <em>Note: Leave the Bridge Secret blank here to automatically pair using the shared LLM API key.</em></p>
+                  </div>
+                )}
+
+                {selectedGuideDevice === 'esp32' && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    <p><strong>To set up an ESP32 microcontroller as a Field Node:</strong></p>
+                    <ol style={{ paddingLeft: '20px', margin: '0 0 10px 0' }}>
+                      <li>Flash MicroPython onto your ESP32 board.</li>
+                      <li>Upload the contents of the <code style={{ color: '#fff' }}>backend/nodes/esp32/</code> directory (containing <code style={{ color: '#fff' }}>boot.py</code> and <code style={{ color: '#fff' }}>main.py</code>) to your board.</li>
+                      <li>Configure your local WiFi SSID and password in the configuration file on the board.</li>
+                      <li>Set the matching authentication bridge secret.</li>
+                    </ol>
+                  </div>
+                )}
+
+                {selectedGuideDevice === 'windows' && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                    <p><strong>To set up another Windows PC as a Field Node:</strong></p>
+                    <ol style={{ paddingLeft: '20px', margin: '0 0 10px 0' }}>
+                      <li>Clone the project repository in PowerShell:<br />
+                        <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#38bdf8' }}>
+                          git clone https://github.com/jjuhric/private_ai.git
+                        </code>
+                      </li>
+                      <li>Navigate to the folder and execute setup:<br />
+                        <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#38bdf8' }}>
+                          cd private_ai && .\setup.ps1
+                        </code>
+                      </li>
+                      <li>Answer <strong>No (n)</strong> to the Main Host role prompt to install it as a Field Node.</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {scanning && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '30px 10px', color: 'var(--text-secondary)' }}>
+                <RefreshCw size={24} className="animate-spin text-accent-primary" />
+                <span>Scanning local network subnet for active Private AI nodes...</span>
+              </div>
+            )}
+
+            {!scanning && discoveredNodes.length > 0 && (
+              <div style={{ padding: '16px', background: 'rgba(52,211,153,0.05)', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(52,211,153,0.1)' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#34d399', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CheckCircle size={16} /> Discovered Nodes on LAN
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {discoveredNodes.map((n, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.1)', padding: '8px 12px', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '0.85rem' }}>
+                        <span style={{ fontWeight: 600, color: '#fff' }}>{n.ip_address}:{n.port}</span>
+                        <span style={{ margin: '0 8px', color: 'var(--text-secondary)' }}>|</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Type: {n.device_type}</span>
+                        {n.is_main_host && <span style={{ marginLeft: '8px', background: 'var(--accent-primary)', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', color: '#fff' }}>Main Host</span>}
+                      </div>
+                      <button className="btn btn-primary" onClick={() => handleQuickRegisterNode(n)} style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
+                        Quick Register
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {showAddNode && (
               <form onSubmit={handleAddNode} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.1)', borderRadius: '8px' }}>

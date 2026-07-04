@@ -369,8 +369,31 @@ Generate a detailed final report summarizing your actions and findings. Make it 
 }
 
 async function runWorkerAgent(agentName, settings, task, db, userId, githubToken) {
-  const systemPrompt = AGENT_PROMPTS[agentName];
+  let systemPrompt = AGENT_PROMPTS[agentName];
   if (!systemPrompt) throw new Error(`Unknown agent: ${agentName}`);
+
+  // Fetch and inject user profile details if db and userId are available
+  if (db && userId) {
+    try {
+      const profile = await db.get(
+        'SELECT name, zipcode, country, temp_unit, dob, gender, political_leaning, interests FROM users WHERE id = ?',
+        [userId]
+      );
+      if (profile) {
+        systemPrompt += `\n\n### User Profile Context:
+- Profile Name: ${profile.name || 'Not set'}
+- Profile Zipcode: ${profile.zipcode || 'Not set'}
+- Profile Country: ${profile.country || 'US'}
+- Profile Temp Unit: ${profile.temp_unit || 'imperial'}
+- Date of Birth (DOB): ${profile.dob || 'Not set'}
+- Gender: ${profile.gender || 'Not set'}
+- Political Leaning: ${profile.political_leaning || 'Undecided'}
+- Specific Interests: ${profile.interests || '[]'}`;
+      }
+    } catch (err) {
+      console.error('Failed to load user profile in runWorkerAgent:', err);
+    }
+  }
 
   const history = [];
   const toolOutputs = [];

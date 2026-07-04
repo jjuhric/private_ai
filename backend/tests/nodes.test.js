@@ -132,4 +132,20 @@ describe('Nodes API', () => {
     expect(res.status).toBe(500);
     expect(res.body.error).toBe('DB ping error');
   });
+
+  test('GET /api/nodes/discovery returns node specifications', async () => {
+    mockDb.get.mockResolvedValueOnce({ device_type: 'rpi-5-8gb', is_main_host: 0 });
+    const res = await request(app).get('/api/nodes/discovery');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.device_type).toBe('rpi-5-8gb');
+    expect(res.body.is_main_host).toBe(false);
+  });
+
+  test('POST /api/nodes/scan triggers local LAN scan and returns discovered list', async () => {
+    const res = await request(app).post('/api/nodes/scan');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.nodes)).toBe(true);
+  });
 });

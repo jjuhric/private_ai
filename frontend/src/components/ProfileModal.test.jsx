@@ -83,7 +83,11 @@ describe('ProfileModal Component Tests', () => {
       zipcode: '90210',
       country: 'GB',
       temp_unit: 'metric',
-      weather_api_key: 'new_key'
+      weather_api_key: 'new_key',
+      dob: '',
+      gender: '',
+      political_leaning: 'Undecided',
+      interests: []
     });
   });
 
@@ -154,7 +158,8 @@ describe('ProfileModal Component Tests', () => {
       />
     );
 
-    expect(screen.getByText('AI Model Preferences')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('AI Models'));
+
     expect(screen.getByText('Preferred Local Model')).toBeInTheDocument();
     expect(screen.getByText('Preferred Online Model')).toBeInTheDocument();
 
@@ -208,6 +213,8 @@ describe('ProfileModal Component Tests', () => {
       />
     );
 
+    fireEvent.click(screen.getByText('AI Models'));
+
     const input = screen.getByPlaceholderText('e.g. google/gemma-4-e4b');
     expect(input.value).toBe('local-old');
     fireEvent.change(input, { target: { value: 'local-new' } });
@@ -238,6 +245,8 @@ describe('ProfileModal Component Tests', () => {
       />
     );
 
+    fireEvent.click(screen.getByText('AI Models'));
+
     const selects = screen.getAllByRole('combobox');
     const onlineSelect = selects.find(s => s.value === 'gemini-1.5-pro');
     fireEvent.change(onlineSelect, { target: { value: 'gpt-4o' } });
@@ -245,6 +254,56 @@ describe('ProfileModal Component Tests', () => {
     fireEvent.click(screen.getByText('Save Profile'));
     expect(mockSaveSettings).toHaveBeenCalledWith(expect.objectContaining({
       preferred_online_model: 'gpt-4o'
+    }));
+  });
+
+  test('handles personalization tab inputs and interactive interest lists', () => {
+    const mockSaveProfile = vi.fn();
+    render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={vi.fn()} 
+        profile={{
+          ...defaultProfile,
+          dob: '1990-05-15',
+          gender: 'Female',
+          political_leaning: 'Democrat',
+          interests: ['AI']
+        }} 
+        saveProfile={mockSaveProfile} 
+      />
+    );
+
+    // Switch to personalization tab
+    fireEvent.click(screen.getByText('Personalization'));
+
+    // Check pre-populated data
+    expect(screen.getByDisplayValue('1990-05-15')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Female')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Democrat')).toBeInTheDocument();
+    expect(screen.getByText('AI')).toBeInTheDocument();
+
+    // Add interest
+    const interestInput = screen.getByPlaceholderText('Add an interest (e.g. AI News, Cycling)');
+    fireEvent.change(interestInput, { target: { value: 'Baking' } });
+    
+    // Click plus button (second child of display:flex container)
+    const addBtn = screen.getByPlaceholderText('Add an interest (e.g. AI News, Cycling)').nextSibling;
+    fireEvent.click(addBtn);
+    expect(screen.getByText('Baking')).toBeInTheDocument();
+
+    // Remove interest
+    const removeBtn = screen.getAllByText('×')[0];
+    fireEvent.click(removeBtn);
+    expect(screen.queryByText('AI')).toBeNull();
+
+    // Save profile
+    fireEvent.click(screen.getByText('Save Profile'));
+    expect(mockSaveProfile).toHaveBeenCalledWith(expect.objectContaining({
+      dob: '1990-05-15',
+      gender: 'Female',
+      political_leaning: 'Democrat',
+      interests: ['Baking']
     }));
   });
 });

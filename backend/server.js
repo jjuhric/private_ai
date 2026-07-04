@@ -120,7 +120,8 @@ const server = app.listen(PORT, () => {
     const { getDb } = require('./db');
     const { startBriefingScheduler } = require('./utils/briefing');
     getDb().then(db => {
-      startBriefingScheduler(db);
+      // Temporarily disabled daily-notifications as it is not working for now.
+      // startBriefingScheduler(db);
     }).catch(err => {
       logger.error('Failed to start briefing scheduler:', err);
     });

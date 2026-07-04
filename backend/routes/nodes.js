@@ -3,6 +3,128 @@ const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { getDb } = require('../db');
 
+const os = require('os');
+const net = require('net');
+
+// Get local IPv4 subnet (e.g. "192.168.1")
+function getLocalSubnet() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        const parts = net.address.split('.');
+        if (parts.length === 4) {
+          return `${parts[0]}.${parts[1]}.${parts[2]}`;
+        }
+      }
+    }
+  }
+  return '192.168.1';
+}
+
+// TCP port checker utility
+function checkIpPort(ip, port, timeout = 600) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let isDone = false;
+    
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      socket.destroy();
+      if (!isDone) {
+        isDone = true;
+        resolve(true);
+      }
+    });
+    
+    const handleError = () => {
+      socket.destroy();
+      if (!isDone) {
+        isDone = true;
+        resolve(false);
+      }
+    };
+    
+    socket.on('error', handleError);
+    socket.on('timeout', handleError);
+    
+    socket.connect(port, ip);
+  });
+}
+
+// Fetch node metadata safely
+async function getDiscoveryPayload(ip, port = 3000) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 800);
+    const response = await fetch(`http://${ip}:${port}/api/nodes/discovery`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
+
+// Public discovery endpoint
+router.get('/discovery', async (req, res) => {
+  try {
+    const db = await getDb();
+    const settings = await db.get('SELECT device_type, is_main_host FROM user_settings LIMIT 1') || {};
+    res.json({
+      success: true,
+      device_type: settings.device_type || 'unknown',
+      is_main_host: settings.is_main_host === 1,
+      port: process.env.PORT || 3000
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Authenticated network scan endpoint
+router.post('/scan', authenticateToken, async (req, res) => {
+  try {
+    const subnet = getLocalSubnet();
+    const port = process.env.PORT || 3000;
+    const discovered = [];
+    const ipList = [];
+    
+    for (let i = 1; i <= 254; i++) {
+      ipList.push(`${subnet}.${i}`);
+    }
+    
+    // Batch in chunks of 40 to avoid high connection overhead
+    const batchSize = 40;
+    for (let i = 0; i < ipList.length; i += batchSize) {
+      const batch = ipList.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (ip) => {
+          const isOpen = await checkIpPort(ip, port);
+          if (isOpen) {
+            const info = await getDiscoveryPayload(ip, port);
+            if (info && info.success) {
+              discovered.push({
+                ip_address: ip,
+                port: port,
+                device_type: info.device_type,
+                is_main_host: info.is_main_host
+              });
+            }
+          }
+        })
+      );
+    }
+    
+    res.json({ success: true, nodes: discovered });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get all network nodes
 router.get('/', authenticateToken, async (req, res) => {
   try {

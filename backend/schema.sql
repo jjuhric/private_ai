@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
   weather_api_key TEXT,
   last_briefing_at DATETIME,
   briefing_hour INTEGER DEFAULT 7,
+  dob TEXT,
+  gender TEXT,
+  political_leaning TEXT DEFAULT 'Undecided',
+  interests TEXT DEFAULT '[]',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

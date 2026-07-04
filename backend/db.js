@@ -61,6 +61,18 @@ async function getDb() {
     if (!columns.some(col => col.name === 'briefing_hour')) {
       await dbConnection.run("ALTER TABLE users ADD COLUMN briefing_hour INTEGER DEFAULT 7");
     }
+    if (!columns.some(col => col.name === 'dob')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN dob TEXT");
+    }
+    if (!columns.some(col => col.name === 'gender')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN gender TEXT");
+    }
+    if (!columns.some(col => col.name === 'political_leaning')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN political_leaning TEXT DEFAULT 'Undecided'");
+    }
+    if (!columns.some(col => col.name === 'interests')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN interests TEXT DEFAULT '[]'");
+    }
 
     // Migrate user_settings to add local_key column if missing
     const settingsColumns = await dbConnection.all('PRAGMA table_info(user_settings)');
