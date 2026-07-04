@@ -53,6 +53,8 @@ jobs:
         run: npm run install:all
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
+      - name: Build Frontend Application
+        run: npm run build
       - name: Run Playwright E2E Tests
         run: npm run test:e2e
 
