@@ -168,7 +168,7 @@ else
         1) DEVICE_TYPE="windows" ;;
         2) DEVICE_TYPE="linux" ;;
         3) DEVICE_TYPE="rpi-5-8gb" ;;
-        4) DEVICE_TYPE="rpi-5-15gb" ;;
+        4) DEVICE_TYPE="rpi-5-16gb" ;;
         5) DEVICE_TYPE="rpi-4b-2gb" ;;
         6) DEVICE_TYPE="rpi-zero-2w" ;;
         7) DEVICE_TYPE="esp32" ;;

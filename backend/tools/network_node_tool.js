@@ -35,7 +35,7 @@ async function handleRemoteNodeBridge(params, options = {}) {
 
     // Check if the target node is the Parent/Main Host
     // In our security model, nothing can route commands to the Parent Node.
-    if (node.is_main_host === 1 || node.node_name.toLowerCase() === 'parent') {
+    if ((node.is_main_host === 1 || node.node_name.toLowerCase() === 'parent') && action !== 'system_info') {
       return 'Error: Access denied. Commands cannot be routed to the Parent Node (machine running the LLM).';
     }
 

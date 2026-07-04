@@ -103,7 +103,7 @@ if ($NonInteractive) {
     Write-Host "  Configuration Settings" -ForegroundColor Cyan
     Write-Host "====================================================" -ForegroundColor Cyan
 
-    $deviceType = Read-Host "Enter Device Type (windows, linux, rpi-5-8gb, rpi-5-15gb, rpi-zero-2w, esp32) [$defaultDeviceType]"
+    $deviceType = Read-Host "Enter Device Type (windows, linux, rpi-5-8gb, rpi-5-16gb, rpi-zero-2w, esp32) [$defaultDeviceType]"
     if ([string]::IsNullOrWhiteSpace($deviceType)) { $deviceType = $defaultDeviceType }
 
     $isMainHostYN = Read-Host "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [$defaultIsMainHostYN]"

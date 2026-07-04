@@ -76,7 +76,7 @@ router.post('/execute', authenticateBridge, async (req, res) => {
 
     // SECURITY CHECK: If this node is the Parent Node (Main Host), reject all remote network incoming commands immediately
     const settings = await db.get('SELECT is_main_host FROM user_settings LIMIT 1');
-    if (settings && settings.is_main_host === 1 && req.isBridge) {
+    if (settings && settings.is_main_host === 1 && req.isBridge && action !== 'system_info') {
       console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
       return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' });
     }

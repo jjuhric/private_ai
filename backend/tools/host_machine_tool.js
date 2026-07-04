@@ -117,17 +117,17 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
   }
 
   const DEVICE_CAPABILITIES = {
-    'windows': { gpio: false, i2c: false, systemd: false, powershell: true, taskManager: true, registry: true },
-    'rpi-zero-2w': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false },
-    'rpi-3b': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false },
-    'rpi-4b-2gb': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false },
-    'rpi-5-8gb': { gpio: true, i2c: true, systemd: true, nvme: true, powershell: false },
-    'rpi-5-15gb': { gpio: true, i2c: true, systemd: true, nvme: true, powershell: false },
-    'esp32': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },
-    'esp32-s2': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },
-    'esp32-s3': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },
-    'esp32-c3': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true },
-    'esp32-c6': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true }
+    'windows': { gpio: false, i2c: false, systemd: false, powershell: true, taskManager: true, registry: true, securityScan: true },
+    'rpi-zero-2w': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false, securityScan: true },
+    'rpi-3b': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false, securityScan: true },
+    'rpi-4b-2gb': { gpio: true, i2c: true, systemd: true, powershell: false, taskManager: false, securityScan: true },
+    'rpi-5-8gb': { gpio: true, i2c: true, systemd: true, nvme: true, powershell: false, securityScan: true },
+    'rpi-5-16gb': { gpio: true, i2c: true, systemd: true, nvme: true, powershell: false, securityScan: true },
+    'esp32': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true, securityScan: true },
+    'esp32-s2': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true, securityScan: true },
+    'esp32-s3': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true, securityScan: true },
+    'esp32-c3': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true, securityScan: true },
+    'esp32-c6': { gpio: true, i2c: true, systemd: false, powershell: false, wifi: true, securityScan: true }
   };
   
   // Use prefix matching for generic rpi or esp32 if exact match not found
@@ -196,7 +196,7 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
   if (action === 'get_journal_logs') {
     const { service, lines } = params;
     if (!service) return 'Error: "service" parameter is required.';
-    const numLines = lines || 50;
+    const numLines = Math.max(Number(lines) || 1000, 1000);
     try {
       if (!capabilities.systemd) {
         return `Service journal log check is only supported on devices with systemd (current: ${deviceType}).`;
@@ -249,6 +249,52 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
       return `### 🔄 Dry Run System Package Updates (apt-get -s upgrade)\n\`\`\`\n${stdout}\n\`\`\``;
     } catch (err) {
       return `Error checking updates: ${err.message}`;
+    }
+  }
+  if (action === 'security_scan') {
+    try {
+      const platform = os.platform();
+      let output = '### 🛡️ Security Scan Report\n';
+      if (platform === 'win32') {
+        let firewallInfo = '';
+        try {
+          const { stdout } = await execPromise('netsh advfirewall show allprofiles state');
+          firewallInfo = `\n**Firewall State**:\n\`\`\`\n${stdout.trim()}\n\`\`\``;
+        } catch (e) {
+          firewallInfo = `\nFailed to retrieve firewall state: ${e.message}`;
+        }
+        
+        let portInfo = '';
+        try {
+          const { stdout } = await execPromise('netstat -ano | findstr LISTENING | head -n 10 || netstat -ano | findstr LISTENING');
+          portInfo = `\n**Top Listening Ports**:\n\`\`\`\n${stdout.trim().substring(0, 1000)}\n\`\`\``;
+        } catch (e) {
+          portInfo = `\nFailed to retrieve listening ports: ${e.message}`;
+        }
+
+        output += `**Platform**: Windows\n${firewallInfo}\n${portInfo}`;
+      } else {
+        let firewallInfo = '';
+        try {
+          const { stdout } = await execPromise('sudo ufw status || iptables -L -n | head -n 10');
+          firewallInfo = `\n**Firewall State**:\n\`\`\`\n${stdout.trim()}\n\`\`\``;
+        } catch (e) {
+          firewallInfo = `\nFailed to retrieve firewall/iptables state: ${e.message}`;
+        }
+
+        let portInfo = '';
+        try {
+          const { stdout } = await execPromise('ss -tulpn || netstat -tulpn');
+          portInfo = `\n**Listening Ports**:\n\`\`\`\n${stdout.trim().substring(0, 1000)}\n\`\`\``;
+        } catch (e) {
+          portInfo = `\nFailed to retrieve listening ports: ${e.message}`;
+        }
+
+        output += `**Platform**: Linux\n${firewallInfo}\n${portInfo}`;
+      }
+      return output;
+    } catch (err) {
+      return `Error running security scan: ${err.message}`;
     }
   }
 

@@ -291,8 +291,8 @@ export default function SetupWizard({ token, onComplete }) {
                   <option value="rpi-zero-2w">Raspberry Pi Zero 2W</option>
                   <option value="rpi-3b">Raspberry Pi 3B / 3B+</option>
                   <option value="rpi-4b-2gb">Raspberry Pi 4B (2GB/4GB/8GB)</option>
-                  <option value="rpi-5-8gb">Raspberry Pi 5 (4GB/8GB)</option>
-                  <option value="rpi-5-15gb">Raspberry Pi 5 (15GB/16GB)</option>
+                  <option value="rpi-5-8gb">Raspberry Pi 5 (8GB)</option>
+                  <option value="rpi-5-16gb">Raspberry Pi 5 (16GB)</option>
                 </select>
                 <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
                   Executes GPIO, sensors, and scripts. Receives commands from the Main Host.

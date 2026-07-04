@@ -304,6 +304,24 @@ describe('Multi-Agent System & Tools Tests', () => {
       const scriptRes = await handleHostMachineTool('run_script', {});
       expect(scriptRes).toContain('Error: "scriptPath" parameter is required.');
     });
+
+    test('host_machine_tool security_scan on win32 and linux', async () => {
+      const os = require('os');
+      
+      // Test win32
+      const platformSpyWin = jest.spyOn(os, 'platform').mockReturnValue('win32');
+      const scanWin = await handleHostMachineTool('security_scan');
+      expect(scanWin).toContain('Security Scan Report');
+      expect(scanWin).toContain('Windows');
+      platformSpyWin.mockRestore();
+
+      // Test linux
+      const platformSpyLin = jest.spyOn(os, 'platform').mockReturnValue('linux');
+      const scanLin = await handleHostMachineTool('security_scan');
+      expect(scanLin).toContain('Security Scan Report');
+      expect(scanLin).toContain('Linux');
+      platformSpyLin.mockRestore();
+    });
   });
 
   describe('Coder Tools', () => {

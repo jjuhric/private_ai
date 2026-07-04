@@ -449,6 +449,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Device Type</label>
                     <select className="form-control" value={newNode.device_type} onChange={e => setNewNode({...newNode, device_type: e.target.value})}>
                       <option value="rpi-5-8gb">Raspberry Pi 5 (8GB)</option>
+                      <option value="rpi-5-16gb">Raspberry Pi 5 (16GB)</option>
                       <option value="rpi-4-4gb">Raspberry Pi 4 (4GB+)</option>
                       <option value="rpi-zero-2w">Raspberry Pi Zero 2W</option>
                       <option value="esp32-wroom">ESP32 WROOM (WiFi)</option>

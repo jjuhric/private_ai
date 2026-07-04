@@ -127,7 +127,7 @@ describe('SetupWizard Component Tests', () => {
     fireEvent.click(rpiCard);
     
     // Change select option for RPi type
-    const rpiSelect = screen.getByDisplayValue('Raspberry Pi 5 (4GB/8GB)');
+    const rpiSelect = screen.getByDisplayValue('Raspberry Pi 5 (8GB)');
     fireEvent.click(rpiSelect);
     fireEvent.change(rpiSelect, { target: { value: 'rpi-zero-2w' } });
     
