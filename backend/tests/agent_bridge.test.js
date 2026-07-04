@@ -187,6 +187,25 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     expect(mockSpawn).toHaveBeenCalled();
   });
 
+  test('POST /execute: triggers update_node background process on Linux', async () => {
+    const os = require('os');
+    const originalPlatform = os.platform;
+    os.platform = () => 'linux';
+
+    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
+
+    const res = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'update_node' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.output).toContain('Self-update initiated successfully');
+    expect(mockSpawn).toHaveBeenCalledWith('bash', expect.any(Array), expect.any(Object));
+
+    os.platform = originalPlatform;
+  });
+
   test('POST /execute: 400 on unrecognized action', async () => {
     mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
 
