@@ -11,7 +11,7 @@ SERVICE_NAME="private-ai"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 echo "===================================================="
-echo "  Private AI Assistant Setup & Update Utility V2.4.0 "
+echo "  Private AI Assistant Setup & Update Utility V4.0.0 "
 echo "===================================================="
 
 # Helper function to print logs
@@ -77,31 +77,123 @@ else
     git clone "$REPO_URL"
     
     cd "$TARGET_DIR"
-    
-    # Create default .env file if it doesn't exist
-    if [ ! -f ".env" ]; then
-        log "Creating default .env from .env.example..."
-        cp .env.example .env
-    fi
 fi
 
-# 4. Install Dependencies
-log "Installing project dependencies..."
+# 4. Interactive Configuration
+echo -e "\n===================================================="
+echo "  Configuration Settings"
+echo "===================================================="
+
+# Device Type selection
+echo "Supported Device Types:"
+echo "  1) Windows"
+echo "  2) General Linux (default)"
+echo "  3) Raspberry Pi 5"
+echo "  4) Raspberry Pi 4"
+echo "  5) Raspberry Pi Zero 2W"
+echo "  6) ESP32 Node"
+read -p "Select your device type [2]: " DEV_CHOICE
+case $DEV_CHOICE in
+    1) DEVICE_TYPE="windows" ;;
+    2|*) DEVICE_TYPE="linux" ;;
+    3) DEVICE_TYPE="rpi-5-8gb" ;;
+    4) DEVICE_TYPE="rpi-4b-2gb" ;;
+    5) DEVICE_TYPE="rpi-zero-2w" ;;
+    6) DEVICE_TYPE="esp32" ;;
+esac
+
+# Main Host role prompt
+read -p "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [y]: " MAIN_HOST_YN
+MAIN_HOST_YN=${MAIN_HOST_YN:-y}
+if [[ "$MAIN_HOST_YN" =~ ^[Yy]$ ]]; then
+    IS_MAIN_HOST="1"
+else
+    IS_MAIN_HOST="0"
+fi
+
+# Admin account registration
+read -p "Enter Admin Username [admin]: " ADMIN_USER
+ADMIN_USER=${ADMIN_USER:-admin}
+
+read -p "Enter Admin Password [adminpassword]: " ADMIN_PASS
+ADMIN_PASS=${ADMIN_PASS:-adminpassword}
+
+# Local LLM address
+read -p "Enter Local LLM Base URL [http://localhost:1234/v1]: " LOCAL_URL
+LOCAL_URL=${LOCAL_URL:-http://localhost:1234/v1}
+
+# Optional API Keys / Tokens
+read -p "Enter Local LLM API Key (optional): " LOCAL_KEY
+read -p "Enter Online Gemini API Key (optional): " ONLINE_KEY
+read -p "Enter GitHub Access Token (optional): " GITHUB_TOKEN
+
+# Deployment mode / Frontend compilation check
+read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
+BUILD_FE_YN=${BUILD_FE_YN:-y}
+
+# Server port configuration
+read -p "Enter Server PORT [5173]: " APP_PORT
+APP_PORT=${APP_PORT:-5173}
+
+# Create .env config file
+log "Configuring environment variables (.env)..."
+if [ ! -f ".env" ]; then
+    cp .env.example .env
+fi
+
+# Write PORT and DEPLOY_MODE into .env
+sed -i "s/^PORT=.*/PORT=${APP_PORT}/" .env || echo "PORT=${APP_PORT}" >> .env
+
+if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
+    sed -i "s/^DEPLOY_MODE=.*/# DEPLOY_MODE=backend-only/" .env
+    DEPLOY_MODE=""
+else
+    if grep -q "DEPLOY_MODE" .env; then
+        sed -i "s/^#\?\s*DEPLOY_MODE=.*/DEPLOY_MODE=backend-only/" .env
+    else
+        echo "DEPLOY_MODE=backend-only" >> .env
+    fi
+    DEPLOY_MODE="backend-only"
+fi
+
+# Generate random JWT_SECRET if it matches the default placeholder
+DEFAULT_SECRET="some_long_random_secret_phrase_for_private_ai_assistant"
+if grep -q "$DEFAULT_SECRET" .env; then
+    NEW_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+    sed -i "s/$DEFAULT_SECRET/$NEW_SECRET/" .env
+fi
+
+# 5. Install Dependencies
+log "Installing project dependencies (this may take a few minutes)..."
 npm run install:all
 
-# 5. Build the Frontend
-log "Building frontend application..."
-npm run build
+# 6. Database Initialization & Seeding
+log "Initializing database and seeding configuration..."
+node backend/scripts/seed_settings.js \
+    --username="$ADMIN_USER" \
+    --password="$ADMIN_PASS" \
+    --device_type="$DEVICE_TYPE" \
+    --is_main_host="$IS_MAIN_HOST" \
+    --local_url="$LOCAL_URL" \
+    --local_key="$LOCAL_KEY" \
+    --online_key="$ONLINE_KEY" \
+    --github_token="$GITHUB_TOKEN"
 
-# 6. Setup or Restart systemd Service
-log "Configuring systemd background service..."
+# 7. Build Frontend (if requested)
+if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
+    log "Building frontend application..."
+    npm run build
+else
+    log "Skipping frontend compilation (backend-only deployment)."
+fi
 
-# Resolve path to npm dynamically
-NPM_PATH=$(which npm || echo "/usr/bin/npm")
+# 8. Setup systemd Service (if not Windows/ESP32 choice)
+if [ "$DEVICE_TYPE" != "windows" ] && [ "$DEVICE_TYPE" != "esp32" ]; then
+    log "Configuring systemd background service..."
+    NPM_PATH=$(which npm || echo "/usr/bin/npm")
 
-# Create or overwrite systemd service file
-log "Creating/updating systemd service file at $SERVICE_FILE..."
-sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+    # Create or overwrite systemd service file
+    sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Private AI Assistant Service
 After=network.target
@@ -118,22 +210,30 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 
-log "Reloading systemd daemon..."
-sudo systemctl daemon-reload
+    log "Reloading systemd daemon..."
+    sudo systemctl daemon-reload
 
-log "Enabling $SERVICE_NAME service to start on boot..."
-sudo systemctl enable "$SERVICE_NAME".service
+    log "Enabling $SERVICE_NAME service to start on boot..."
+    sudo systemctl enable "$SERVICE_NAME".service
 
-log "Restarting $SERVICE_NAME service..."
-sudo systemctl restart "$SERVICE_NAME".service
+    log "Restarting $SERVICE_NAME service..."
+    sudo systemctl restart "$SERVICE_NAME".service
 
-# 7. Verification
-if sudo systemctl is-active --quiet "$SERVICE_NAME".service; then
-    log_success "Private AI Assistant is running in the background!"
-    log "You can check status using: sudo systemctl status $SERVICE_NAME"
-    log "You can check logs using: journalctl -u $SERVICE_NAME -f"
-else
-    log_error "Failed to start $SERVICE_NAME service. Please check systemctl logs."
+    # Verify status
+    if sudo systemctl is-active --quiet "$SERVICE_NAME".service; then
+        log_success "Private AI Assistant is running in the background!"
+        log "Check status: sudo systemctl status $SERVICE_NAME"
+        log "Check logs: journalctl -u $SERVICE_NAME -f"
+    else
+        log_error "Failed to start $SERVICE_NAME service. Please check systemctl logs."
+    fi
 fi
 
-echo -e "\nSetup/Update process completed successfully!"
+echo -e "\n===================================================="
+echo "  Setup Completed Successfully!"
+echo "===================================================="
+echo "Device Type : $DEVICE_TYPE"
+echo "Main Host   : $MAIN_HOST_YN"
+echo "Port        : $APP_PORT"
+echo "Build UI    : $BUILD_FE_YN"
+echo "===================================================="
