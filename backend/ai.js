@@ -162,6 +162,7 @@ async function runAgentLoop({
   userId,
   provider,
   modelName,
+  supervisorModel,
   userMessage,
   history,
   githubToken,
@@ -265,7 +266,11 @@ async function runAgentLoop({
     onThought(`Supervisor deciding strategy (turn ${toolCallsCount + 1}/${maxToolCalls})...\n`);
 
     try {
-      decision = await runAgentTurn('supervisor', systemPrompt, settings, userMessage, currentHistory);
+      const supervisorSettings = {
+        ...settings,
+        modelName: supervisorModel || settings.modelName
+      };
+      decision = await runAgentTurn('supervisor', systemPrompt, supervisorSettings, userMessage, currentHistory);
     } catch (err) {
       console.error('Supervisor turn failed, using fallback "none":', err);
       decision = {
@@ -287,7 +292,7 @@ async function runAgentLoop({
     let toolOutput = '';
     
     // Check for delegation
-    if (decision.tool.startsWith('delegate_to_')) {
+    if (decision.tool.startsWith('delegate_to_') && decision.tool !== 'delegate_to_remote_node') {
       const agentName = decision.tool.replace('delegate_to_', '');
       let subTask = '';
       if (agentName === 'web_searcher') {
@@ -331,10 +336,26 @@ async function runAgentLoop({
         toolOutput = await handleGoogleNewsTool(decision.params?.query);
       } else if (decision.tool === 'weather') {
         toolOutput = await handleWeatherTool(db, userId, decision.action, decision.params);
-      } else if (decision.tool === 'memory') {
-        toolOutput = await handleMemoryTool(db, userId, decision.action, decision.params);
+      } else if (decision.tool === 'host_machine') {
+        const { handleHostMachineTool } = require('./tools/host_machine_tool');
+        toolOutput = await handleHostMachineTool(decision.action, decision.params);
       } else if (decision.tool === 'time') {
+        const { handleTimeTool } = require('./tools/time_tool');
         toolOutput = await handleTimeTool(db, userId, decision.action, decision.params);
+      } else if (decision.tool === 'delegate_to_remote_node') {
+        try {
+          const { nodeId, command } = decision.params;
+          const fetch = require('node-fetch'); // Ensure fetch is available
+          const bridgeRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/bridge/execute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.token}` },
+            body: JSON.stringify({ nodeId, command })
+          });
+          const data = await bridgeRes.json();
+          toolOutput = JSON.stringify(data);
+        } catch (err) {
+          toolOutput = `Remote node execution error: ${err.message}`;
+        }
       } else {
         toolOutput = `Error: Tool "${decision.tool}" is unrecognized by Supervisor.`;
       }

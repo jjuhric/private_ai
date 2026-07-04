@@ -9,6 +9,8 @@ import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
 import AgentDashboard from './components/AgentDashboard';
 import Toast from './components/Toast';
+import SetupWizard from './components/SetupWizard';
+import SudoModal from './components/SudoModal';
 
 function App() {
   // Auth state
@@ -37,6 +39,8 @@ function App() {
 
   // Settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSetupComplete, setIsSetupComplete] = useState(true);
+  const [sudoPrompt, setSudoPrompt] = useState(null); // { commandId, approved, editedCmd, commandText }
   const [settings, setSettings] = useState({
     provider: 'local',
     model_name: 'google/gemma-4-e4b',
@@ -316,6 +320,7 @@ function App() {
           online_key: data.online_key || '',
           online_provider: data.online_provider || 'gemini'
         });
+        setIsSetupComplete(data.is_setup_complete !== false);
       }
       fetchLocalModels();
       fetchOnlineModels();
@@ -479,13 +484,21 @@ function App() {
     }
   };
 
-  const handleResolveCommand = async (commandId, approved) => {
-    const editedCommand = document.getElementById(`cmd-input-${commandId}`)?.value || '';
+  const handleResolveCommand = async (commandId, approved, editedCmd, password) => {
+    const finalCmd = editedCmd !== undefined ? editedCmd : (document.getElementById(`cmd-input-${commandId}`)?.value || '');
+    
+    // Check if we need to show the sudo prompt first
+    if (approved && finalCmd.includes('sudo') && !password) {
+      setSudoPrompt({ commandId, approved, editedCmd: finalCmd, commandText: finalCmd });
+      return;
+    }
+
+    setSudoPrompt(null);
     
     // Update local state to reflect approved or rejected status
     setToolLogs(prev => prev.map(log => 
       log.commandId === commandId 
-        ? { ...log, status: approved ? 'approved' : 'rejected', command: approved ? editedCommand : log.command } 
+        ? { ...log, status: approved ? 'approved' : 'rejected', command: approved ? finalCmd : log.command } 
         : log
     ));
 
@@ -496,7 +509,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ commandId, approved, command: editedCommand })
+        body: JSON.stringify({ commandId, approved, command: finalCmd, password })
       });
     } catch (err) {
       console.error('Failed to resolve command:', err);
@@ -622,6 +635,7 @@ function App() {
                 type: 'command_approval',
                 commandId: dataValue.commandId,
                 command: dataValue.command,
+                safety_analysis: dataValue.safety_analysis,
                 status: 'pending'
               }]);
             } else if (eventType === 'error') {
@@ -671,6 +685,18 @@ function App() {
         handleAuthSubmit={handleAuthSubmit}
         showAuthPassword={showAuthPassword}
         setShowAuthPassword={setShowAuthPassword}
+      />
+    );
+  }
+
+  if (!isSetupComplete) {
+    return (
+      <SetupWizard
+        token={token}
+        onComplete={() => {
+          fetchSettings();
+          fetchProfile();
+        }}
       />
     );
   }
@@ -735,6 +761,7 @@ function App() {
 
         {activeTab === 'chat' && (
           <ChatPane
+            settings={settings}
             messages={messages}
             activeChatId={activeChatId}
             isStreaming={isStreaming}
@@ -798,7 +825,20 @@ function App() {
       <ProfileModal
         isProfileOpen={isProfileOpen}
         setIsProfileOpen={setIsProfileOpen}
+        profile={profile}
         saveProfile={saveProfile}
+        settings={settings}
+        saveSettings={saveSettings}
+        localModels={localModels}
+        onlineModels={onlineModels}
+      />
+
+      {/* Sudo Modal */}
+      <SudoModal
+        isOpen={!!sudoPrompt}
+        onClose={() => setSudoPrompt(null)}
+        onSubmit={(password) => handleResolveCommand(sudoPrompt.commandId, sudoPrompt.approved, sudoPrompt.editedCmd, password)}
+        command={sudoPrompt?.commandText || ''}
       />
 
       {/* Toast Notifications */}

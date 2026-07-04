@@ -130,4 +130,42 @@ describe('ProfileModal Component Tests', () => {
     );
     expect(screen.getByPlaceholderText('US').value).toBe('US');
   });
+
+  test('renders preferred models and saves settings when available', () => {
+    const mockSaveSettings = vi.fn();
+    const mockSaveProfile = vi.fn();
+    const mockSettings = {
+      local_url: 'http://localhost:1234/v1',
+      online_key: 'test_online_key',
+      preferred_local_model: 'local-gemma-old',
+      preferred_online_model: 'gemini-1.5-pro'
+    };
+
+    render(
+      <ProfileModal 
+        isProfileOpen={true} 
+        setIsProfileOpen={vi.fn()} 
+        profile={defaultProfile} 
+        saveProfile={mockSaveProfile} 
+        settings={mockSettings}
+        saveSettings={mockSaveSettings}
+        localModels={['local-gemma-old', 'local-gemma-new']}
+        onlineModels={['gemini-1.5-pro', 'gemini-2.5-flash']}
+      />
+    );
+
+    expect(screen.getByText('AI Model Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Preferred Local Model')).toBeInTheDocument();
+    expect(screen.getByText('Preferred Online Model')).toBeInTheDocument();
+
+    const saveBtn = screen.getByText('Save Profile');
+    fireEvent.click(saveBtn);
+
+    expect(mockSaveProfile).toHaveBeenCalled();
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      ...mockSettings,
+      preferred_local_model: 'local-gemma-old',
+      preferred_online_model: 'gemini-1.5-pro'
+    });
+  });
 });

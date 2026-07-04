@@ -139,6 +139,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       userId: req.user.id,
       provider: settings.provider,
       modelName: settings.model_name,
+      supervisorModel: settings.supervisor_model,
       userMessage: message,
       history,
       githubToken: decrypt(settings.github_token),
@@ -165,8 +166,8 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       onAgentStatus: (statusData) => {
         sendEvent('agent_status', statusData);
       },
-      onCommandApprovalRequired: ({ commandId, command }) => {
-        sendEvent('command_approval_required', { commandId, command });
+      onCommandApprovalRequired: ({ commandId, command, safety_analysis }) => {
+        sendEvent('command_approval_required', { commandId, command, safety_analysis });
       }
     });
 
@@ -241,11 +242,11 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
 });
 
 router.post('/chat/approve-command', authenticateToken, (req, res) => {
-  const { commandId, approved, command } = req.body;
+  const { commandId, approved, command, password } = req.body;
   if (!commandId) return res.status(400).json({ error: 'commandId is required.' });
   
   const { resolveCommand } = require('../utils/commandApproval');
-  const success = resolveCommand(commandId, approved, command);
+  const success = resolveCommand(commandId, approved, command, password);
   if (success) {
     res.json({ success: true });
   } else {

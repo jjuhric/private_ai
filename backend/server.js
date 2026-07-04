@@ -18,6 +18,10 @@ const calendarRouter = require('./routes/calendar');
 const chatRouter = require('./routes/chat');
 const memoryRouter = require('./routes/memory');
 const vaultRouter = require('./routes/vault');
+const updateRouter = require('./routes/update');
+const hostRouter = require('./routes/host');
+const agentBridgeRouter = require('./routes/agent_bridge');
+const nodesRouter = require('./routes/nodes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +79,10 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/memories', memoryRouter);
 app.use('/api/vault', vaultRouter);
+app.use('/api/update', updateRouter);
+app.use('/api/host', hostRouter);
+app.use('/api/bridge', agentBridgeRouter);
+app.use('/api/nodes', nodesRouter);
 app.use('/api', chatRouter); // Routes handle their own prefixing (e.g. /chats, /chat/stream)
 
 // Version info helper
@@ -104,6 +112,17 @@ app.get('*', (req, res, next) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info(`Express Backend running securely on port ${PORT}`);
+  
+  // Initialize briefing scheduler background loop if not running unit tests
+  if (process.env.NODE_ENV !== 'test') {
+    const { getDb } = require('./db');
+    const { startBriefingScheduler } = require('./utils/briefing');
+    getDb().then(db => {
+      startBriefingScheduler(db);
+    }).catch(err => {
+      logger.error('Failed to start briefing scheduler:', err);
+    });
+  }
 });

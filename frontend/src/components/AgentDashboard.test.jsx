@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import AgentDashboard from './AgentDashboard';
 
 // Mock fetch
@@ -15,6 +15,7 @@ describe('AgentDashboard Component Tests', () => {
 
   beforeEach(() => {
     mockFetch.mockReset();
+    mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
   });
 
   test('renders active agent grid registry and tool timeline', () => {
@@ -291,6 +292,48 @@ describe('AgentDashboard Component Tests', () => {
       );
       expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
       unmount();
+    });
+  });
+
+  test('renders System Control subtab with mock telemetry data', async () => {
+    const localMockFetch = vi.fn().mockImplementation(async (url) => {
+      const urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+      if (urlStr.includes('/api/vault')) {
+        return { ok: true, json: async () => [] };
+      }
+      if (urlStr.includes('/api/host/status')) {
+        return {
+          ok: true,
+          json: async () => ({
+            cpu: { model: 'ARM Cortex-A72', cores: 4, loadAvg: [0.1, 0.2, 0.3] },
+            memory: { total: 1024, free: 512, used: 512, percentage: '50.0' },
+            uptime: 3600,
+            telemetry: {
+              temperature: '45.0°C',
+              power: 'Power readings',
+              network: 'Network info'
+            }
+          })
+        };
+      }
+      return { ok: false };
+    });
+    vi.stubGlobal('fetch', localMockFetch);
+
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+    
+    // Switch sub-tab
+    await act(async () => {
+      fireEvent.click(screen.getByText('System Control'));
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    expect(localMockFetch).toHaveBeenCalledWith('/api/host/status', expect.any(Object));
+    await waitFor(() => {
+      expect(screen.getByText('CPU Specifications')).toBeInTheDocument();
+      expect(screen.getByText(/ARM Cortex-A72/)).toBeInTheDocument();
+      expect(screen.getByText(/4 Cores/)).toBeInTheDocument();
+      expect(screen.getByText(/50.0% Used/)).toBeInTheDocument();
     });
   });
 });
