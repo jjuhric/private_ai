@@ -125,12 +125,12 @@ describe('ChatPane Component Tests', () => {
     // Test Approve button click
     const approveBtn = screen.getByText('Approve');
     fireEvent.click(approveBtn);
-    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', true);
+    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', true, 'npm run start');
 
     // Test Reject button click
     const rejectBtn = screen.getByText('Reject');
     fireEvent.click(rejectBtn);
-    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', false);
+    expect(mockHandleResolveCommand).toHaveBeenCalledWith('cmd_123', false, 'npm run start');
 
     // Test resolved command approval state
     const resolvedLogs = [
@@ -173,5 +173,55 @@ describe('ChatPane Component Tests', () => {
     );
 
     expect(screen.getByText('Status: REJECTED')).toBeInTheDocument();
+  });
+
+  test('clicking starter chips updates input text', () => {
+    const mockSetInputText = vi.fn();
+    render(<ChatPane {...defaultProps} messages={[]} setInputText={mockSetInputText} />);
+    
+    // Find one of the chips
+    const chip = screen.getByText('Check host CPU temperature & RAM specs');
+    fireEvent.click(chip);
+    expect(mockSetInputText).toHaveBeenCalledWith(
+      'Can you inspect my computer specifications, thermal temperature, and battery telemetry?'
+    );
+  });
+
+  test('changing command input updates the command value', () => {
+    const logs = [
+      {
+        type: 'command_approval',
+        commandId: 'cmd_123',
+        command: 'npm run start',
+        status: 'pending'
+      }
+    ];
+
+    render(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        toolLogs={logs}
+      />
+    );
+
+    const input = screen.getByDisplayValue('npm run start');
+    fireEvent.change(input, { target: { value: 'npm run test' } });
+    expect(input.value).toBe('npm run test');
+  });
+
+  test('clicking stop button calls handleStop', () => {
+    const mockHandleStop = vi.fn();
+    render(
+      <ChatPane 
+        {...defaultProps} 
+        isStreaming={true} 
+        handleStop={mockHandleStop}
+      />
+    );
+
+    const stopBtn = screen.getByTitle('Stop generating');
+    fireEvent.click(stopBtn);
+    expect(mockHandleStop).toHaveBeenCalledTimes(1);
   });
 });

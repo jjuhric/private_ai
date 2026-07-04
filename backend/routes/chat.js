@@ -108,6 +108,11 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  const streamAbortController = new AbortController();
+  req.on('close', () => {
+    streamAbortController.abort();
+  });
+
   let accumulatedThoughts = '';
   let accumulatedContent = '';
 
@@ -137,14 +142,15 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       userMessage: message,
       history,
       githubToken: decrypt(settings.github_token),
-      localBaseUrl: settings.local_url || 'http://192.168.1.42:1234/v1',
+      localBaseUrl: settings.local_url || 'http://localhost:1234/v1',
       localApiKey: decrypt(settings.local_key),
       localApiStyle: settings.local_api_style || 'openai',
       onlineUrl: settings.online_url,
       onlineKey: decrypt(settings.online_key),
       geminiKey: decrypt(settings.gemini_key),
       onlineProvider: settings.online_provider || 'gemini',
-      isAborted: () => res.destroyed,
+      isAborted: () => streamAbortController.signal.aborted,
+      abortSignal: streamAbortController.signal,
       onThought: (thoughtChunk) => {
         accumulatedThoughts += thoughtChunk;
         sendEvent('thought', thoughtChunk);
@@ -155,6 +161,9 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       },
       onToolCall: (toolCall) => {
         sendEvent('tool', toolCall);
+      },
+      onAgentStatus: (statusData) => {
+        sendEvent('agent_status', statusData);
       },
       onCommandApprovalRequired: ({ commandId, command }) => {
         sendEvent('command_approval_required', { commandId, command });
@@ -220,6 +229,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       ]
     );
 
+    sendEvent('agent_status', { agent: null, status: 'idle' });
     sendEvent('done', { success: true });
   } catch (err) {
     console.error('Stream processing error:', err);

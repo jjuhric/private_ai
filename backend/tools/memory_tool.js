@@ -17,7 +17,7 @@ async function handleMemoryTool(db, userId, action, params = {}) {
   try {
     switch (action) {
       case 'remember': {
-        const { content, level, expiresAt, days } = params;
+        const { content, level, expiresAt, days, agentName } = params;
         if (!content || typeof content !== 'string' || content.trim() === '') {
           return 'Error: "content" parameter is required and must be a non-empty string for the "remember" action.';
         }
@@ -54,8 +54,8 @@ async function handleMemoryTool(db, userId, action, params = {}) {
 
         // Fetch active memories to check for semantic duplicates
         const activeMemories = await db.all(
-          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
-          [userId]
+          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
+          [userId, agentName || null, agentName || null]
         );
 
         let semanticDuplicate = null;
@@ -84,19 +84,19 @@ async function handleMemoryTool(db, userId, action, params = {}) {
         }
 
         const result = await db.run(
-          'INSERT INTO memories (user_id, content, level, expires_at, embedding) VALUES (?, ?, ?, ?, ?)',
-          [userId, cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null]
+          'INSERT INTO memories (user_id, content, level, expires_at, embedding, agent_name) VALUES (?, ?, ?, ?, ?, ?)',
+          [userId, cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null, agentName || null]
         );
 
         return `Successfully remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${result.lastID}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}).`;
       }
 
       case 'recall': {
-        const { query } = params;
+        const { query, agentName } = params;
         
         const rows = await db.all(
-          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\'))',
-          [userId]
+          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
+          [userId, agentName || null, agentName || null]
         );
 
         if (query && typeof query === 'string' && query.trim() !== '') {
@@ -124,8 +124,8 @@ async function handleMemoryTool(db, userId, action, params = {}) {
           if (matchedRows.length === 0) {
             // Fallback: search for any active memories if search query yielded nothing
             const allActive = await db.all(
-              'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) ORDER BY created_at DESC LIMIT 5',
-              [userId]
+              'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL)) ORDER BY created_at DESC LIMIT 5',
+              [userId, agentName || null, agentName || null]
             );
             if (allActive.length > 0) {
               return `No memories matched your search for "${query}". Here are the most recent general memories:\n` +
@@ -146,8 +146,8 @@ async function handleMemoryTool(db, userId, action, params = {}) {
 
         // Return most recent memories if no query was provided
         const allActive = await db.all(
-          'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) ORDER BY created_at DESC',
-          [userId]
+          'SELECT id, content, level, expires_at FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL)) ORDER BY created_at DESC',
+          [userId, agentName || null, agentName || null]
         );
         return `Retrieved memories:\n` +
           allActive.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');

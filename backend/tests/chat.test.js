@@ -273,4 +273,38 @@ describe('Chat Router Tests', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(msgsRes.statusCode).toBe(500);
   });
+
+  test('GET /api/chats/:id/messages - 404 if chat not found', async () => {
+    const res = await request(app)
+      .get('/api/chats/99999/messages')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.statusCode).toBe(404);
+  });
+
+  test('POST /api/chat/approve-command - validations and cases', async () => {
+    // Missing commandId
+    const res1 = await request(app)
+      .post('/api/chat/approve-command')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ approved: true });
+    expect(res1.statusCode).toBe(400);
+
+    // Command not found
+    const res2 = await request(app)
+      .post('/api/chat/approve-command')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ commandId: 'nonexistent-id', approved: true });
+    expect(res2.statusCode).toBe(404);
+
+    // Mock command approval registry to successfully resolve
+    const { registerPendingCommand } = require('../utils/commandApproval');
+    registerPendingCommand('cmd-123', 'echo hello', userId);
+
+    const res3 = await request(app)
+      .post('/api/chat/approve-command')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ commandId: 'cmd-123', approved: true, command: 'echo hello' });
+    expect(res3.statusCode).toBe(200);
+    expect(res3.body.success).toBe(true);
+  });
 });

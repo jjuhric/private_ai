@@ -8,7 +8,7 @@ const { handleMemoryTool } = require('./tools/memory_tool');
 const { handleTimeTool } = require('./tools/time_tool');
 
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
-async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk) {
+async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk, abortSignal) {
   const localStyle = apiStyle || 'openai';
   let endpoint = '';
   let headers = {
@@ -76,7 +76,8 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: abortSignal
   });
 
   if (!response.ok) {
@@ -99,6 +100,10 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
   let buffer = '';
 
   while (true) {
+    if (abortSignal?.aborted) {
+      await reader.cancel();
+      break;
+    }
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
@@ -123,10 +128,10 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
 }
 
 // Helper to call Gemini Client Stream
-async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk) {
+async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk, abortSignal) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: modelName || 'gemini-2.5-flash',
+    model: modelName || 'gemini-1.5-flash',
     systemInstruction: systemInstruction
   });
 
@@ -144,6 +149,7 @@ async function callGeminiStream(apiKey, modelName, systemInstruction, history, u
 
   const result = await model.generateContentStream({ contents });
   for await (const chunk of result.stream) {
+    if (abortSignal?.aborted) break;
     const text = chunk.text();
     if (text) onChunk(text);
   }
@@ -169,7 +175,9 @@ async function runAgentLoop({
   onThought,
   onContent,
   onToolCall,
+  onAgentStatus,
   isAborted,
+  abortSignal,
   onCommandApprovalRequired,
   forceMemoryAgent = false
 }) {
@@ -191,7 +199,9 @@ async function runAgentLoop({
     onlineUrl,
     forceMemoryAgent,
     onToolCall,
-    onCommandApprovalRequired
+    onAgentStatus,
+    onCommandApprovalRequired,
+    abortSignal
   };
 
   // Core/Location memories will be fetched programmatically below.
@@ -246,11 +256,12 @@ async function runAgentLoop({
   const maxToolCalls = 10;
 
   while (toolCallsCount < maxToolCalls) {
-    if (isAborted && isAborted()) {
+    if (abortSignal?.aborted || (isAborted && isAborted())) {
       onThought("Stream aborted by user.\n");
       break;
     }
     let decision = null;
+    if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
     onThought(`Supervisor deciding strategy (turn ${toolCallsCount + 1}/${maxToolCalls})...\n`);
 
     try {
@@ -300,11 +311,13 @@ async function runAgentLoop({
       }
 
       onThought(`Delegating sub-task to Agent "${agentName}": "${subTask}"...\n`);
+      if (onAgentStatus) onAgentStatus({ agent: agentName, status: 'active' });
       try {
         toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId, githubToken);
       } catch (err) {
         toolOutput = `Agent "${agentName}" delegation failed: ${err.message}`;
       }
+      if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
     } else {
       // Execute direct fallback tools of supervisor
       if (decision.tool === 'calendar') {
@@ -347,10 +360,11 @@ async function runAgentLoop({
   }
 
   // Now, call the Responder Agent to output the streamed response
-  if (isAborted && isAborted()) {
+  if (abortSignal?.aborted || (isAborted && isAborted())) {
     onThought("Stream aborted by user.\n");
     return;
   }
+  if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
   onThought('Supervisor generating final response...\n');
 
   const responderInstruction = `You are a helpful, smart AI Personal Assistant Supervisor.
@@ -371,7 +385,8 @@ Make sure to answer the user query directly and clearly.`;
       responderInstruction,
       cleanedHistory,
       userMessage,
-      onContent
+      onContent,
+      abortSignal
     );
   } else {
     let targetUrl = '';
@@ -405,7 +420,8 @@ Make sure to answer the user query directly and clearly.`;
       modelName,
       messages,
       targetStyle,
-      onContent
+      onContent,
+      abortSignal
     );
   }
 }

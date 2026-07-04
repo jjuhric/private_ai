@@ -64,7 +64,7 @@ async function getDb() {
     }
     
     if (!settingsColumns.some(col => col.name === 'local_url')) {
-      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN local_url TEXT DEFAULT 'http://192.168.1.42:1234/v1'");
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN local_url TEXT DEFAULT 'http://localhost:1234/v1'");
     }
     if (!settingsColumns.some(col => col.name === 'local_api_style')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN local_api_style TEXT DEFAULT 'openai'");
@@ -84,6 +84,10 @@ async function getDb() {
     const hasEmbedding = memoriesColumns.some(col => col.name === 'embedding');
     if (!hasEmbedding) {
       await dbConnection.run('ALTER TABLE memories ADD COLUMN embedding TEXT');
+    }
+    const hasAgentName = memoriesColumns.some(col => col.name === 'agent_name');
+    if (!hasAgentName) {
+      await dbConnection.run('ALTER TABLE memories ADD COLUMN agent_name TEXT');
     }
     
     console.log('Database initialized successfully.');

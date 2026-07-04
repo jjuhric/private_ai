@@ -26,7 +26,15 @@ export default function ProfileModal({
         weather_api_key: profile.weather_api_key || ''
       });
     }
-  }, [profile, isProfileOpen]);
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isProfileOpen) {
+        setIsProfileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [profile, isProfileOpen, setIsProfileOpen]);
 
   if (!isProfileOpen) return null;
 

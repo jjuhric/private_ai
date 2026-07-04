@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS memories (
   expires_at DATETIME, -- NULL for long-term, timestamp for short-term
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   embedding TEXT,
+  agent_name TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
