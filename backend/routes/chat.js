@@ -156,7 +156,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       userMessage: message,
       history,
       githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
-      localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1',
+      localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1'),
       localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
       localApiStyle: settings.local_api_style || 'openai',
       onlineUrl: settings.online_url,

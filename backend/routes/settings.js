@@ -11,7 +11,7 @@ router.get('/', authenticateToken, async (req, res) => {
       await db.run('INSERT INTO user_settings (user_id) VALUES (?)', [req.user.id]);
       settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
     }
-    
+
     const { decrypt } = require('../utils/crypto');
     const maskKey = (key) => {
       if (!key) return '';
@@ -33,7 +33,7 @@ router.get('/', authenticateToken, async (req, res) => {
       gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
-      local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1',
+      local_url: settings.local_url || process.env.LOCAL_LLM_URL || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1'),
       preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.8-9b',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-1.5-flash',
       supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
@@ -51,17 +51,17 @@ router.put('/', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
     const { encrypt, decrypt } = require('../utils/crypto');
-    
+
     const existing = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
     const isMasked = (val) => val && val.includes('••');
-    
+
     const finalGithub = isMasked(github_token) ? existing.github_token : (github_token ? encrypt(github_token) : null);
     const finalGemini = isMasked(gemini_key) ? existing.gemini_key : (gemini_key ? encrypt(gemini_key) : null);
     const finalLocal = isMasked(local_key) ? existing.local_key : (local_key ? encrypt(local_key) : null);
     const finalOnline = isMasked(online_key) ? existing.online_key : (online_key ? encrypt(online_key) : null);
-    
+
     const resolvedLocalKey = isMasked(local_key) ? decrypt(existing.local_key) : local_key;
-    const resolvedUrl = local_url || 'http://192.168.1.42:1234/v1';
+    const resolvedUrl = local_url || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
     const resolvedStyle = local_api_style || ((resolvedUrl.includes(':1234') || (resolvedLocalKey && resolvedLocalKey.startsWith('lm-'))) ? 'lm-studio' : 'openai');
 
     await db.run(
@@ -105,14 +105,14 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     const db = await getDb();
     const settings = await db.get('SELECT local_url, local_key, local_api_style FROM user_settings WHERE user_id = ?', [req.user.id]);
     const { decrypt } = require('../utils/crypto');
-    
+
     const queryUrl = req.query.localUrl;
     const isMasked = (val) => val && val.includes('•');
     const queryKey = isMasked(req.query.localApiKey) ? undefined : req.query.localApiKey;
     const queryStyle = req.query.localApiStyle;
 
-    const localUrl = queryUrl || settings?.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
-    
+    const localUrl = queryUrl || settings?.local_url || process.env.LOCAL_LLM_URL || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
+
     let localApiKey = '';
     if (queryKey !== undefined && queryKey !== null) {
       localApiKey = queryKey;
@@ -122,7 +122,7 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     localApiKey = localApiKey || process.env.LOCAL_LLM_KEY || '';
 
     const localApiStyle = queryStyle || settings?.local_api_style || ((localUrl.includes(':1234') || localApiKey.startsWith('lm-')) ? 'lm-studio' : 'openai');
-    
+
     const authHeader = localApiKey && localApiKey !== 'lm-studio' ? { 'Authorization': `Bearer ${localApiKey}` } : {};
 
     let endpoint = '';
@@ -196,7 +196,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
         : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('gemini'));
     } else if (provider === 'openai') {
-      const response = await fetch('https://api.openai.com/v1/models', {
+      const response = await fetch(`${process.env.LOCAL_LLM_URL}/models`, {
         headers: { 'Authorization': `Bearer ${key}` }
       });
       if (!response.ok) throw new Error(`OpenAI API error: ${response.statusText}`);
@@ -242,19 +242,19 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
   const { provider, localUrl, localApiKey, onlineKey, onlineProvider, onlineUrl } = req.body;
   try {
     if (provider === 'local') {
-      const url = localUrl || 'http://localhost:1234/v1';
+      const url = localUrl || (process.platform === 'win32' ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
       const fetchUrl = `${url.replace(/\/$/, '')}/models`;
       const headers = {};
       if (localApiKey && !localApiKey.includes('••')) {
         headers['Authorization'] = `Bearer ${localApiKey}`;
       }
-      
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
-      
+
       const testRes = await fetch(fetchUrl, { headers, signal: controller.signal });
       clearTimeout(timeoutId);
-      
+
       if (testRes.ok) {
         return res.json({ success: true, message: 'Local connection successful' });
       } else {
@@ -265,13 +265,13 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
       if (activeProvider === 'gemini') {
         const key = onlineKey;
         if (!key) return res.status(400).json({ error: 'API key is required' });
-        
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
-        
+
         const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, { signal: controller.signal });
         clearTimeout(timeoutId);
-        
+
         if (testRes.ok) {
           return res.json({ success: true, message: 'Gemini connection successful' });
         } else {
@@ -281,13 +281,13 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
         const baseUrl = onlineUrl || 'https://api.openai.com/v1';
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
-        
+
         const testRes = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, {
           headers: { 'Authorization': `Bearer ${onlineKey}` },
           signal: controller.signal
         });
         clearTimeout(timeoutId);
-        
+
         if (testRes.ok) {
           return res.json({ success: true, message: `${activeProvider} connection successful` });
         } else {

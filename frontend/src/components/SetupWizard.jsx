@@ -22,7 +22,7 @@ export default function SetupWizard({ token, onComplete }) {
   // Step 2: Settings Data
   const [llmForm, setLlmForm] = useState({
     provider: 'local', // 'local' or 'gemini'
-    local_url: 'http://localhost:1234/v1',
+    local_url: 'http://192.168.1.42:1234/v1',
     local_api_style: 'openai',
     local_key: '',
     online_provider: 'gemini',
@@ -251,7 +251,10 @@ export default function SetupWizard({ token, onComplete }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div 
-                onClick={() => setDeviceForm({ device_type: 'windows', is_main_host: 1 })}
+                onClick={() => {
+                  setDeviceForm({ device_type: 'windows', is_main_host: 1 });
+                  setLlmForm(prev => ({ ...prev, local_url: 'http://localhost:1234/v1' }));
+                }}
                 style={{ 
                   padding: '16px', borderRadius: '12px', border: `2px solid ${deviceForm.device_type === 'windows' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'}`, 
                   background: 'rgba(0,0,0,0.2)', cursor: 'pointer', transition: 'all 0.2s' 
@@ -266,7 +269,10 @@ export default function SetupWizard({ token, onComplete }) {
               </div>
 
               <div 
-                onClick={() => setDeviceForm({ device_type: 'rpi-5-8gb', is_main_host: 0 })}
+                onClick={() => {
+                  setDeviceForm({ device_type: 'rpi-5-8gb', is_main_host: 0 });
+                  setLlmForm(prev => ({ ...prev, local_url: 'http://192.168.1.42:1234/v1' }));
+                }}
                 style={{ 
                   padding: '16px', borderRadius: '12px', border: `2px solid ${deviceForm.device_type.startsWith('rpi') ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'}`, 
                   background: 'rgba(0,0,0,0.2)', cursor: 'pointer', transition: 'all 0.2s' 
@@ -294,7 +300,10 @@ export default function SetupWizard({ token, onComplete }) {
               </div>
 
               <div 
-                onClick={() => setDeviceForm({ device_type: 'esp32-s3', is_main_host: 0 })}
+                onClick={() => {
+                  setDeviceForm({ device_type: 'esp32-s3', is_main_host: 0 });
+                  setLlmForm(prev => ({ ...prev, local_url: 'http://192.168.1.42:1234/v1' }));
+                }}
                 style={{ 
                   padding: '16px', borderRadius: '12px', border: `2px solid ${deviceForm.device_type.startsWith('esp32') ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)'}`, 
                   background: 'rgba(0,0,0,0.2)', cursor: 'pointer', transition: 'all 0.2s' 
@@ -469,7 +478,7 @@ export default function SetupWizard({ token, onComplete }) {
                       className="form-control"
                       value={llmForm.local_url}
                       onChange={e => setLlmForm(prev => ({ ...prev, local_url: e.target.value }))}
-                      placeholder="e.g. http://localhost:1234/v1"
+                      placeholder="e.g. http://192.168.1.42:1234/v1"
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>

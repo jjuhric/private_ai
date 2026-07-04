@@ -23,7 +23,7 @@ async function main(argv = process.argv) {
   const deviceType = args.device_type || 'windows';
   const isMainHost = args.is_main_host === '1' || args.is_main_host === 'true' ? 1 : 0;
   
-  const localUrl = args.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1';
+  const localUrl = args.local_url || process.env.LOCAL_LLM_URL || ((args.device_type === 'windows' || process.platform === 'win32') ? 'http://localhost:1234/v1' : 'http://192.168.1.42:1234/v1');
   const localKey = args.local_key || process.env.LOCAL_LLM_KEY || null;
   const onlineProvider = args.online_provider || process.env.ONLINE_PROVIDER || 'gemini';
   const onlineKey = args.online_key || process.env.GEMINI_API_KEY || null;
