@@ -31,6 +31,22 @@ jest.mock('../tools/host_machine_tool', () => ({
   handleHostMachineTool: (...args) => mockHandleHostMachineTool(...args)
 }));
 
+// Mock safe update service
+const mockRunUpdatePipeline = jest.fn(() => Promise.resolve({ success: true }));
+const mockCheckForUpdates = jest.fn(() => Promise.resolve({ hasUpdate: false }));
+jest.mock('../services/safe_update_service', () => ({
+  runUpdatePipeline: () => mockRunUpdatePipeline(),
+  checkForUpdates: () => mockCheckForUpdates()
+}));
+
+// Mock tool manager
+const mockInstallTool = jest.fn(() => Promise.resolve({ version: '1.0.0' }));
+const mockUninstallTool = jest.fn(() => Promise.resolve());
+jest.mock('../services/tool_manager', () => ({
+  installTool: (...args) => mockInstallTool(...args),
+  uninstallTool: (...args) => mockUninstallTool(...args)
+}));
+
 const JWT_SECRET = 'dev_secret_key_private_ai_assistant_2026';
 const testToken = jwt.sign({ id: 1 }, JWT_SECRET);
 
@@ -219,11 +235,7 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     );
   });
 
-  test('POST /execute: triggers update_node background process on Windows', async () => {
-    const os = require('os');
-    const originalPlatform = os.platform;
-    os.platform = () => 'win32';
-
+  test('POST /execute: triggers update_node safe update pipeline', async () => {
     mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
 
     const res = await request(app)
@@ -232,29 +244,37 @@ describe('agent_bridge.js API Endpoint Tests', () => {
       .send({ action: 'update_node' });
 
     expect(res.status).toBe(200);
-    expect(res.body.output).toContain('Self-update initiated successfully');
-    expect(mockSpawn).toHaveBeenCalledWith('powershell.exe', expect.any(Array), expect.any(Object));
-
-    os.platform = originalPlatform;
+    expect(res.body.output).toContain('Safe self-update pipeline initiated');
+    expect(mockRunUpdatePipeline).toHaveBeenCalled();
   });
 
-  test('POST /execute: triggers update_node background process on Linux', async () => {
-    const os = require('os');
-    const originalPlatform = os.platform;
-    os.platform = () => 'linux';
+  test('POST /execute: triggers install_tool, uninstall_tool, check_updates', async () => {
+    mockDb.get.mockResolvedValue({ is_main_host: 0 });
 
-    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
-
-    const res = await request(app)
+    // Test check_updates
+    const checkRes = await request(app)
       .post('/api/bridge/execute')
       .set('Authorization', `Bearer ${testToken}`)
-      .send({ action: 'update_node' });
+      .send({ action: 'check_updates' });
+    expect(checkRes.status).toBe(200);
 
-    expect(res.status).toBe(200);
-    expect(res.body.output).toContain('Self-update initiated successfully');
-    expect(mockSpawn).toHaveBeenCalledWith('bash', expect.any(Array), expect.any(Object));
+    // Test install_tool
+    const installRes = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'install_tool', params: { toolName: 'email_sender' } });
+    expect(installRes.status).toBe(200);
+    expect(installRes.body.output).toContain('Successfully installed');
+    expect(mockInstallTool).toHaveBeenCalledWith('email_sender');
 
-    os.platform = originalPlatform;
+    // Test uninstall_tool
+    const uninstallRes = await request(app)
+      .post('/api/bridge/execute')
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ action: 'uninstall_tool', params: { toolName: 'email_sender' } });
+    expect(uninstallRes.status).toBe(200);
+    expect(uninstallRes.body.output).toContain('Successfully uninstalled');
+    expect(mockUninstallTool).toHaveBeenCalledWith('email_sender');
   });
 
   test('POST /execute: 400 on unrecognized action', async () => {

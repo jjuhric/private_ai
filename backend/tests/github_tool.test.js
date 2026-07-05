@@ -97,4 +97,63 @@ describe('GitHub Tool Tests', () => {
     const result = await handleGitHubTool('token', 'unknown', {});
     expect(JSON.parse(result)).toHaveProperty('error', 'Unknown GitHub action');
   });
+
+  test('create_branch action', async () => {
+    // Mock getRef
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ object: { sha: 'base_sha_123' } })
+    });
+    // Mock createRef
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
+    const result = await handleGitHubTool('token', 'create_branch', { owner: 'owner', repo: 'repo', branch: 'new_branch' });
+    const parsed = JSON.parse(result);
+    expect(parsed.success).toBe(true);
+    expect(parsed.sha).toBe('base_sha_123');
+  });
+
+  test('commit_files action', async () => {
+    // Mock file check (not found)
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404
+    });
+    // Mock commit
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
+    const result = await handleGitHubTool('token', 'commit_files', {
+      owner: 'owner',
+      repo: 'repo',
+      branch: 'branch',
+      files: [{ path: 'file.js', content: 'base64_content' }],
+      message: 'commit msg'
+    });
+    const parsed = JSON.parse(result);
+    expect(parsed.success).toBe(true);
+  });
+
+  test('create_pr action', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ html_url: 'https://github.com/pr/1', number: 1 })
+    });
+
+    const result = await handleGitHubTool('token', 'create_pr', {
+      owner: 'owner',
+      repo: 'repo',
+      title: 'PR title',
+      head: 'branch',
+      body: 'PR body'
+    });
+    const parsed = JSON.parse(result);
+    expect(parsed.success).toBe(true);
+    expect(parsed.url).toBe('https://github.com/pr/1');
+  });
 });

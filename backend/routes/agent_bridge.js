@@ -128,60 +128,26 @@ router.post('/execute', authenticateBridge, async (req, res) => {
         userId: req.user.id
         // We omit onCommandApprovalRequired so it executes directly without asking the local console (since approval was done on caller node)
       });
-    } else if (action === 'update_node') {
-      const os = require('os');
-      const platform = os.platform();
-      const currentDir = process.cwd();
-      
-      console.log(`[Agent Bridge] Initiating background self-update for platform "${platform}" in folder: ${currentDir}`);
-      
-      if (platform === 'win32') {
-        const { spawn } = require('child_process');
-        const psScript = `
-          Start-Sleep -Seconds 2
-          $tempEnv = Join-Path $env:TEMP ".private_ai_env_backup"
-          Copy-Item -Path "${currentDir}\\.env" -Destination $tempEnv -Force
-          if (Test-Path "${currentDir}\\backend\\database.db") {
-              Copy-Item -Path "${currentDir}\\backend\\database.db*" -Destination $env:TEMP -Force
-          }
-          Remove-Item -Path "${currentDir}" -Recurse -Force
-          git clone "https://github.com/jjuhric/private_ai.git" "${currentDir}"
-          Copy-Item -Path $tempEnv -Destination "${currentDir}\\.env" -Force
-          if (Test-Path "$env:TEMP\\database.db") {
-              Copy-Item -Path "$env:TEMP\\database.db*" -Destination "${currentDir}\\backend" -Force
-          }
-          Set-Location -Path "${currentDir}"
-          powershell.exe -ExecutionPolicy Bypass -File .\\setup.ps1 -NonInteractive
-        `;
-        const child = spawn('powershell.exe', ['-Command', psScript], {
-          detached: true,
-          stdio: 'ignore'
-        });
-        child.unref();
-      } else {
-        const { spawn } = require('child_process');
-        const shScript = `
-          sleep 2
-          cp "${currentDir}/.env" "/tmp/.private_ai_env_backup"
-          if [ -f "${currentDir}/backend/database.db" ]; then
-              cp "${currentDir}/backend/database.db"* "/tmp/"
-          fi
-          rm -rf "${currentDir}"
-          git clone "https://github.com/jjuhric/private_ai.git" "${currentDir}"
-          cp "/tmp/.private_ai_env_backup" "${currentDir}/.env"
-          if [ -f "/tmp/database.db" ]; then
-              cp /tmp/database.db* "${currentDir}/backend/"
-          fi
-          cd "${currentDir}"
-          ./setup.sh --non-interactive
-        `;
-        const child = spawn('bash', ['-c', shScript], {
-          detached: true,
-          stdio: 'ignore'
-        });
-        child.unref();
-      }
-      output = 'Self-update initiated successfully in the background. The node will re-clone, restore configs, and restart on the latest version.';
+    } else if (action === 'update_node' || action === 'apply_update') {
+      const safeUpdateService = require('../services/safe_update_service');
+      safeUpdateService.runUpdatePipeline().then((result) => {
+        console.log(`[Safe Update] Pipeline finished: ${JSON.stringify(result)}`);
+      }).catch((err) => {
+        console.error(`[Safe Update] Pipeline failed: ${err.message}`);
+      });
+      output = 'Safe self-update pipeline initiated in the background. The node will fetch, pull to staging, run validation tests, apply changes, and hot-reload.';
+    } else if (action === 'install_tool') {
+      const toolManager = require('../services/tool_manager');
+      const manifest = await toolManager.installTool(params.toolName);
+      output = `Successfully installed tool "${params.toolName}" (v${manifest.version}) on this node.`;
+    } else if (action === 'uninstall_tool') {
+      const toolManager = require('../services/tool_manager');
+      await toolManager.uninstallTool(params.toolName);
+      output = `Successfully uninstalled tool "${params.toolName}" from this node.`;
+    } else if (action === 'check_updates') {
+      const safeUpdateService = require('../services/safe_update_service');
+      const updateInfo = await safeUpdateService.checkForUpdates();
+      output = JSON.stringify(updateInfo);
     } else if ([
       'get_specifications', 
       'get_power', 

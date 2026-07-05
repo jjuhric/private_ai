@@ -22,6 +22,7 @@ const updateRouter = require('./routes/update');
 const hostRouter = require('./routes/host');
 const agentBridgeRouter = require('./routes/agent_bridge');
 const nodesRouter = require('./routes/nodes');
+const mqttService = require('./services/mqtt_service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,14 @@ const logger = require('./utils/logger');
 getDb().then(async (db) => {
   logger.info('Database initialized successfully.');
   try {
+    // Initialize MQTT client
+    mqttService.init();
+    
+    // Probe and log node identity
+    const nodeIdentity = require('./services/node_identity');
+    const identity = await nodeIdentity.getIdentity();
+    logger.info(`[Node Startup] Node Identity: ${JSON.stringify(identity)}`);
+    
     const { runDailyMemoryCheck } = require('./tools/memory_tool');
     await runDailyMemoryCheck(db);
     
@@ -127,3 +136,17 @@ const server = app.listen(PORT, () => {
     });
   }
 });
+
+// Handle graceful shutdown
+const gracefulShutdown = () => {
+  logger.info('SIGTERM/SIGINT received. Shutting down gracefully...');
+  mqttService.disconnect();
+  server.close(() => {
+    logger.info('HTTP server closed.');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
