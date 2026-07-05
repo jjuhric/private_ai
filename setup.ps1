@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param (
-    [switch]$NonInteractive
+    [switch]$NonInteractive,
+    [switch]$SkipUpdate
 )
 
 # Windows Setup & Update Script for Private AI Assistant
@@ -13,6 +14,44 @@ Write-Host "====================================================" -ForegroundCol
 # 1. Helper function for logs
 function Write-Log ($Msg, $Color = "White") {
     Write-Host "`n[INFO] $Msg" -ForegroundColor $Color
+}
+
+# Update check: If already setup, treat as update
+if (-not $SkipUpdate -and (Test-Path ".env")) {
+    Write-Log "Existing setup detected (.env file exists). Treating as an update..." "Yellow"
+    
+    # Verify Git
+    $gitCheck = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $gitCheck) {
+        Write-Host "[ERROR] Git is not installed. Unable to pull updates." -ForegroundColor Red
+    } else {
+        if (Test-Path ".git") {
+            Write-Log "Pulling latest updates from git..." "Cyan"
+            & git pull
+        }
+    }
+
+    # Fresh npm install
+    Write-Log "Removing existing node_modules directories for a fresh installation..." "Cyan"
+    $modulePaths = @("node_modules", "backend/node_modules", "frontend/node_modules")
+    foreach ($path in $modulePaths) {
+        if (Test-Path $path) {
+            Write-Log "Deleting $path..." "Gray"
+            Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Log "Installing all dependencies fresh..." "Cyan"
+    & npm run install:all
+
+    # Re-run setup.ps1 with -SkipUpdate to complete the setup process
+    Write-Log "Re-running setup.ps1 to apply configurations and rebuild..." "Cyan"
+    $params = @()
+    if ($NonInteractive) { $params += "-NonInteractive" }
+    $params += "-SkipUpdate"
+
+    & powershell.exe -File .\setup.ps1 $params
+    Exit $LASTEXITCODE
 }
 
 # 2. Check Prerequisites
@@ -38,7 +77,7 @@ if (-not $nodeCheck) {
 }
 
 # 3. Pull latest git changes if in a repo clone
-if (Test-Path ".git") {
+if (-not $SkipUpdate -and (Test-Path ".git")) {
     Write-Log "Repository detected. Fetching latest commits..."
     & git pull
 }
@@ -214,8 +253,12 @@ if ($envContent -like "*$defaultSecret*") {
 Set-Content -Path ".env" -Value $envContent
 
 # 7. Install Dependencies
-Write-Log "Installing NPM dependencies (this might take a few minutes)..."
-& npm run install:all
+if (-not $SkipUpdate) {
+    Write-Log "Installing NPM dependencies (this might take a few minutes)..."
+    & npm run install:all
+} else {
+    Write-Log "Skipping NPM dependencies install since it was completed during the update phase." "Green"
+}
 
 # 8. Database Seeding
 $resetDb = $false
@@ -266,17 +309,44 @@ if ($isAdmin) {
     try {
         $taskName = "PrivateAI-Assistant"
         $scriptRoot = Resolve-Path "."
-        $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$scriptRoot`" && npm start"
+        
+        # Stop any existing process running on the port before registering/starting
+        $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
+        if ($portProcess) {
+            $procId = $portProcess.OwningProcess
+            Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+        }
+
+        # Stop existing scheduled task if running
+        Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+
+        $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-background.vbs`""
         $trigger = New-ScheduledTaskTrigger -AtLogon
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
         
         Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Private AI Assistant Background Web Server" -Force | Out-Null
         Write-Log "Successfully registered background scheduled task 'PrivateAI-Assistant' to run on Logon." "Green"
+
+        # Start the task now so the service is running
+        Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        Write-Log "Started the background service task." "Green"
+
+        # 11. Register Daily Autoupdate Task
+        Write-Log "Configuring daily autoupdate task..."
+        $updateTaskName = "PrivateAI-Updater"
+        $updateAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-updater.vbs`""
+        $updateTrigger = New-ScheduledTaskTrigger -Daily -At "3:00AM"
+        $updateSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+        
+        Register-ScheduledTask -TaskName $updateTaskName -Action $updateAction -Trigger $updateTrigger -Settings $updateSettings -Description "Private AI Assistant Daily Autoupdate" -Force | Out-Null
+        Write-Log "Successfully registered background scheduled task '$updateTaskName' to run daily at 3:00 AM." "Green"
     } catch {
-        Write-Host "[WARNING] Failed to register background task in Task Scheduler: $_" -ForegroundColor Yellow
+        Write-Host "[WARNING] Failed to register background task or daily autoupdate in Task Scheduler: $_" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "`n[NOTICE] To automatically launch Private AI on system boot as a background service:" -ForegroundColor Yellow
+    Write-Host "`n[NOTICE] To automatically launch Private AI on system boot and enable daily autoupdates:" -ForegroundColor Yellow
     Write-Host "Please re-run this setup script in an Administrator PowerShell window." -ForegroundColor Yellow
     Write-Host "Otherwise, you can start the application manually at any time by running 'npm start'." -ForegroundColor Yellow
 }

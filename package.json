@@ -10,6 +10,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "npm run build --prefix frontend",
     "start": "node backend/server.js",
+    "logs": "node backend/scripts/show_logs.js",
     "test:backend": "npm run test --prefix backend",
     "test:frontend": "npm run test --prefix frontend",
     "test": "npm run test:backend && npm run test:frontend",
