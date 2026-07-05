@@ -12,9 +12,12 @@ SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 # Parse CLI arguments
 NON_INTERACTIVE=false
+SKIP_UPDATE=false
 for arg in "$@"; do
     if [ "$arg" = "--non-interactive" ]; then
         NON_INTERACTIVE=true
+    elif [ "$arg" = "--skip-update" ]; then
+        SKIP_UPDATE=true
     fi
 done
 
@@ -34,6 +37,36 @@ log_success() {
 log_error() {
     echo -e "\n[ERROR] $1" >&2
 }
+
+# Update check: If already setup, treat as update
+if [ "$SKIP_UPDATE" = false ] && [ -f ".env" ]; then
+    log "Existing setup detected (.env file exists). Treating as an update..."
+    
+    # Verify Git and pull
+    if command -v git &> /dev/null; then
+        if [ -d ".git" ]; then
+            log "Pulling latest updates from git..."
+            git pull
+        fi
+    fi
+
+    # Fresh npm install
+    log "Removing existing node_modules directories for a fresh installation..."
+    rm -rf node_modules backend/node_modules frontend/node_modules
+
+    log "Installing all dependencies fresh..."
+    npm run install:all
+
+    # Re-run setup.sh with --skip-update to complete the setup process
+    log "Re-running setup.sh to apply configurations and rebuild..."
+    ARGS=()
+    if [ "$NON_INTERACTIVE" = true ]; then
+        ARGS+=("--non-interactive")
+    fi
+    ARGS+=("--skip-update")
+
+    exec ./setup.sh "${ARGS[@]}"
+fi
 
 # 1. Determine if we are already inside a git clone of this repository
 if [ -d ".git" ] && grep -q "private-ai-assistant" package.json 2>/dev/null; then
@@ -75,7 +108,7 @@ if [ -d "$TARGET_DIR" ]; then
     cd "$TARGET_DIR"
     
     # Check if there is a git remote first
-    if git remote &> /dev/null; then
+    if [ "$SKIP_UPDATE" = false ] && git remote &> /dev/null; then
         log "Pulling latest updates from Github..."
         git pull
     fi
@@ -273,8 +306,12 @@ if grep -q "$DEFAULT_SECRET" .env; then
 fi
 
 # 6. Install Dependencies
-log "Installing project dependencies (this may take a few minutes)..."
-npm run install:all
+if [ "$SKIP_UPDATE" = false ]; then
+    log "Installing project dependencies (this may take a few minutes)..."
+    npm run install:all
+else
+    log "Skipping project dependencies install since it was completed during the update phase."
+fi
 
 # 7. Database Initialization & Seeding
 RESET_DB=false
@@ -350,6 +387,15 @@ EOF
         log "Check logs: journalctl -u $SERVICE_NAME -f"
     else
         log_error "Failed to start $SERVICE_NAME service. Please check systemctl logs."
+    fi
+
+    # Setup daily cron job for autoupdate
+    log "Configuring daily autoupdate task via cron..."
+    if command -v crontab &> /dev/null; then
+        (crontab -l 2>/dev/null | grep -v "setup.sh --non-interactive"; echo "0 3 * * * cd $TARGET_DIR && ./setup.sh --non-interactive > /dev/null 2>&1") | crontab -
+        log_success "Successfully registered daily autoupdate cron job at 3:00 AM."
+    else
+        log "crontab utility not found. Skipped registering daily autoupdate cron job."
     fi
 fi
 

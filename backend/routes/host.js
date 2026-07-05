@@ -79,4 +79,25 @@ router.post('/gpio/run', authenticateToken, async (req, res) => {
   }
 });
 
+// Retrieve the last 200 lines of application logs
+router.get('/logs', authenticateToken, async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const logPath = path.join(__dirname, '../../app.log');
+    if (!fs.existsSync(logPath)) {
+      return res.json({ logs: 'No logs file found yet.' });
+    }
+    const logsContent = fs.readFileSync(logPath, 'utf8');
+    const lines = logsContent.split('\n');
+    const lastLines = lines.slice(-200).join('\n');
+    res.json({ logs: lastLines });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+
+
+

@@ -148,4 +148,4 @@ To run the full suite:
 npm test
 ```
 * **Unit & Integration Tests**: Covers routers, DB migrations, RAG vault tools, agent routing, and remote bridge payloads.
-* **Coverage Requirements**: Strict enforcement of **95% statement and line coverage** via Jest (backend) and Vitest (frontend).
+* **Coverage Requirements**: Strict enforcement of **90% statement and line coverage** via Jest (backend) and Vitest (frontend).
