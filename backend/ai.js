@@ -351,7 +351,7 @@ async function runAgentLoop({
       'coder',
       'qa_engineer',
       'weather_expert',
-      'host_specialist',
+      'system_specialist',
       'memory_agent',
       'document_vault',
       'developer_agent',
@@ -363,8 +363,8 @@ async function runAgentLoop({
 
     if (agentNames.includes(toolName)) {
       toolName = `delegate_to_${toolName}`;
-    } else if (toolName === 'system_info') {
-      toolName = 'delegate_to_host_specialist';
+    } else if (toolName === 'system_info' || toolName === 'system' || toolName === 'system_specialist') {
+      toolName = 'delegate_to_system_specialist';
     } else if (toolName === 'developer' || toolName === 'delegate_to_developer') {
       toolName = 'delegate_to_developer_agent';
     } else if (toolName === 'github' || toolName === 'delegate_to_github') {
@@ -395,7 +395,7 @@ async function runAgentLoop({
         subTask = decision.params?.task || userMessage;
       } else if (agentName === 'weather_expert') {
         subTask = decision.params?.task || JSON.stringify(decision.params);
-      } else if (agentName === 'host_specialist') {
+      } else if (agentName === 'system_specialist') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
       } else if (agentName === 'memory_agent') {
         subTask = decision.params?.task || userMessage;

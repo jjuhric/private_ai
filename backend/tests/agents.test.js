@@ -461,7 +461,7 @@ describe('Multi-Agent System & Tools Tests', () => {
           })
         });
 
-      const result = await runWorkerAgent('host_specialist', { provider: 'openai', modelName: 'gpt-4' }, 'Check specs', null, 1);
+      const result = await runWorkerAgent('system_specialist', { provider: 'openai', modelName: 'gpt-4' }, 'Check specs', null, 1);
       expect(result).toBe('Worker agent response summary.');
 
       global.fetch = globalFetch;
@@ -728,7 +728,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       }));
 
       const { runWorkerAgent } = require('../utils/agents');
-      const result = await runWorkerAgent('host_specialist', { provider: 'gemini', geminiKey: 'key' }, 'hello', null, 1);
+      const result = await runWorkerAgent('system_specialist', { provider: 'gemini', geminiKey: 'key' }, 'hello', null, 1);
       expect(result).toBe('gemini report summary');
     });
 
@@ -753,7 +753,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         }
       });
 
-      const result = await runWorkerAgent('host_specialist', { provider: 'local', localApiStyle: 'lm-studio', localBaseUrl: 'http://localhost' }, 'hello', null, 1);
+      const result = await runWorkerAgent('system_specialist', { provider: 'local', localApiStyle: 'lm-studio', localBaseUrl: 'http://localhost' }, 'hello', null, 1);
       expect(result).toBe('lm-studio report summary');
       global.fetch = globalFetch;
     });
@@ -779,7 +779,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         }
       });
 
-      const result = await runWorkerAgent('host_specialist', { provider: 'local', localApiStyle: 'anthropic', localBaseUrl: 'http://localhost' }, 'hello', null, 1);
+      const result = await runWorkerAgent('system_specialist', { provider: 'local', localApiStyle: 'anthropic', localBaseUrl: 'http://localhost' }, 'hello', null, 1);
       expect(result).toBe('anthropic report summary');
       global.fetch = globalFetch;
     });
@@ -904,7 +904,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       const result1 = await runAgentTurn('supervisor', 'system prompt', { provider: 'local', localBaseUrl: ':invalid_url' }, 'hello', []);
       expect(result1.thought).toBe('done');
 
-      const result2 = await runWorkerAgent('host_specialist', { provider: 'local', localBaseUrl: ':invalid_url' }, 'hello', null, 1);
+      const result2 = await runWorkerAgent('system_specialist', { provider: 'local', localBaseUrl: ':invalid_url' }, 'hello', null, 1);
       expect(result2).toContain('done');
 
       global.fetch = globalFetch;
@@ -916,7 +916,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         throw new Error('LLM connection failed');
       });
       await expect(
-        runWorkerAgent('host_specialist', { provider: 'openai' }, 'hello', null, 1)
+        runWorkerAgent('system_specialist', { provider: 'openai' }, 'hello', null, 1)
       ).rejects.toThrow('LLM connection failed');
       global.fetch = globalFetch;
     });
@@ -927,7 +927,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       const mockToolCall = jest.fn();
       const globalFetch = global.fetch;
 
-      const agents = ['web_searcher', 'calendar_handler', 'coder', 'qa_engineer', 'host_specialist', 'unknown_agent'];
+      const agents = ['web_searcher', 'calendar_handler', 'coder', 'qa_engineer', 'system_specialist', 'unknown_agent'];
       for (const agent of agents) {
         let calls = 0;
         global.fetch = jest.fn().mockImplementation(() => {

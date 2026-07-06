@@ -240,7 +240,7 @@ describe('AgentDashboard Component Tests', () => {
       { tool: 'query_vault', action: 'query', agent: 'document_vault' },
       { tool: 'read_file', action: 'read', agent: 'coder' },
       { tool: 'weather', action: 'forecast', agent: 'weather_expert' },
-      { tool: 'host_machine', action: 'specs', agent: 'host_specialist' }
+      { tool: 'host_machine', action: 'specs', agent: 'system_specialist' }
     ];
     render(<AgentDashboard token={token} toolLogs={logs} />);
     expect(screen.getByText('Agent Network Dashboard')).toBeInTheDocument();
@@ -282,7 +282,7 @@ describe('AgentDashboard Component Tests', () => {
       'coder',
       'qa_engineer',
       'weather_expert',
-      'host_specialist'
+      'system_specialist'
     ];
 
     agentsToTest.forEach(agent => {
