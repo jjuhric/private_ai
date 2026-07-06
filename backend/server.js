@@ -168,6 +168,7 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
   const PRODUCTION_REGISTRY_DIR = path.resolve(registryLocalPath);
   const LOCAL_STAGING_DIR = path.join(PRODUCTION_REGISTRY_DIR, 'staging');
   const fs = require('fs');
+  const { exec } = require('child_process');
 
   const executeSyncPipeline = () => {
     // INTERCEPT: If the core system is currently busy executing agent logic threads, defer sync

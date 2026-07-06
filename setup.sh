@@ -332,8 +332,16 @@ write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
 write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
-write_env_var "MQTT_BROKER_URL" "${DEFAULT_MQTT_BROKER_URL}"
-write_env_var "MQTT_NODE_ID" "${DEFAULT_MQTT_NODE_ID}"
+if [ "$IS_MAIN_HOST" = "0" ]; then
+    MQTT_BROKER_URL="mqtt://${MAIN_HOST_IP:-localhost}:1883"
+    MQTT_NODE_ID=$(hostname 2>/dev/null || echo "field-node")
+else
+    MQTT_BROKER_URL="${DEFAULT_MQTT_BROKER_URL}"
+    MQTT_NODE_ID="${DEFAULT_MQTT_NODE_ID}"
+fi
+
+write_env_var "MQTT_BROKER_URL" "${MQTT_BROKER_URL}"
+write_env_var "MQTT_NODE_ID" "${MQTT_NODE_ID}"
 write_env_var "MQTT_USERNAME" "${DEFAULT_MQTT_USERNAME}"
 write_env_var "MQTT_PASSWORD" "${DEFAULT_MQTT_PASSWORD}"
 write_env_var "TOOL_REGISTRY_REPO" "${DEFAULT_TOOL_REGISTRY_REPO}"

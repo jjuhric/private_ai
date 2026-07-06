@@ -273,8 +273,17 @@ Write-EnvVar "GITHUB_TOKEN" $githubToken
 Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 Write-EnvVar "SUPERVISOR_MODEL" "gemini-1.5-pro"
-Write-EnvVar "MQTT_BROKER_URL" $defaultMqttBrokerUrl
-Write-EnvVar "MQTT_NODE_ID" $defaultMqttNodeId
+if ($isMainHost -eq "0") {
+    $mqttBrokerUrl = "mqtt://${mainHostIp}:1883"
+    $mqttNodeId = $env:COMPUTERNAME.ToLower()
+    if ([string]::IsNullOrWhiteSpace($mqttNodeId)) { $mqttNodeId = "field-node" }
+} else {
+    $mqttBrokerUrl = $defaultMqttBrokerUrl
+    $mqttNodeId = $defaultMqttNodeId
+}
+
+Write-EnvVar "MQTT_BROKER_URL" $mqttBrokerUrl
+Write-EnvVar "MQTT_NODE_ID" $mqttNodeId
 Write-EnvVar "MQTT_USERNAME" $defaultMqttUsername
 Write-EnvVar "MQTT_PASSWORD" $defaultMqttPassword
 Write-EnvVar "TOOL_REGISTRY_REPO" $defaultToolRegistryRepo
