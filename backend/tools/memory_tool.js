@@ -91,7 +91,8 @@ async function handleMemoryTool(db, userId, action, params = {}) {
         return `Successfully remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${result.lastID}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}).`;
       }
 
-      case 'recall': {
+      case 'recall':
+      case 'query': {
         const { query, agentName } = params;
         
         const rows = await db.all(

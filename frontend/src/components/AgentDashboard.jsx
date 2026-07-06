@@ -298,8 +298,10 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     // When streaming is explicitly finished (false), all agents return to Idle
     if (isStreaming === false) return 'Idle';
 
-    const currentAgent = activeAgent || (toolLogs && toolLogs.length > 0 ? (toolLogs[toolLogs.length - 1].agent || toolLogs[toolLogs.length - 1].tool) : null) || (isStreaming ? 'supervisor' : null);
+    let currentAgent = activeAgent || (toolLogs && toolLogs.length > 0 ? (toolLogs[toolLogs.length - 1].agent || toolLogs[toolLogs.length - 1].tool) : null) || (isStreaming ? 'supervisor' : null);
     if (!currentAgent) return 'Idle';
+
+    currentAgent = currentAgent.toLowerCase().replace('delegate_to_', '');
 
     if (agentType === 'supervisor' && currentAgent === 'supervisor') return 'Active';
     if (agentType === 'memory' && (currentAgent === 'memory_agent' || currentAgent === 'memory')) return 'Active';
