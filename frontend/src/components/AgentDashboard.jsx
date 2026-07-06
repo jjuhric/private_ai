@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2 } from 'lucide-react';
+import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar } from 'lucide-react';
 
 function TokenChart({ data }) {
   if (!data || data.length === 0) {
@@ -251,6 +251,93 @@ function LMStudioLogsView({ token }) {
     </div>
   );
 }
+
+const agents = [
+  {
+    type: 'supervisor',
+    name: 'Supervisor',
+    icon: Network,
+    desc: 'Master orchestrator. Reads the full agent capability registry and routes every task to the best-suited specialist agent.'
+  },
+  {
+    type: 'weather',
+    name: 'Weather Expert',
+    icon: Cloud,
+    desc: 'Fetches current conditions, hourly forecasts, and daily weather data using your zipcode.'
+  },
+  {
+    type: 'system',
+    name: 'System Agent',
+    icon: Cpu,
+    desc: 'Queries local host: CPU, RAM, disk, temperature, processes, services, security scans, and scripting on the current machine only.'
+  },
+  {
+    type: 'node',
+    name: 'Network Node Agent',
+    icon: Server,
+    desc: 'Routes commands and queries to remote RPi or ESP32 field nodes. Cannot query Main Host from a remote context.'
+  },
+  {
+    type: 'memory',
+    name: 'Memory Agent',
+    icon: BookOpen,
+    desc: 'Stores, recalls, and forgets long-term and short-term memories about the user.'
+  },
+  {
+    type: 'calendar',
+    name: 'Calendar Agent',
+    icon: Calendar,
+    desc: 'Manages calendar events: listing, adding, or deleting scheduled events.'
+  },
+  {
+    type: 'crawler',
+    name: 'Web Searcher',
+    icon: Search,
+    desc: 'Performs live web searches and Google News lookups, aligning results with stored user interests.'
+  },
+  {
+    type: 'rag',
+    name: 'Document Vault (RAG)',
+    icon: FileText,
+    desc: 'Performs semantic vector search over uploaded private documents using cosine similarity.'
+  },
+  {
+    type: 'github',
+    name: 'GitHub Agent',
+    icon: GitBranch,
+    desc: 'Performs GitHub operations: branching, committing, PRs. Cannot push to main/master or create repos.'
+  },
+  {
+    type: 'dev',
+    name: 'Coder',
+    icon: Code,
+    desc: 'Reads, writes, and manages source code files. Reports back to Supervisor before executing mutations.'
+  },
+  {
+    type: 'qa',
+    name: 'QA Engineer',
+    icon: Shield,
+    desc: 'Reviews code for bugs, vulnerabilities, and test coverage. Issues APPROVE or REJECT verdicts.'
+  },
+  {
+    type: 'tool_creator',
+    name: 'Tool Creator',
+    icon: Wrench,
+    desc: 'Coordinates dynamic tool creation: designs plan, requests HITL approval, then implements and deploys.'
+  },
+  {
+    type: 'agent_creator',
+    name: 'Agent Creator',
+    icon: UserPlus,
+    desc: 'Dynamically designs and integrates new specialist agents into the multi-agent loop.'
+  },
+  {
+    type: 'developer',
+    name: 'Developer Agent',
+    icon: Layers,
+    desc: 'Orchestrates software development pipelines: manifest, handler code, tests, and deployment via dev_pipeline tool.'
+  }
+];
 
 export default function AgentDashboard({ token, toolLogs, activeAgent, isStreaming, settings }) {
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
@@ -598,6 +685,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     if (agentType === 'weather' && (currentAgent === 'weather_expert' || currentAgent === 'weather')) return 'Active';
     if (agentType === 'system' && (currentAgent === 'system_specialist' || currentAgent === 'system' || currentAgent === 'host_machine')) return 'Active';
     if (agentType === 'node' && (currentAgent === 'node_agent' || currentAgent === 'network_node' || currentAgent === 'list_network_nodes' || currentAgent === 'remote_node_bridge')) return 'Active';
+    if (agentType === 'developer' && (currentAgent === 'developer_agent' || currentAgent === 'developer' || currentAgent === 'dev_pipeline')) return 'Active';
 
     return 'Idle';
   };
@@ -736,10 +824,14 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
             <div className="memory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
               {agents.map((agent, index) => {
                 const status = getAgentStatus(agent.type);
+                const IconComponent = agent.icon;
                 return (
                   <div key={index} className="memory-card" style={{ padding: '16px', position: 'relative' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                      <h4 style={{ fontWeight: 600, fontSize: '0.95rem', color: '#fff' }}>{agent.name}</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {IconComponent && <IconComponent size={16} className={status === 'Active' ? 'text-accent-primary' : 'text-secondary'} />}
+                        <h4 style={{ fontWeight: 600, fontSize: '0.95rem', color: '#fff', margin: 0 }}>{agent.name}</h4>
+                      </div>
                       <span className={`badge ${status === 'Active' ? 'badge-short-term' : 'badge-long-term'}`} style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
                         {status}
                       </span>

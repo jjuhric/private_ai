@@ -439,4 +439,41 @@ describe('LM Studio and Model Selection Tests', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/event-stream');
   });
+
+  test('selectBestModel silently falls back when selected model matches blocked patterns (e.g. nomic-embed-text)', async () => {
+    const { selectBestModel } = require('../utils/model_selector');
+    const settingsBlockedDefault = {
+      provider: 'local',
+      modelName: 'nomic-embed-text',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key'
+    };
+
+    mockFetchResponses['/api/v1/models'] = {
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'model-1', object: 'model' }]
+      })
+    };
+
+    const selected1 = await selectBestModel(settingsBlockedDefault, 'test query', []);
+    expect(selected1).toBe('google/gemma-4-e4b');
+
+    const settingsNormalDefault = {
+      provider: 'local',
+      modelName: 'google/gemma-2-9b-it',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key'
+    };
+
+    mockFetchResponses['/api/v1/models'] = {
+      ok: true,
+      json: async () => [
+        { id: 'nomic-embed-text', isLoaded: true }
+      ]
+    };
+
+    const selected2 = await selectBestModel(settingsNormalDefault, 'test query', []);
+    expect(selected2).toBe('google/gemma-2-9b-it');
+  });
 });

@@ -1,5 +1,19 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const BLOCKED_MODEL_PATTERNS = ['embed', 'embedding', 'nomic-embed'];
+
+function checkAndFallbackModel(candidate, preferredModel) {
+  let fallback = preferredModel || 'google/gemma-4-e4b';
+  if (BLOCKED_MODEL_PATTERNS.some(p => fallback.toLowerCase().includes(p))) {
+    fallback = 'google/gemma-4-e4b';
+  }
+  if (candidate && BLOCKED_MODEL_PATTERNS.some(p => candidate.toLowerCase().includes(p))) {
+    console.warn(`[Model Selector] Warning: selected model "${candidate}" is an embedding-only model. Silently falling back to default model: "${fallback}"`);
+    return fallback;
+  }
+  return candidate || fallback;
+}
+
 /**
  * Runs the routing agent to select the best model.
  * - If provider is local, it queries the currently loaded local model (if any).
@@ -28,7 +42,7 @@ async function selectBestModel(settings, userMessage, history) {
     // If no model is currently loaded, bypass routing and return configured default model to avoid cold-start load
     if (!loadedModel) {
       console.log(`[Model Selector] No local model loaded. Defaulting to preferred local model: ${modelName}`);
-      return modelName;
+      return checkAndFallbackModel(modelName, modelName);
     }
 
     const availableModelIds = availableModels.map(m => m.id);
@@ -82,12 +96,12 @@ You MUST respond in this exact JSON format:
           const parsed = JSON.parse(text);
           if (parsed.selected_model && availableModelIds.includes(parsed.selected_model)) {
             console.log(`[Model Selector] Local router selected: ${parsed.selected_model} (Reason: ${parsed.reasoning})`);
-            return parsed.selected_model;
+            return checkAndFallbackModel(parsed.selected_model, modelName);
           }
         } catch (parseErr) {
           // Fallback if JSON parsing fails but text matches one of the IDs
           for (const id of availableModelIds) {
-            if (text.includes(id)) return id;
+            if (text.includes(id)) return checkAndFallbackModel(id, modelName);
           }
         }
       }
@@ -95,7 +109,7 @@ You MUST respond in this exact JSON format:
       console.warn(`[Model Selector] Local routing query failed: ${err.message}. Using currently loaded model.`);
     }
 
-    return loadedModel;
+    return checkAndFallbackModel(loadedModel, modelName);
   }
 
   // 2. ONLINE PROVIDER PATH
@@ -104,7 +118,7 @@ You MUST respond in this exact JSON format:
     const activeKey = geminiKey || onlineKey;
     if (!activeKey) {
       console.log(`[Model Selector] No online API key available. Defaulting to: ${modelName || 'gemini-2.5-flash'}`);
-      return modelName || 'gemini-2.5-flash';
+      return checkAndFallbackModel(modelName || 'gemini-2.5-flash', modelName);
     }
 
     const systemPrompt = `You are a Model Selection Router Agent.
@@ -141,7 +155,7 @@ History: ${JSON.stringify((history || []).slice(-5))}`;
       const parsed = JSON.parse(text);
       if (parsed.selected_model === 'gemini-2.5-flash' || parsed.selected_model === 'gemini-2.5-pro') {
         console.log(`[Model Selector] Online router selected: ${parsed.selected_model} (Reason: ${parsed.reasoning})`);
-        return parsed.selected_model;
+        return checkAndFallbackModel(parsed.selected_model, modelName);
       }
     } catch (err) {
       console.warn(`[Model Selector] Online routing query failed: ${err.message}. Using default: ${modelName || 'gemini-2.5-flash'}`);
@@ -149,7 +163,7 @@ History: ${JSON.stringify((history || []).slice(-5))}`;
   }
 
   // Fallback to configured model name if provider is custom or routing failed
-  return modelName;
+  return checkAndFallbackModel(modelName, modelName);
 }
 
 module.exports = {
