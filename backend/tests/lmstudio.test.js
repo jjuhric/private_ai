@@ -534,4 +534,92 @@ describe('LM Studio and Model Selection Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
+
+  test('POST /api/lmstudio/eject-model returns 403 when user is not main host', async () => {
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { is_main_host: 0 };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    const res = await request(app)
+      .post('/api/lmstudio/eject-model')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: 'Only the main host is authorized to eject models.' });
+  });
+
+  test('POST /api/lmstudio/eject-model returns success when user is main host and model is loaded', async () => {
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { 
+          is_main_host: 1, 
+          local_key: 'mockkey', 
+          local_url: 'http://localhost:1234/v1' 
+        };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    mockFetchResponses['/api/v1/models'] = {
+      ok: true,
+      json: async () => ({
+        models: [
+          { id: 'gemma-2b', loaded_instances: [{ instance_id: 'instance-123' }] }
+        ]
+      })
+    };
+    mockFetchResponses['/api/v1/models/unload'] = {
+      ok: true,
+      json: async () => ({ status: 'unloaded' })
+    };
+
+    const res = await request(app)
+      .post('/api/lmstudio/eject-model')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toContain("gemma-2b");
+  });
+
+  test('POST /api/lmstudio/eject-model returns 404 when no loaded model is found', async () => {
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { 
+          is_main_host: 1, 
+          local_key: 'mockkey', 
+          local_url: 'http://localhost:1234/v1' 
+        };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    mockFetchResponses['/api/v1/models'] = {
+      ok: true,
+      json: async () => ({
+        models: [
+          { id: 'gemma-2b', loaded_instances: [] }
+        ]
+      })
+    };
+
+    const res = await request(app)
+      .post('/api/lmstudio/eject-model')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toContain('No active loaded model found');
+  });
 });

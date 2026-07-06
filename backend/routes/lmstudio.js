@@ -219,4 +219,36 @@ router.post('/clear-logs', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/eject-model', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const settings = await db.get('SELECT is_main_host FROM user_settings WHERE user_id = ?', [req.user.id]);
+    
+    if (!settings || settings.is_main_host !== 1) {
+      return res.status(403).json({ error: 'Only the main host is authorized to eject models.' });
+    }
+
+    const { decrypt } = require('../utils/crypto');
+    const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
+    const decryptedLocalKey = decrypt(userSettings.local_key);
+    const localBaseUrl = userSettings.local_url || 'http://192.168.1.42:1234/v1';
+    const localApiKey = decryptedLocalKey || '';
+
+    const { listLocalModels, unloadLocalModel } = require('../utils/lmstudio');
+    const availableModels = await listLocalModels(localBaseUrl, localApiKey);
+    const loadedModelObj = availableModels.find(m => m.isLoaded);
+    
+    if (loadedModelObj && loadedModelObj.instanceId) {
+      console.log(`[Model Ejection] Ejecting active local model instance: ${loadedModelObj.instanceId}`);
+      await unloadLocalModel(localBaseUrl, localApiKey, loadedModelObj.instanceId);
+      return res.json({ success: true, message: `Model '${loadedModelObj.id}' ejected successfully.` });
+    } else {
+      return res.status(404).json({ error: 'No active loaded model found to eject.' });
+    }
+  } catch (err) {
+    console.error('[LM Studio Logs] Error ejecting model:', err);
+    res.status(500).json({ error: `Failed to eject model: ${err.message}` });
+  }
+});
+
 module.exports = router;

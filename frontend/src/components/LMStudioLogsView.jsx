@@ -1,14 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export default function LMStudioLogsView({ token }) {
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState('connecting');
   const [filter, setFilter] = useState('all'); // 'all', 'server', 'model'
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState(null); // { question: '', choices: [], onSelect: () => {} }
+  const eventSourceRef = useRef(null);
 
   const handleClearLogs = () => {
-    setShowConfirmModal(true);
+    setModalConfig({
+      question: "Wipe all local LM Studio logs from the active log file on disk?",
+      choices: [
+        { label: "Cancel", value: "cancel", className: "btn-secondary" },
+        { label: "Yes, Clear Logs", value: "clear", className: "btn-primary" }
+      ],
+      onSelect: (val) => {
+        if (val === 'clear') triggerClearLogs();
+      }
+    });
+  };
+
+  const handleStopStream = () => {
+    setModalConfig({
+      question: "Are you sure you want to terminate the active log collection stream? Live captured CLI logs will stop.",
+      choices: [
+        { label: "Cancel", value: "cancel", className: "btn-secondary" },
+        { label: "Yes, Stop Stream", value: "stop", className: "btn-primary" }
+      ],
+      onSelect: (val) => {
+        if (val === 'stop') {
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
+          setStatus('disconnected');
+          setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'system', text: 'Live log stream stopped by user request.' }]);
+        }
+      }
+    });
+  };
+
+  const handleEjectModel = () => {
+    setModalConfig({
+      question: "Eject the currently loaded local model from memory to free up system resources?",
+      choices: [
+        { label: "Cancel", value: "cancel", className: "btn-secondary" },
+        { label: "Yes, Eject Model", value: "eject", className: "btn-primary" }
+      ],
+      onSelect: (val) => {
+        if (val === 'eject') triggerEjectModel();
+      }
+    });
   };
 
   const triggerClearLogs = async () => {
@@ -28,9 +71,29 @@ export default function LMStudioLogsView({ token }) {
     }
   };
 
+  const triggerEjectModel = async () => {
+    try {
+      const res = await fetch('/api/lmstudio/eject-model', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'system', text: `Success: ${data.message || 'Model ejected.'}` }]);
+        alert(data.message || 'Model ejected successfully.');
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to eject model.');
+      }
+    } catch (err) {
+      alert(`Error ejecting model: ${err.message}`);
+    }
+  };
+
   useEffect(() => {
     let url = `/api/lmstudio/log-stream?token=${encodeURIComponent(token)}`;
     const eventSource = new EventSource(url);
+    eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
       setStatus('connected');
@@ -65,12 +128,14 @@ export default function LMStudioLogsView({ token }) {
     };
 
     eventSource.onerror = () => {
+      if (!eventSourceRef.current) return;
       setStatus('disconnected');
       setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), type: 'error', text: 'Connection lost. Reconnecting...' }]);
     };
 
     return () => {
       eventSource.close();
+      eventSourceRef.current = null;
     };
   }, [token]);
 
@@ -84,9 +149,11 @@ export default function LMStudioLogsView({ token }) {
   });
 
   // Automatically scroll to bottom of logs
-  const terminalEndRef = React.useRef(null);
+  const terminalEndRef = useRef(null);
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (terminalEndRef.current && typeof terminalEndRef.current.scrollIntoView === 'function') {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [filteredLogs]);
 
   return (
@@ -133,6 +200,38 @@ export default function LMStudioLogsView({ token }) {
             }}
           >
             Clear Logs
+          </button>
+          <button
+            onClick={handleStopStream}
+            disabled={status !== 'connected'}
+            style={{
+              background: 'rgba(245, 158, 11, 0.15)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
+              color: '#fcd34d',
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              cursor: status === 'connected' ? 'pointer' : 'not-allowed',
+              opacity: status === 'connected' ? 1 : 0.5,
+              marginLeft: '8px'
+            }}
+          >
+            Stop
+          </button>
+          <button
+            onClick={handleEjectModel}
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#fca5a5',
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              marginLeft: '8px'
+            }}
+          >
+            Eject
           </button>
         </div>
       </div>
@@ -202,37 +301,34 @@ export default function LMStudioLogsView({ token }) {
         })}
         <div ref={terminalEndRef} />
       </div>
-      {showConfirmModal && (
-        <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+
+      {modalConfig && (
+        <div className="modal-overlay" onClick={() => setModalConfig(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
             <div className="modal-header">
-              <h3 style={{ margin: 0, color: '#fff' }}>Private AI</h3>
-              <button className="btn-icon" onClick={() => setShowConfirmModal(false)}>
+              <h3 style={{ margin: 0, color: '#fff' }}>Emergency Interaction Required</h3>
+              <button className="btn-icon" onClick={() => setModalConfig(null)}>
                 <X size={20} />
               </button>
             </div>
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                Are you sure you want to wipe the active LM Studio log file on disk?
+              <p style={{ fontSize: '0.9rem', color: '#fff', fontWeight: '500', margin: 0 }}>
+                {modalConfig.question}
               </p>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowConfirmModal(false)}
-                  style={{ flex: 1 }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  className="btn btn-primary" 
-                  onClick={() => {
-                    setShowConfirmModal(false);
-                    triggerClearLogs();
-                  }}
-                  style={{ flex: 1, background: '#ef4444', border: 'none' }}
-                >
-                  Clear Logs
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {modalConfig.choices.map((choice, idx) => (
+                  <button 
+                    key={idx}
+                    className={`btn ${choice.className || 'btn-secondary'}`}
+                    onClick={() => {
+                      setModalConfig(null);
+                      modalConfig.onSelect(choice.value);
+                    }}
+                    style={{ width: '100%', padding: '10px', textAlign: 'center' }}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

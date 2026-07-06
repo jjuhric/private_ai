@@ -24,7 +24,7 @@ export default function ChatPane({
   const isAtBottomRef = useRef(true);
 
   const scrollToBottom = (behavior = 'smooth') => {
-    if (messagesEndRef && messagesEndRef.current) {
+    if (messagesEndRef && messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
       messagesEndRef.current.scrollIntoView({ behavior });
     } else if (scrollerRef.current) {
       scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
