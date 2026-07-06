@@ -783,16 +783,7 @@ function App() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {activeTab === 'chat' && activeChatId && !isChatPoppedOut && (
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setIsChatPoppedOut(true)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '6px 12px' }}
-                title="Pop out chat to a separate window"
-              >
-                <ExternalLink size={14} /> Pop Out Chat
-              </button>
-            )}
+
 
             <div className="model-config-badge">
               <span className={`connection-dot ${settings.provider === 'gemini' ? 'online' : 'local'}`}></span>
