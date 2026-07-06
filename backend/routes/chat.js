@@ -219,6 +219,9 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
 
     actualModel = selectedModel;
 
+    // Send the model name to the frontend
+    sendEvent('model_used', { model: actualModel });
+
     // Trigger AI orchestration loop
 
     await runAgentLoop({

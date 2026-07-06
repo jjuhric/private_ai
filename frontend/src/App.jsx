@@ -63,6 +63,7 @@ function App() {
   const [showGithubToken, setShowGithubToken] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profile, setProfile] = useState({ name: '', zipcode: '', country: 'US', temp_unit: 'imperial', weather_api_key: '', dob: '', gender: '', political_leaning: 'Undecided', interests: [] });
+  const [liveModel, setLiveModel] = useState('');
 
   // Calendar
   const [calendarEvents, setCalendarEvents] = useState([]);
@@ -334,7 +335,7 @@ function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSettings({
+        const loadedSettings = {
           provider: data.provider || 'local',
           model_name: data.model_name || 'google/gemma-4-e4b',
           github_token: data.github_token || '',
@@ -348,8 +349,14 @@ function App() {
           preferred_local_model: data.preferred_local_model || '',
           preferred_online_model: data.preferred_online_model || '',
           is_main_host: data.is_main_host === 1 || data.is_main_host === true || false
-        });
+        };
+        setSettings(loadedSettings);
         setIsSetupComplete(data.is_setup_complete !== false);
+
+        const initialLiveModel = loadedSettings.provider === 'local'
+          ? (loadedSettings.preferred_local_model || loadedSettings.model_name)
+          : (loadedSettings.preferred_online_model || loadedSettings.model_name);
+        setLiveModel(initialLiveModel);
       }
       fetchLocalModels();
       fetchOnlineModels();
@@ -359,6 +366,11 @@ function App() {
   };
 
   const saveSettings = async (newSettings) => {
+    const updatedSettings = {
+      ...newSettings,
+      preferred_local_model: newSettings.provider === 'local' ? newSettings.model_name : newSettings.preferred_local_model,
+      preferred_online_model: newSettings.provider !== 'local' ? newSettings.model_name : newSettings.preferred_online_model
+    };
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
@@ -366,12 +378,18 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newSettings)
+        body: JSON.stringify(updatedSettings)
       });
       if (res.ok) {
-        setSettings(newSettings);
+        setSettings(updatedSettings);
+
+        const nextLiveModel = updatedSettings.provider === 'local'
+          ? (updatedSettings.preferred_local_model || updatedSettings.model_name)
+          : (updatedSettings.preferred_online_model || updatedSettings.model_name);
+        setLiveModel(nextLiveModel);
+
         setIsSettingsOpen(false);
-        fetchLocalModels();
+        fetchLocalModels(updatedSettings);
         fetchOnlineModels();
       }
     } catch (err) {
@@ -671,6 +689,10 @@ function App() {
                 safety_analysis: dataValue.safety_analysis,
                 status: 'pending'
               }]);
+            } else if (eventType === 'model_used') {
+              if (dataValue && dataValue.model) {
+                setLiveModel(dataValue.model);
+              }
             } else if (eventType === 'error') {
               console.error(dataValue);
               showToast(`Error: ${dataValue.message}`, 'error');
@@ -790,7 +812,7 @@ function App() {
             <div className="model-config-badge">
               <span className={`connection-dot ${settings.provider === 'gemini' ? 'online' : 'local'}`}></span>
               <span style={{ fontSize: '0.85rem', fontWeight: 550 }}>
-                {settings.provider === 'gemini' ? 'Online: Gemini' : 'Local AI'} ({settings.model_name.split('/').pop()})
+                {settings.provider === 'gemini' ? 'Online: Gemini' : 'Local AI'} ({liveModel ? liveModel.split('/').pop() : settings.model_name.split('/').pop()})
               </span>
             </div>
           </div>
