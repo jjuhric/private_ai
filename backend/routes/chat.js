@@ -109,8 +109,28 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
   res.flushHeaders();
 
   const streamAbortController = new AbortController();
-  req.on('close', () => {
+  req.on('close', async () => {
     streamAbortController.abort();
+
+    // If provider is local, eject the currently loaded model on abort to free up resources
+    if (settings.provider === 'local') {
+      try {
+        const { decrypt } = require('../utils/crypto');
+        const decryptedLocalKey = decrypt(settings.local_key);
+        const localBaseUrl = settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
+        const localApiKey = decryptedLocalKey || process.env.LOCAL_LLM_KEY || '';
+
+        const { listLocalModels, unloadLocalModel } = require('../utils/lmstudio');
+        const availableModels = await listLocalModels(localBaseUrl, localApiKey);
+        const loadedModelObj = availableModels.find(m => m.isLoaded);
+        if (loadedModelObj && loadedModelObj.instanceId) {
+          console.log(`[Model Ejection] User aborted chat. Ejecting active local model instance: ${loadedModelObj.instanceId}`);
+          await unloadLocalModel(localBaseUrl, localApiKey, loadedModelObj.instanceId);
+        }
+      } catch (ejectErr) {
+        console.error('Failed to eject local model on abort:', ejectErr);
+      }
+    }
   });
 
   let accumulatedThoughts = '';
@@ -140,12 +160,66 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
       actualModel = settings.preferred_online_model;
     }
 
-    // Trigger AI orchestration loop
     const { decrypt } = require('../utils/crypto');
     const decryptedGithub = decrypt(settings.github_token);
     const decryptedLocalKey = decrypt(settings.local_key);
     const decryptedOnlineKey = decrypt(settings.online_key);
     const decryptedGeminiKey = decrypt(settings.gemini_key);
+
+    // Trigger Model Selector Agent
+    const { selectBestModel } = require('../utils/model_selector');
+    const selectorSettings = {
+      provider: settings.provider,
+      modelName: actualModel,
+      onlineProvider: settings.online_provider || 'gemini',
+      onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+      geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
+      localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
+      localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
+      localApiStyle: settings.local_api_style || 'openai'
+    };
+
+    let selectedModel = actualModel;
+    try {
+      selectedModel = await selectBestModel(selectorSettings, message, history);
+    } catch (selErr) {
+      console.error('Model selection routing failed:', selErr);
+    }
+
+    // If local provider and model changed, handle unloading of old and loading of new
+    if (settings.provider === 'local') {
+      const { listLocalModels, loadLocalModel, unloadLocalModel } = require('../utils/lmstudio');
+      const localBaseUrl = selectorSettings.localBaseUrl;
+      const localApiKey = selectorSettings.localApiKey;
+
+      try {
+        const availableModels = await listLocalModels(localBaseUrl, localApiKey);
+        const loadedModelObj = availableModels.find(m => m.isLoaded);
+        const loadedModel = loadedModelObj ? loadedModelObj.id : null;
+
+        if (loadedModel && loadedModel !== selectedModel) {
+          sendEvent('thought', `[System] Unloading model '${loadedModel}' and loading '${selectedModel}'... Please wait.\n`);
+          console.log(`[Model Switcher] Unloading loaded model: ${loadedModel}`);
+          if (loadedModelObj.instanceId) {
+            await unloadLocalModel(localBaseUrl, localApiKey, loadedModelObj.instanceId);
+          }
+          console.log(`[Model Switcher] Loading selected model: ${selectedModel}`);
+          await loadLocalModel(localBaseUrl, localApiKey, selectedModel);
+        } else if (!loadedModel) {
+          // Cold-start load
+          sendEvent('thought', `[System] Loading model '${selectedModel}'... Please wait.\n`);
+          console.log(`[Model Switcher] Cold loading selected model: ${selectedModel}`);
+          await loadLocalModel(localBaseUrl, localApiKey, selectedModel);
+        }
+      } catch (switchErr) {
+        console.error('Local model switching failed:', switchErr);
+        sendEvent('thought', `[System] Warning: Local model switching failed: ${switchErr.message}. Proceeding anyway.\n`);
+      }
+    }
+
+    actualModel = selectedModel;
+
+    // Trigger AI orchestration loop
 
     await runAgentLoop({
       db,

@@ -200,7 +200,7 @@ async function callGeminiStream(apiKey, modelName, systemInstruction, history, u
     parts: [{ text: userMessage }]
   });
 
-  const result = await model.generateContentStream({ contents });
+  const result = await model.generateContentStream({ contents }, { signal: abortSignal });
   let fullResponseText = '';
   for await (const chunk of result.stream) {
     if (abortSignal?.aborted) break;

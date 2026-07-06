@@ -254,7 +254,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       model: modelName || 'gemini-2.0-flash',
       generationConfig: { responseMimeType: 'application/json' }
     });
-    const result = await model.generateContent(fullPrompt);
+    const result = await model.generateContent(fullPrompt, { signal: settings.abortSignal });
     respText = result.response.text();
 
     // Log token usage
@@ -435,7 +435,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
     const genAI = new GoogleGenerativeAI(activeKey);
     const model = genAI.getGenerativeModel({ model: modelName || 'gemini-2.5-flash' });
-    const result = await model.generateContent(responderInstruction);
+    const result = await model.generateContent(responderInstruction, { signal: settings.abortSignal });
     const respText = result.response.text();
 
     // Log token usage

@@ -1,5 +1,21 @@
 const { runWorkerAgent } = require('../utils/agents');
 
+let mockAgentsGenerateContent = jest.fn();
+
+jest.mock('@google/generative-ai', () => {
+  return {
+    GoogleGenerativeAI: jest.fn().mockImplementation(() => {
+      return {
+        getGenerativeModel: jest.fn().mockImplementation(() => {
+          return {
+            generateContent: mockAgentsGenerateContent
+          };
+        })
+      };
+    })
+  };
+});
+
 // Mock all tools to avoid hitting actual APIs
 jest.mock('../tools/weather_tool', () => ({ handleWeatherTool: jest.fn(() => 'weather-ok') }));
 jest.mock('../tools/host_machine_tool', () => ({ handleHostMachineTool: jest.fn(() => 'host-ok') }));
@@ -21,9 +37,9 @@ describe('Agents Coverage Extender Tests', () => {
 
   test('runWorkerAgent should route tool actions correctly', async () => {
     const settings = {
-      provider: 'gemini',
-      geminiKey: 'fake-key',
-      model_name: 'gemini-1.5-pro'
+      provider: 'openai',
+      onlineKey: 'fake-key',
+      modelName: 'gpt-4'
     };
 
     // We can spy on runAgentTurn inside the required file, but since it is not exported,
@@ -447,5 +463,35 @@ describe('Agents Coverage Extender Tests', () => {
     const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1, 'token');
     expect(result).toContain('Pipeline Interrupted');
     expect(onCommandApprovalRequired).toHaveBeenCalled();
+  });
+
+  test('runWorkerAgent and runAgentResponse with gemini provider', async () => {
+    const settings = {
+      provider: 'gemini',
+      geminiKey: 'fake-key',
+      model_name: 'gemini-2.0-flash',
+      db: { run: jest.fn().mockResolvedValue({ lastID: 1 }) },
+      userId: 1
+    };
+
+    mockAgentsGenerateContent
+      // First call inside runWorkerAgent -> runAgentTurn
+      .mockResolvedValueOnce({
+        response: {
+          text: () => JSON.stringify({ tool: 'none' }),
+          usageMetadata: { totalTokenCount: 150 }
+        }
+      })
+      // Second call inside runWorkerAgent -> runAgentResponse
+      .mockResolvedValueOnce({
+        response: {
+          text: () => 'This is the final response summary',
+          usageMetadata: { totalTokenCount: 200 }
+        }
+      });
+
+    const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
+    expect(result).toBe('This is the final response summary');
+    expect(mockAgentsGenerateContent).toHaveBeenCalledTimes(2);
   });
 });
