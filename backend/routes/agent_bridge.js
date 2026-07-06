@@ -95,7 +95,7 @@ router.get('/health', async (req, res) => {
     const settings = await db.get('SELECT local_url, provider FROM user_settings LIMIT 1');
     
     if (settings && settings.provider === 'local') {
-      const targetUrl = settings.local_url || 'http://192.168.1.42:1234/v1';
+      const targetUrl = settings.local_url || 'http://92.168.1.42:1234/v1';
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 2000); // 2s timeout
       

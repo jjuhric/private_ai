@@ -33,7 +33,7 @@ router.get('/', authenticateToken, async (req, res) => {
       gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
-      local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
+      local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://92.168.1.42:1234/v1',
       preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.5-9b',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
@@ -61,7 +61,7 @@ router.put('/', authenticateToken, async (req, res) => {
     const finalOnline = isMasked(online_key) ? existing.online_key : (online_key ? encrypt(online_key) : null);
 
     const resolvedLocalKey = isMasked(local_key) ? decrypt(existing.local_key) : local_key;
-    const resolvedUrl = local_url || 'http://192.168.1.42:1234/v1';
+    const resolvedUrl = local_url || 'http://92.168.1.42:1234/v1';
     const resolvedStyle = local_api_style || 'openai';
 
     await db.run(
@@ -111,7 +111,7 @@ router.get('/local-models', authenticateToken, async (req, res) => {
     const queryKey = isMasked(req.query.localApiKey) ? undefined : req.query.localApiKey;
     const queryStyle = req.query.localApiStyle;
 
-    const localUrl = queryUrl || settings?.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
+    const localUrl = queryUrl || settings?.local_url || process.env.LOCAL_LLM_URL || 'http://92.168.1.42:1234/v1';
 
     let localApiKey = '';
     if (queryKey !== undefined && queryKey !== null) {
@@ -135,7 +135,7 @@ router.get('/local-models', authenticateToken, async (req, res) => {
         endpoint = `${origin}/v1/models`;
       }
     } catch (e) {
-      endpoint = `${localUrl.replace(/\/$/, '')}/models`;
+      endpoint = `${localUrl.replace(/\/$/, '')}/v1/models`;
     }
 
     const response = await fetch(endpoint, {
@@ -195,7 +195,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
         : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('gemini'));
     } else if (provider === 'openai') {
-      const response = await fetch(`${process.env.LOCAL_LLM_URL}/models`, {
+      const response = await fetch(`${process.env.LOCAL_LLM_URL}/v1/models`, {
         headers: { 'Authorization': `Bearer ${key}` }
       });
       if (!response.ok) throw new Error(`OpenAI API error: ${response.statusText}`);
@@ -203,7 +203,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
       const models = data.data ? data.data.map(m => m.id) : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('openai'));
     } else if (provider === 'custom' && url) {
-      let endpoint = `${url.replace(/\/$/, '')}/models`;
+      let endpoint = `${url.replace(/\/$/, '')}/v1/models`;
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${key}` }
       });
@@ -241,8 +241,8 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
   const { provider, localUrl, localApiKey, onlineKey, onlineProvider, onlineUrl } = req.body;
   try {
     if (provider === 'local') {
-      const url = localUrl || 'http://192.168.1.42:1234/v1';
-      const fetchUrl = `${url.replace(/\/$/, '')}/models`;
+      const url = localUrl || 'http://92.168.1.42:1234/v1';
+      const fetchUrl = `${url.replace(/\/$/, '')}/v1/models`;
       const headers = {};
       if (localApiKey && !localApiKey.includes('••')) {
         headers['Authorization'] = `Bearer ${localApiKey}`;
@@ -281,7 +281,7 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        const testRes = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, {
+        const testRes = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/models`, {
           headers: { 'Authorization': `Bearer ${onlineKey}` },
           signal: controller.signal
         });

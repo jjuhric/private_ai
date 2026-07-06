@@ -244,7 +244,7 @@ describe('SetupWizard Component Tests', () => {
     fireEvent.click(screen.getByText('Local API'));
     
     // Cover Local API inputs
-    fireEvent.change(screen.getByPlaceholderText('e.g. http://192.168.1.42:1234/v1'), { target: { value: 'http://127.0.0.1:11434/v1' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g. http://92.168.1.42:1234/v1'), { target: { value: 'http://127.0.0.1:11434/v1' } });
     fireEvent.change(screen.getByPlaceholderText('Token if required'), { target: { value: 'secret-local-key' } });
     
     const localSelects = screen.getAllByRole('combobox');

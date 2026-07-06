@@ -24,7 +24,7 @@ async function main() {
       zipcode: user ? user.zipcode : '',
       device_type: settings ? settings.device_type : 'windows',
       is_main_host: settings ? settings.is_main_host : 1,
-      local_url: settings ? settings.local_url : 'http://192.168.1.42:1234/v1',
+      local_url: settings ? settings.local_url : 'http://92.168.1.42:1234/v1',
       local_key: (settings && settings.local_key) ? decrypt(settings.local_key) : '',
       online_provider: settings ? settings.online_provider : 'gemini',
       online_key: (settings && settings.online_key) ? decrypt(settings.online_key) : '',
