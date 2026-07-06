@@ -31,6 +31,12 @@ class MqttService {
     }
 
     logger.info(`[MQTT] Connecting to broker at ${this.brokerUrl} as client "${this.nodeId}"`);
+    
+    // Add helpful warning for field nodes trying to connect to localhost
+    if ((this.brokerUrl.includes('localhost') || this.brokerUrl.includes('127.0.0.1')) && (this.nodeId.includes('field') || this.nodeId.includes('rpi'))) {
+      logger.warn('[MQTT] Warning: You are running on a field node but your MQTT_BROKER_URL points to localhost. If your broker runs on the main host, you need to change MQTT_BROKER_URL in your .env file to point to the main host\'s IP address.');
+    }
+
     this.client = mqtt.connect(this.brokerUrl, options);
 
     this.client.on('connect', () => {
@@ -78,7 +84,8 @@ class MqttService {
     });
 
     this.client.on('error', (err) => {
-      logger.error(`[MQTT] Connection error: ${err.message}`);
+      const errMsg = err ? (err.message || err.code || JSON.stringify(err)) : 'Unknown error';
+      logger.error(`[MQTT] Connection error: ${errMsg}`);
     });
 
     this.client.on('close', () => {
