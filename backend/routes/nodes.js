@@ -114,6 +114,9 @@ router.post('/scan', authenticateToken, async (req, res) => {
           if (isOpen) {
             const info = await getDiscoveryPayload(ip, port);
             if (info && info.success) {
+              if (info.is_main_host) {
+                return;
+              }
               discovered.push({
                 ip_address: ip,
                 port: port,
