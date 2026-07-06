@@ -22,6 +22,20 @@ function getLocalSubnet() {
   return '192.168.1';
 }
 
+// Get all local IPv4 addresses of this machine
+function getLocalIps() {
+  const ips = new Set(['127.0.0.1', 'localhost']);
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const netObj of interfaces[name]) {
+      if (netObj.family === 'IPv4') {
+        ips.add(netObj.address);
+      }
+    }
+  }
+  return ips;
+}
+
 // TCP port checker utility
 function checkIpPort(ip, port, timeout = 600) {
   return new Promise((resolve) => {
@@ -93,6 +107,7 @@ router.post('/scan', authenticateToken, async (req, res) => {
     const existingSet = new Set(existingNodes.map(n => `${n.ip_address}:${n.port}`));
 
     const subnet = getLocalSubnet();
+    const localIps = getLocalIps();
     const port = process.env.PORT || 3000;
     const discovered = [];
     const ipList = [];
@@ -107,7 +122,7 @@ router.post('/scan', authenticateToken, async (req, res) => {
       const batch = ipList.slice(i, i + batchSize);
       await Promise.all(
         batch.map(async (ip) => {
-          if (existingSet.has(`${ip}:${port}`)) {
+          if (localIps.has(ip) || existingSet.has(`${ip}:${port}`)) {
             return;
           }
           const isOpen = await checkIpPort(ip, port);
