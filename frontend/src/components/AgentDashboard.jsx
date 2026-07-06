@@ -255,7 +255,7 @@ function LMStudioLogsView({ token }) {
 const agents = [
   {
     type: 'supervisor',
-    name: 'Supervisor',
+    name: 'Supervisor Agent',
     icon: Network,
     desc: 'Master orchestrator. Reads the full agent capability registry and routes every task to the best-suited specialist agent.'
   },
@@ -273,7 +273,7 @@ const agents = [
   },
   {
     type: 'node',
-    name: 'Network Node Agent',
+    name: 'Node Agent',
     icon: Server,
     desc: 'Routes commands and queries to remote RPi or ESP32 field nodes. Cannot query Main Host from a remote context.'
   },
@@ -297,7 +297,7 @@ const agents = [
   },
   {
     type: 'rag',
-    name: 'Document Vault (RAG)',
+    name: 'Document Vault Agent',
     icon: FileText,
     desc: 'Performs semantic vector search over uploaded private documents using cosine similarity.'
   },
@@ -309,7 +309,7 @@ const agents = [
   },
   {
     type: 'dev',
-    name: 'Coder',
+    name: 'Coding Agent',
     icon: Code,
     desc: 'Reads, writes, and manages source code files. Reports back to Supervisor before executing mutations.'
   },
@@ -321,13 +321,13 @@ const agents = [
   },
   {
     type: 'tool_creator',
-    name: 'Tool Creator',
+    name: 'Tool Creation Agent',
     icon: Wrench,
     desc: 'Coordinates dynamic tool creation: designs plan, requests HITL approval, then implements and deploys.'
   },
   {
     type: 'agent_creator',
-    name: 'Agent Creator',
+    name: 'Agent Creation Agent',
     icon: UserPlus,
     desc: 'Dynamically designs and integrates new specialist agents into the multi-agent loop.'
   },
@@ -340,6 +340,7 @@ const agents = [
 ];
 
 export default function AgentDashboard({ token, toolLogs, activeAgent, isStreaming, settings }) {
+  console.log('[AgentDashboard] settings:', settings, 'hostname:', window.location.hostname, 'port:', window.location.port);
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
   const [documents, setDocuments] = useState([]);
   
@@ -568,22 +569,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     }
   };
 
-  // Specialized Agent List
-  const agents = [
-    { name: 'Supervisor Agent', desc: 'Orchestrates conversation flow, delegates subtasks, and generates final user reports.', status: 'Idle', type: 'supervisor' },
-    { name: 'Memory Agent', desc: 'Manages user memories, recalls preferences, stores facts, and cleans up expired short-term logs.', status: 'Idle', type: 'memory' },
-    { name: 'Calendar Agent', desc: 'Manages calendar events, schedules meetings, lists appointments, and resolves scheduling conflicts.', status: 'Idle', type: 'calendar' },
-    { name: 'Web Searcher', desc: 'Crawls Google and DuckDuckGo search results, retrieves top articles, and decodes news feeds.', status: 'Idle', type: 'crawler' },
-    { name: 'Document Vault Agent', desc: 'Queries the local Document Vault using semantic RAG vector similarity to fetch private context.', status: 'Idle', type: 'rag' },
-    { name: 'Coding Agent', desc: 'Inspects and modifies workspace files, integrates with GitHub API, and executes approved terminal scripts.', status: 'Idle', type: 'dev' },
-    { name: 'GitHub Agent', desc: 'Performs secure GitHub version control operations including branching, commits, and pull requests.', status: 'Idle', type: 'github' },
-    { name: 'Tool Creation Agent', desc: 'Orchestrates the dynamic design, planning, implementation, and QA verification of new tools.', status: 'Idle', type: 'tool_creator' },
-    { name: 'Agent Creation Agent', desc: 'Manages the automated generation, prompt engineering, and registration of new specialized agents.', status: 'Idle', type: 'agent_creator' },
-    { name: 'QA Engineer', desc: 'Reviews code syntax, checks files for security issues, and runs project build verification tests.', status: 'Idle', type: 'qa' },
-    { name: 'Weather Expert', desc: 'Resolves zipcodes to coordinates and pulls current, hourly, and daily forecasts.', status: 'Idle', type: 'weather' },
-    { name: 'System Agent', desc: 'Queries CPU telemetry, memory usage, disk allocation, and live battery power specs.', status: 'Idle', type: 'system' },
-    { name: 'Node Agent', desc: 'Lists remote network nodes and routes commands, files, or system queries to distributed field devices (RPi, ESP32).', status: 'Idle', type: 'node' }
-  ];
+
 
   useEffect(() => {
     fetchDocuments();
