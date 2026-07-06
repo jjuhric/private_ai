@@ -128,6 +128,7 @@ app.get('*', (req, res, next) => {
   }
   res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
     if (err) {
+      logger.error('Error sending index.html:', err);
       res.status(404).send('Frontend not built. Run "npm run build" in frontend folder.');
     }
   });

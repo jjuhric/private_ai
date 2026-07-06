@@ -1,4 +1,4 @@
-const { verifyCommandWithQAAndSupervisor } = require('../utils/codeVerifier');
+const { verifyCommandWithQAAndSupervisor, verifyWriteFileWithQAAndSupervisor } = require('../utils/codeVerifier');
 const { handleCoderTool } = require('../tools/coder_tools');
 const { runAgentLoop } = require('../ai');
 const agents = require('../utils/agents');
@@ -212,5 +212,124 @@ Supervisor Evaluation: Potential disruption`
       expect.stringContaining('INSERT INTO messages'),
       expect.any(Array)
     );
+  });
+
+  test('verifyCommandWithQAAndSupervisor skips Supervisor review if QA rejects', async () => {
+    agents.runAgentTurn
+      .mockResolvedValueOnce({
+        params: {
+          approved: false,
+          can_cause_disruptions: true,
+          reason: 'Command is malicious'
+        }
+      });
+
+    const res = await verifyCommandWithQAAndSupervisor('rm -rf /', 'coder', settings);
+    expect(res.qaResult.approved).toBe(false);
+    expect(res.supervisorResult.reason).toContain('Bypassed');
+    expect(agents.runAgentTurn).toHaveBeenCalledTimes(1);
+  });
+
+  test('verifyWriteFileWithQAAndSupervisor returns correct results on approval', async () => {
+    agents.runAgentTurn
+      .mockResolvedValueOnce({
+        params: {
+          approved: true,
+          can_cause_disruptions: false,
+          reason: 'File content is safe'
+        }
+      })
+      .mockResolvedValueOnce({
+        params: {
+          approved_without_user: true,
+          can_cause_disruptions: false,
+          reason: 'Supervisor approved'
+        }
+      });
+
+    const res = await verifyWriteFileWithQAAndSupervisor('test.js', 'console.log("hello");', 'coder', settings);
+    expect(res.qaResult.approved).toBe(true);
+    expect(res.supervisorResult.approved_without_user).toBe(true);
+    expect(res.supervisorResult.can_cause_disruptions).toBe(false);
+  });
+
+  test('handleCoderTool write_file returns INPUT_REQUIRED_FROM_USER on disruptive file write', async () => {
+    agents.runAgentTurn
+      .mockResolvedValueOnce({
+        params: {
+          approved: true,
+          can_cause_disruptions: true,
+          reason: 'Modifies system code'
+        }
+      })
+      .mockResolvedValueOnce({
+        params: {
+          approved_without_user: false,
+          can_cause_disruptions: true,
+          reason: 'Requires user check'
+        }
+      });
+
+    const originalNodeEnv = process.env.NODE_ENV;
+    delete process.env.NODE_ENV;
+
+    const options = {
+      settings,
+      agentName: 'coder'
+    };
+
+    const result = await handleCoderTool('write_file', { filePath: 'backend/server.js', content: 'crashed' }, options);
+    
+    process.env.NODE_ENV = originalNodeEnv;
+
+    expect(result).toContain('INPUT_REQUIRED_FROM_USER: [Supervisor Approval Required]');
+    expect(result).toContain('File: backend/server.js');
+    expect(result).toContain('Content: crashed');
+  });
+
+  test('runAgentLoop intercepts approved file write response and executes it', async () => {
+    const dbMock = {
+      all: jest.fn().mockResolvedValue([]),
+      get: jest.fn().mockResolvedValue(null),
+      run: jest.fn().mockResolvedValue({ lastID: 1 })
+    };
+
+    const onContentMock = jest.fn();
+    const onThoughtMock = jest.fn();
+
+    const history = [
+      { role: 'user', content: 'write safe file' },
+      {
+        role: 'assistant',
+        content: `[Supervisor Approval Required]
+Agent: coder
+File: test.js
+Content: console.log("hello");
+QA Analysis: Safe file
+Supervisor Evaluation: Safe`
+      }
+    ];
+
+    agents.runAgentTurn.mockResolvedValueOnce({
+      thought: 'Execution complete',
+      tool: 'none'
+    });
+
+    await runAgentLoop({
+      db: dbMock,
+      userId: 1,
+      chatId: 1,
+      userMessage: '1',
+      history,
+      provider: 'gemini',
+      modelName: 'gemini-2.0-flash',
+      onThought: onThoughtMock,
+      onContent: onContentMock,
+      onToolCall: jest.fn(),
+      onAgentStatus: jest.fn(),
+      abortSignal: null
+    });
+
+    expect(onThoughtMock).toHaveBeenCalledWith(expect.stringContaining('Executing...'));
   });
 });

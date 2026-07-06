@@ -34,10 +34,41 @@ async function handleReadFile(params) {
   }
 }
 
-async function handleWriteFile(params) {
+async function handleWriteFile(params, options = {}) {
   const { filePath, content } = params;
   if (!filePath) return 'Error: "filePath" parameter is required.';
   if (content === undefined) return 'Error: "content" parameter is required.';
+
+  // QA and Supervisor verification for agent loop executions
+  if (options.settings && process.env.NODE_ENV !== 'test' && !options.skipVerification) {
+    const { verifyWriteFileWithQAAndSupervisor } = require('../utils/codeVerifier');
+    const agentName = options.agentName || 'unknown_agent';
+    try {
+      const { qaResult, supervisorResult } = await verifyWriteFileWithQAAndSupervisor(filePath, content, agentName, options.settings);
+      
+      if (supervisorResult.can_cause_disruptions || !qaResult.approved) {
+        return `INPUT_REQUIRED_FROM_USER: [Supervisor Approval Required]
+Agent: ${agentName}
+File: ${filePath}
+Content: ${content}
+QA Analysis: ${qaResult.reason}
+Supervisor Evaluation: ${supervisorResult.reason}
+This file write could cause disruptions. Do you want to run this? Please reply with:
+1 - Yes
+2 - No`;
+      }
+    } catch (err) {
+      console.error('File verification failed:', err);
+      return `INPUT_REQUIRED_FROM_USER: [Supervisor Approval Required]
+Agent: ${agentName}
+File: ${filePath}
+Content: ${content}
+Error: QA/Supervisor verification failed: ${err.message}
+This file write could cause disruptions. Do you want to run this? Please reply with:
+1 - Yes
+2 - No`;
+    }
+  }
 
   try {
     const safePath = resolveSafePath(filePath);
@@ -154,7 +185,7 @@ async function handleCoderTool(action, params = {}, options = {}) {
     case 'read_file':
       return handleReadFile(params);
     case 'write_file':
-      return handleWriteFile(params);
+      return handleWriteFile(params, options);
     case 'list_dir':
       return handleListDir(params);
     case 'execute_command':

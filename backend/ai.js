@@ -387,37 +387,69 @@ async function runAgentLoop({
 
   if (lastAssistantMsg) {
     if (lastAssistantMsg.content.includes('[Supervisor Approval Required]')) {
-      // Parse agent and command
+      // Parse agent, command, file and content
       let parsedAgent = null;
       let parsedCommand = null;
+      let parsedFile = null;
+      let parsedContent = null;
       
       const agentIndex = lastAssistantMsg.content.indexOf('Agent:');
       const commandIndex = lastAssistantMsg.content.indexOf('Command:');
+      const fileIndex = lastAssistantMsg.content.indexOf('File:');
+      const contentIndex = lastAssistantMsg.content.indexOf('Content:');
       const qaIndex = lastAssistantMsg.content.indexOf('QA Analysis:');
       const errorIndex = lastAssistantMsg.content.indexOf('Error:');
-      const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : lastAssistantMsg.content.indexOf('This command could cause'));
-      
-      if (agentIndex !== -1 && commandIndex !== -1 && endCommandIndex !== -1 && endCommandIndex > commandIndex) {
-        parsedAgent = lastAssistantMsg.content.substring(agentIndex + 6, commandIndex).trim();
-        parsedCommand = lastAssistantMsg.content.substring(commandIndex + 8, endCommandIndex).trim();
+
+      if (agentIndex !== -1) {
+        if (commandIndex !== -1) {
+          const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : lastAssistantMsg.content.indexOf('This command could cause'));
+          if (endCommandIndex !== -1 && endCommandIndex > commandIndex) {
+            parsedAgent = lastAssistantMsg.content.substring(agentIndex + 6, commandIndex).trim();
+            parsedCommand = lastAssistantMsg.content.substring(commandIndex + 8, endCommandIndex).trim();
+          }
+        } else if (fileIndex !== -1) {
+          const endFileIndex = contentIndex !== -1 ? contentIndex : (qaIndex !== -1 ? qaIndex : lastAssistantMsg.content.indexOf('This file write could cause'));
+          if (endFileIndex !== -1 && endFileIndex > fileIndex) {
+            parsedAgent = lastAssistantMsg.content.substring(agentIndex + 6, fileIndex).trim();
+            parsedFile = lastAssistantMsg.content.substring(fileIndex + 5, endFileIndex).trim();
+            if (contentIndex !== -1) {
+              const endContentIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : lastAssistantMsg.content.indexOf('This file write could cause'));
+              parsedContent = lastAssistantMsg.content.substring(contentIndex + 8, endContentIndex).trim();
+            }
+          }
+        }
       }
 
-      if (parsedAgent && parsedCommand) {
+      if (parsedAgent && (parsedCommand || parsedFile)) {
         const reply = userMessage.trim().toLowerCase();
         if (reply.startsWith('1') || reply === 'yes' || reply.includes('approve') || reply.includes('go ahead') || reply.includes('ok')) {
-          onThought(`User approved the command: "${parsedCommand}". Executing...\n`);
           const { handleCoderTool } = require('./tools/coder_tools');
-          
           let toolOutput = '';
-          try {
-            toolOutput = await handleCoderTool('execute_command', { command: parsedCommand }, {
-              userId,
-              settings,
-              skipVerification: true,
-              agentName: parsedAgent
-            });
-          } catch (err) {
-            toolOutput = `Error running command: ${err.message}`;
+          
+          if (parsedCommand) {
+            onThought(`User approved the command: "${parsedCommand}". Executing...\n`);
+            try {
+              toolOutput = await handleCoderTool('execute_command', { command: parsedCommand }, {
+                userId,
+                settings,
+                skipVerification: true,
+                agentName: parsedAgent
+              });
+            } catch (err) {
+              toolOutput = `Error running command: ${err.message}`;
+            }
+          } else if (parsedFile) {
+            onThought(`User approved writing to file: "${parsedFile}". Executing...\n`);
+            try {
+              toolOutput = await handleCoderTool('write_file', { filePath: parsedFile, content: parsedContent }, {
+                userId,
+                settings,
+                skipVerification: true,
+                agentName: parsedAgent
+              });
+            } catch (err) {
+              toolOutput = `Error writing file: ${err.message}`;
+            }
           }
           
           accumulatedToolOutputs.push({
@@ -435,12 +467,12 @@ async function runAgentLoop({
           });
           currentHistory.push({
             role: 'user',
-            content: `[Output for execute_command]:\n${toolOutput}`
+            content: parsedCommand ? `[Output for execute_command]:\n${toolOutput}` : `[Output for write_file]:\n${toolOutput}`
           });
           
           toolCallsCount = 1; // Mark that we did 1 tool call turn already
         } else if (reply.startsWith('2') || reply === 'no' || reply.includes('reject') || reply.includes('refuse')) {
-          onThought("User rejected running the command. Asking why...\n");
+          onThought("User rejected running the command/file write. Asking why...\n");
           const promptMsg = "Why did you choose not to go forward with this code?";
           onContent(promptMsg);
           
@@ -455,24 +487,36 @@ async function runAgentLoop({
       }
     } else if (lastAssistantMsg.content.includes('Why did you choose not to go forward with this code?')) {
       // The user is responding with their reason for rejection.
-      // Find the original command proposal in history.
+      // Find the original proposal in history.
       const originalProposal = [...cleanedHistory].reverse().find(msg => msg.role === 'assistant' && msg.content.includes('[Supervisor Approval Required]'));
       let rejectedCommandInfo = '';
       if (originalProposal) {
         let parsedCommand = null;
+        let parsedFile = null;
         const commandIndex = originalProposal.content.indexOf('Command:');
+        const fileIndex = originalProposal.content.indexOf('File:');
         const qaIndex = originalProposal.content.indexOf('QA Analysis:');
         const errorIndex = originalProposal.content.indexOf('Error:');
-        const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : originalProposal.content.indexOf('This command could cause'));
-        if (commandIndex !== -1 && endCommandIndex !== -1 && endCommandIndex > commandIndex) {
-          parsedCommand = originalProposal.content.substring(commandIndex + 8, endCommandIndex).trim();
-          rejectedCommandInfo = `The user rejected running this command: "${parsedCommand}".\n`;
+        
+        if (commandIndex !== -1) {
+          const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : originalProposal.content.indexOf('This command could cause'));
+          if (endCommandIndex !== -1 && endCommandIndex > commandIndex) {
+            parsedCommand = originalProposal.content.substring(commandIndex + 8, endCommandIndex).trim();
+            rejectedCommandInfo = `The user rejected running this command: "${parsedCommand}".\n`;
+          }
+        } else if (fileIndex !== -1) {
+          const contentIndex = originalProposal.content.indexOf('Content:');
+          const endFileIndex = contentIndex !== -1 ? contentIndex : (qaIndex !== -1 ? qaIndex : originalProposal.content.indexOf('This file write could cause'));
+          if (endFileIndex !== -1 && endFileIndex > fileIndex) {
+            parsedFile = originalProposal.content.substring(fileIndex + 5, endFileIndex).trim();
+            rejectedCommandInfo = `The user rejected writing to this file: "${parsedFile}".\n`;
+          }
         }
       }
       
-      customSystemPromptContext = `\n\n### User Command Rejection Context:
+      customSystemPromptContext = `\n\n### User Code Rejection Context:
 ${rejectedCommandInfo}The user chose not to run the code/command and provided this reason: "${userMessage}".
-Please evaluate their reason. If changes to the code or command are required based on their feedback, make those changes (e.g. call the coder agent to edit the files, or adjust the command) and ask for approval again (which will undergo QA and Supervisor review again).
+Please evaluate their reason. If changes to the code or command are required based on their feedback, make those changes (e.g. call the coder/developer agent to edit the files, or adjust the command) and ask for approval again (which will undergo QA and Supervisor review again).
 If no changes are required and you can proceed without executing the code, then continue.`;
     }
   }
