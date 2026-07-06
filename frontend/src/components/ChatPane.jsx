@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Github, Search, Send, Square, Cpu, CloudSun, Newspaper, FileText } from 'lucide-react';
 import { marked } from 'marked';
 import ExpandableThoughts from './ExpandableThoughts';
@@ -20,6 +20,40 @@ export default function ChatPane({
   streamStatus
 }) {
   const [editedCommands, setEditedCommands] = useState({});
+  const scrollerRef = useRef(null);
+  const isAtBottomRef = useRef(true);
+
+  const scrollToBottom = (behavior = 'smooth') => {
+    if (messagesEndRef && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    } else if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    }
+  };
+
+  // Scroll to bottom on mount (tab switch / back to chat)
+  useEffect(() => {
+    scrollToBottom('auto');
+    isAtBottomRef.current = true;
+  }, []);
+
+  // Monitor scroll events to see if user manually scrolled up
+  const handleScroll = () => {
+    if (!scrollerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollerRef.current;
+    // If we are within 120px of the bottom, we consider ourselves at the bottom
+    const atBottom = scrollHeight - scrollTop - clientHeight <= 120;
+    isAtBottomRef.current = atBottom;
+  };
+
+  // Scroll to bottom on updates if we are at the bottom or it was a user message
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    const isUserMsg = lastMessage && lastMessage.role === 'user';
+    if (isUserMsg || isAtBottomRef.current) {
+      scrollToBottom('smooth');
+    }
+  }, [messages, streamContent, streamThoughts, toolLogs]);
 
   const starterPrompts = [
     { icon: <Cpu size={16} color="#a78bfa" />, text: "Check host CPU temperature & RAM specs", query: "Can you inspect my computer specifications, thermal temperature, and battery telemetry?" },
@@ -34,7 +68,7 @@ export default function ChatPane({
 
   return (
     <div className="chat-pane">
-      <div className="messages-scroller">
+      <div className="messages-scroller" ref={scrollerRef} onScroll={handleScroll}>
         {!activeChatId ? (
           <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '20vh' }}>
             <img 

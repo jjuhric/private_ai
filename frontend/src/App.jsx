@@ -129,13 +129,6 @@ function App() {
     }
   }, [activeChatId]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, streamContent, streamThoughts, toolLogs]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   // Auth operations
   const fetchUserProfile = async () => {
