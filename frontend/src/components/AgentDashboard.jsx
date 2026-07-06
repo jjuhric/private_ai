@@ -210,6 +210,9 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     { name: 'Web Searcher', desc: 'Crawls Google and DuckDuckGo search results, retrieves top articles, and decodes news feeds.', status: 'Idle', type: 'crawler' },
     { name: 'Document Vault Agent', desc: 'Queries the local Document Vault using semantic RAG vector similarity to fetch private context.', status: 'Idle', type: 'rag' },
     { name: 'Coding Agent', desc: 'Inspects and modifies workspace files, integrates with GitHub API, and executes approved terminal scripts.', status: 'Idle', type: 'dev' },
+    { name: 'GitHub Agent', desc: 'Performs secure GitHub version control operations including branching, commits, and pull requests.', status: 'Idle', type: 'github' },
+    { name: 'Tool Creation Agent', desc: 'Orchestrates the dynamic design, planning, implementation, and QA verification of new tools.', status: 'Idle', type: 'tool_creator' },
+    { name: 'Agent Creation Agent', desc: 'Manages the automated generation, prompt engineering, and registration of new specialized agents.', status: 'Idle', type: 'agent_creator' },
     { name: 'QA Engineer', desc: 'Reviews code syntax, checks files for security issues, and runs project build verification tests.', status: 'Idle', type: 'qa' },
     { name: 'Weather Expert', desc: 'Resolves zipcodes to coordinates and pulls current, hourly, and daily forecasts.', status: 'Idle', type: 'weather' },
     { name: 'Host Specialist', desc: 'Queries CPU telemetry, memory usage, disk allocation, and live battery power specs.', status: 'Idle', type: 'host' },
@@ -308,7 +311,10 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     if (agentType === 'calendar' && (currentAgent === 'calendar_handler' || currentAgent === 'calendar')) return 'Active';
     if (agentType === 'crawler' && (currentAgent === 'web_searcher' || currentAgent === 'search_web' || currentAgent === 'google_news')) return 'Active';
     if (agentType === 'rag' && (currentAgent === 'document_vault' || currentAgent === 'query_vault')) return 'Active';
-    if (agentType === 'dev' && (currentAgent === 'coder' || currentAgent === 'read_file' || currentAgent === 'write_file' || currentAgent === 'execute_command' || currentAgent === 'github')) return 'Active';
+    if (agentType === 'dev' && (currentAgent === 'coder' || currentAgent === 'read_file' || currentAgent === 'write_file' || currentAgent === 'execute_command')) return 'Active';
+    if (agentType === 'github' && (currentAgent === 'github_agent' || currentAgent === 'github')) return 'Active';
+    if (agentType === 'tool_creator' && (currentAgent === 'tool_creator_agent' || currentAgent === 'tool_creator' || currentAgent === 'dev_pipeline')) return 'Active';
+    if (agentType === 'agent_creator' && (currentAgent === 'agent_creator_agent' || currentAgent === 'agent_creator')) return 'Active';
     if (agentType === 'qa' && currentAgent === 'qa_engineer') return 'Active';
     if (agentType === 'weather' && (currentAgent === 'weather_expert' || currentAgent === 'weather')) return 'Active';
     if (agentType === 'host' && (currentAgent === 'host_specialist' || currentAgent === 'host_machine')) return 'Active';
