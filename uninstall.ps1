@@ -1,9 +1,15 @@
 # Windows Uninstall Script for Private AI Assistant
 # Removes background tasks, running port processes, environment configurations, logs, databases, and dependencies
 
+$installDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ([string]::IsNullOrWhiteSpace($installDir)) {
+    $installDir = Get-Location
+}
+
 Write-Host "=============================================" -ForegroundColor Red
 Write-Host "❌ Uninstalling Private AI Assistant Node" -ForegroundColor Red
 Write-Host "=============================================" -ForegroundColor Red
+Write-Host "Target directory to remove: $installDir" -ForegroundColor Yellow
 
 # 1. Stop and remove scheduled tasks (requires Admin)
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -25,8 +31,9 @@ if ($isAdmin) {
 
 # 2. Kill running backend processes on PORT 3000 (or customized port from .env)
 $appPort = 3000
-if (Test-Path ".env") {
-    $envLines = Get-Content ".env"
+$envFile = Join-Path $installDir ".env"
+if (Test-Path $envFile) {
+    $envLines = Get-Content $envFile
     foreach ($line in $envLines) {
         if ($line -match "^PORT=(.*)") { $appPort = $Matches[1].Trim() }
     }
@@ -40,39 +47,14 @@ if ($portProcess) {
     Write-Host "✅ Stopped active port process." -ForegroundColor Green
 }
 
-# 3. Clean files, databases, and local staging directories
-Write-Host "Deleting configuration files, logs, and database files..." -ForegroundColor Cyan
-if (Test-Path ".env") { Remove-Item ".env" -Force -ErrorAction SilentlyContinue }
-if (Test-Path "app.log") { Remove-Item "app.log" -Force -ErrorAction SilentlyContinue }
-
-$dbPath = "backend/database.db"
-foreach ($suffix in ("", "-wal", "-shm")) {
-    $file = $dbPath + $suffix
-    if (Test-Path $file) {
-        Remove-Item $file -Force -ErrorAction SilentlyContinue
-    }
+# 3. Clean files, databases, and local staging directories inside installDir, then delete folder itself
+Write-Host "Deleting directory and all files..." -ForegroundColor Cyan
+if (Test-Path $installDir) {
+    # Move out of the folder first
+    Set-Location ~
+    Remove-Item $installDir -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "✅ Private AI directory and all files deleted." -ForegroundColor Green
 }
-
-foreach ($suffix in ("", "-wal", "-shm")) {
-    $file = "backend/test_database.db" + $suffix
-    if (Test-Path $file) {
-        Remove-Item $file -Force -ErrorAction SilentlyContinue
-    }
-}
-
-if (Test-Path "tool_registry/staging") { Remove-Item "tool_registry/staging" -Recurse -Force -ErrorAction SilentlyContinue }
-if (Test-Path "tool_registry/tools") { Remove-Item "tool_registry/tools" -Recurse -Force -ErrorAction SilentlyContinue }
-Write-Host "✅ Environment configuration, logs, and databases removed." -ForegroundColor Green
-
-# 4. Remove NPM dependencies and frontend build outputs
-Write-Host "Deleting node_modules directories and compiled frontend build..." -ForegroundColor Cyan
-$folders = @("node_modules", "backend/node_modules", "frontend/node_modules", "frontend/dist")
-foreach ($folder in $folders) {
-    if (Test-Path $folder) {
-        Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-Write-Host "✅ Dependencies and built assets cleaned." -ForegroundColor Green
 
 Write-Host "`n=============================================" -ForegroundColor Green
 Write-Host "  Private AI has been uninstalled successfully!" -ForegroundColor Green

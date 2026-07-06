@@ -207,13 +207,9 @@ if ($NonInteractive) {
     $userZipcode = Read-Host "Enter your Zipcode [$defaultUserZipcode]"
     if ([string]::IsNullOrWhiteSpace($userZipcode)) { $userZipcode = $defaultUserZipcode }
 
-    # Local LLM Base URL (REQUIRED)
-    while ($true) {
-        $localUrl = Read-Host "Enter Local LLM Base URL (REQUIRED) [$defaultLocalUrl]"
-        if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
-        if (-not [string]::IsNullOrWhiteSpace($localUrl)) { break }
-        Write-Host "❌ Error: Local LLM Base URL is required." -ForegroundColor Red
-    }
+    # Local LLM address
+    $localUrl = Read-Host "Enter Local LLM Base URL [$defaultLocalUrl]"
+    if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
 
     # Optional Local API Key
     $localKey = Read-Host "Enter Local LLM API Key (optional) [$defaultLocalKey]"

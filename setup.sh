@@ -274,15 +274,9 @@ else
     read -p "Enter your Zipcode [${DEFAULT_USER_ZIPCODE}]: " USER_ZIPCODE
     USER_ZIPCODE=${USER_ZIPCODE:-$DEFAULT_USER_ZIPCODE}
 
-    # Local LLM address (REQUIRED)
-    while true; do
-        read -p "Enter Local LLM Base URL (REQUIRED) [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
-        LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
-        if [ ! -z "$LOCAL_URL" ]; then
-            break
-        fi
-        echo "❌ Error: Local LLM Base URL is required."
-    done
+    # Local LLM address
+    read -p "Enter Local LLM Base URL [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
+    LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
 
     # Optional Local API Key
     read -p "Enter Local LLM API Key (optional) [${DEFAULT_LOCAL_KEY}]: " LOCAL_KEY
