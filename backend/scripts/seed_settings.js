@@ -54,6 +54,7 @@ async function main(argv = process.argv) {
 
     const name = args.name || null;
     const zipcode = args.zipcode || null;
+    const weatherApiKey = args.weather_api_key || null;
 
     let userId;
     if (user) {
@@ -66,8 +67,9 @@ async function main(argv = process.argv) {
       console.log(`Created new user "${username}" (ID: ${userId}).`);
     }
 
-    if (name || zipcode) {
-      await db.run('UPDATE users SET name = COALESCE(?, name), zipcode = COALESCE(?, zipcode) WHERE id = ?', [name, zipcode, userId]);
+    const encryptedWeatherKey = weatherApiKey ? encrypt(weatherApiKey) : null;
+    if (name || zipcode || encryptedWeatherKey) {
+      await db.run('UPDATE users SET name = COALESCE(?, name), zipcode = COALESCE(?, zipcode), weather_api_key = COALESCE(?, weather_api_key) WHERE id = ?', [name, zipcode, encryptedWeatherKey, userId]);
     }
 
     // Encrypt keys

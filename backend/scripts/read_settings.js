@@ -22,6 +22,7 @@ async function main() {
       username: user ? user.username : 'admin',
       name: user ? user.name : '',
       zipcode: user ? user.zipcode : '',
+      weather_api_key: (user && user.weather_api_key) ? decrypt(user.weather_api_key) : '',
       device_type: settings ? settings.device_type : 'windows',
       is_main_host: settings ? settings.is_main_host : 1,
       local_url: settings ? settings.local_url : 'http://192.168.1.42:1234/v1',

@@ -159,6 +159,7 @@ DEFAULT_TOOL_REGISTRY_REPO="https://github.com/jjuhric/private_ai_tools.git"
 DEFAULT_TOOL_REGISTRY_LOCAL_PATH="./tool_registry"
 DEFAULT_USER_NAME=""
 DEFAULT_USER_ZIPCODE=""
+DEFAULT_WEATHER_KEY=""
 
 if [ -f ".env" ]; then
     DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
@@ -167,6 +168,7 @@ if [ -f ".env" ]; then
     DEFAULT_ONLINE_KEY=$(grep -E "^GEMINI_API_KEY=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_ONLINE_PROVIDER=$(grep -E "^ONLINE_PROVIDER=" .env | cut -d'=' -f2 || echo "gemini")
+    DEFAULT_WEATHER_KEY=$(grep -E "^WEATHER_API_KEY=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_MAIN_HOST_IP=$(grep -E "^MAIN_HOST_IP=" .env | cut -d'=' -f2 || echo "uhrick-home.local")
     DEFAULT_DB_PATH=$(grep -E "^DB_PATH=" .env | cut -d'=' -f2 || echo "backend/database.db")
     DEFAULT_MQTT_BROKER_URL=$(grep -E "^MQTT_BROKER_URL=" .env | cut -d'=' -f2 || echo "mqtt://localhost:1883")
@@ -195,6 +197,7 @@ if [ -f ".env" ]; then
             DEFAULT_GITHUB_TOKEN=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.github_token || '$DEFAULT_GITHUB_TOKEN'); } catch(e) { console.log('$DEFAULT_GITHUB_TOKEN'); }")
             DEFAULT_USER_NAME=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.name || ''); } catch(e) { console.log(''); }")
             DEFAULT_USER_ZIPCODE=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.zipcode || ''); } catch(e) { console.log(''); }")
+            DEFAULT_WEATHER_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.weather_api_key || ''); } catch(e) { console.log(''); }")
         fi
     fi
 fi
@@ -217,6 +220,7 @@ if [ "$NON_INTERACTIVE" = true ]; then
     GITHUB_TOKEN="$DEFAULT_GITHUB_TOKEN"
     USER_NAME="$DEFAULT_USER_NAME"
     USER_ZIPCODE="$DEFAULT_USER_ZIPCODE"
+    WEATHER_KEY="$DEFAULT_WEATHER_KEY"
     BUILD_FE_YN="y"
     APP_PORT="$DEFAULT_PORT"
 else
@@ -274,6 +278,9 @@ else
     read -p "Enter your Zipcode [${DEFAULT_USER_ZIPCODE}]: " USER_ZIPCODE
     USER_ZIPCODE=${USER_ZIPCODE:-$DEFAULT_USER_ZIPCODE}
 
+    read -p "Enter OpenWeatherMap API Key (optional) [${DEFAULT_WEATHER_KEY}]: " WEATHER_KEY
+    WEATHER_KEY=${WEATHER_KEY:-$DEFAULT_WEATHER_KEY}
+
     # Local LLM address
     read -p "Enter Local LLM Base URL [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
     LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
@@ -328,6 +335,7 @@ write_env_var "DB_PATH" "${DEFAULT_DB_PATH}"
 write_env_var "LOCAL_LLM_URL" "${LOCAL_URL}"
 write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
 write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
+write_env_var "WEATHER_API_KEY" "${WEATHER_KEY}"
 write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
 write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
@@ -404,7 +412,8 @@ node backend/scripts/seed_settings.js \
     --github_token="$GITHUB_TOKEN" \
     --online_provider="$DEFAULT_ONLINE_PROVIDER" \
     --name="$USER_NAME" \
-    --zipcode="$USER_ZIPCODE"
+    --zipcode="$USER_ZIPCODE" \
+    --weather_api_key="$WEATHER_KEY"
 
 # 8. Build Frontend (if requested)
 if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then

@@ -117,6 +117,7 @@ $defaultToolRegistryRepo = "https://github.com/jjuhric/private_ai_tools.git"
 $defaultToolRegistryLocalPath = "./tool_registry"
 $defaultUserName = ""
 $defaultUserZipcode = ""
+$defaultWeatherKey = ""
 
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
@@ -125,6 +126,7 @@ if (Test-Path ".env") {
         if ($line -match "^LOCAL_LLM_URL=(.*)") { $defaultLocalUrl = $Matches[1].Trim() }
         if ($line -match "^LOCAL_LLM_KEY=(.*)") { $defaultLocalKey = $Matches[1].Trim() }
         if ($line -match "^GEMINI_API_KEY=(.*)") { $defaultOnlineKey = $Matches[1].Trim() }
+        if ($line -match "^WEATHER_API_KEY=(.*)") { $defaultWeatherKey = $Matches[1].Trim() }
         if ($line -match "^GITHUB_TOKEN=(.*)") { $defaultGithubToken = $Matches[1].Trim() }
         if ($line -match "^ONLINE_PROVIDER=(.*)") { $defaultOnlineProvider = $Matches[1].Trim() }
         if ($line -match "^MAIN_HOST_IP=(.*)") { $defaultMainHostIp = $Matches[1].Trim() }
@@ -152,6 +154,7 @@ if (Test-Path ".env") {
                 if ($dbSettings.github_token) { $defaultGithubToken = $dbSettings.github_token }
                 if ($dbSettings.name) { $defaultUserName = $dbSettings.name }
                 if ($dbSettings.zipcode) { $defaultUserZipcode = $dbSettings.zipcode }
+                if ($dbSettings.weather_api_key) { $defaultWeatherKey = $dbSettings.weather_api_key }
             } catch {}
         }
     }
@@ -171,6 +174,7 @@ if ($NonInteractive) {
     $githubToken = $defaultGithubToken
     $userName = $defaultUserName
     $userZipcode = $defaultUserZipcode
+    $weatherKey = $defaultWeatherKey
     $buildFeYN = "y"
     $appPort = $defaultPort
 } else {
@@ -206,6 +210,9 @@ if ($NonInteractive) {
 
     $userZipcode = Read-Host "Enter your Zipcode [$defaultUserZipcode]"
     if ([string]::IsNullOrWhiteSpace($userZipcode)) { $userZipcode = $defaultUserZipcode }
+
+    $weatherKey = Read-Host "Enter OpenWeatherMap API Key (optional) [$defaultWeatherKey]"
+    if ([string]::IsNullOrWhiteSpace($weatherKey)) { $weatherKey = $defaultWeatherKey }
 
     # Local LLM address
     $localUrl = Read-Host "Enter Local LLM Base URL [$defaultLocalUrl]"
@@ -269,6 +276,7 @@ Write-EnvVar "DB_PATH" $defaultDbPath
 Write-EnvVar "LOCAL_LLM_URL" $localUrl
 Write-EnvVar "LOCAL_LLM_KEY" $localKey
 Write-EnvVar "GEMINI_API_KEY" $onlineKey
+Write-EnvVar "WEATHER_API_KEY" $weatherKey
 Write-EnvVar "GITHUB_TOKEN" $githubToken
 Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
@@ -357,7 +365,8 @@ $seedCmd = "backend/scripts/seed_settings.js"
     --github_token="$githubToken" `
     --online_provider="$defaultOnlineProvider" `
     --name="$userName" `
-    --zipcode="$userZipcode"
+    --zipcode="$userZipcode" `
+    --weather_api_key="$weatherKey"
 
 # 9. Build Frontend
 if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
