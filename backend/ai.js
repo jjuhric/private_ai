@@ -8,7 +8,7 @@ const { handleMemoryTool } = require('./tools/memory_tool');
 const { handleTimeTool } = require('./tools/time_tool');
 
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
-async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk, abortSignal) {
+async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk, abortSignal, db, userId, provider) {
   const localStyle = apiStyle || 'openai';
   let endpoint = '';
   let headers = {
@@ -103,12 +103,33 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     throw new Error(`LLM API error: ${response.status} - ${errText}`);
   }
 
+  let fullResponseText = '';
+
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/event-stream')) {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.response || data.content;
     if (content) {
       onChunk(content);
+      fullResponseText += content;
+    }
+
+    // Save token usage
+    let tokenCount = 0;
+    if (data.usage && data.usage.total_tokens) {
+      tokenCount = data.usage.total_tokens;
+    } else if (data.usage && data.usage.input_tokens && data.usage.output_tokens) {
+      tokenCount = data.usage.input_tokens + data.usage.output_tokens;
+    } else {
+      const promptText = JSON.stringify(messages);
+      tokenCount = Math.ceil((promptText.length + fullResponseText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'unknown', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log non-stream local LLM tokens:', err));
     }
     return;
   }
@@ -136,17 +157,31 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
           const parsed = JSON.parse(cleaned.substring(6));
           // Support both OpenAI format and Anthropic format chunk parsing
           const text = parsed.choices?.[0]?.delta?.content || parsed.delta?.text || parsed.response || parsed.content;
-          if (text) onChunk(text);
+          if (text) {
+            onChunk(text);
+            fullResponseText += text;
+          }
         } catch (e) {
           // ignore malformed lines
         }
       }
     }
   }
+
+  // Estimate and log streaming tokens
+  const promptText = JSON.stringify(messages);
+  const tokenCount = Math.ceil((promptText.length + fullResponseText.length) / 4);
+  if (db && typeof db.run === 'function' && userId) {
+    const providerType = provider === 'local' ? 'local' : 'online';
+    db.run(
+      'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+      [userId, modelName || 'unknown', providerType, tokenCount]
+    ).catch(err => console.error('Failed to log streaming local LLM tokens:', err));
+  }
 }
 
 // Helper to call Gemini Client Stream
-async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk, abortSignal) {
+async function callGeminiStream(apiKey, modelName, systemInstruction, history, userMessage, onChunk, abortSignal, db, userId, provider) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: modelName || 'gemini-2.0-flash',
@@ -166,10 +201,39 @@ async function callGeminiStream(apiKey, modelName, systemInstruction, history, u
   });
 
   const result = await model.generateContentStream({ contents });
+  let fullResponseText = '';
   for await (const chunk of result.stream) {
     if (abortSignal?.aborted) break;
     const text = chunk.text();
-    if (text) onChunk(text);
+    if (text) {
+      onChunk(text);
+      fullResponseText += text;
+    }
+  }
+
+  // Record token usage
+  let tokenCount = 0;
+  try {
+    const response = await result.response;
+    if (response.usageMetadata && response.usageMetadata.totalTokenCount) {
+      tokenCount = response.usageMetadata.totalTokenCount;
+    }
+  } catch (err) {
+    console.error('Failed to get Gemini stream usage metadata:', err);
+  }
+
+  if (tokenCount === 0) {
+    // Estimate fallback
+    const promptText = systemInstruction + JSON.stringify(contents);
+    tokenCount = Math.ceil((promptText.length + fullResponseText.length) / 4);
+  }
+
+  if (db && typeof db.run === 'function' && userId) {
+    const providerType = provider === 'local' ? 'local' : 'online';
+    db.run(
+      'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+      [userId, modelName || 'gemini-2.0-flash', providerType, tokenCount]
+    ).catch(err => console.error('Failed to log Gemini stream tokens:', err));
   }
 }
 
@@ -207,6 +271,8 @@ async function runAgentLoop({
   const cleanedHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
 
   const settings = {
+    db,
+    userId,
     provider,
     modelName,
     onlineProvider,
@@ -514,7 +580,10 @@ Make sure to answer the user query directly and clearly.`;
       cleanedHistory,
       userMessage,
       onContent,
-      abortSignal
+      abortSignal,
+      db,
+      userId,
+      provider
     );
   } else {
     let targetUrl = '';
@@ -549,7 +618,10 @@ Make sure to answer the user query directly and clearly.`;
       messages,
       targetStyle,
       onContent,
-      abortSignal
+      abortSignal,
+      db,
+      userId,
+      provider
     );
   }
 }

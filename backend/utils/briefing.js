@@ -88,6 +88,8 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
 
     // Construct LLM configuration settings
     const llmSettings = {
+      db,
+      userId,
       provider: activeSettings.provider || 'local',
       modelName: activeSettings.model_name || 'google/gemma-4-e4b',
       onlineProvider: activeSettings.online_provider || 'gemini',

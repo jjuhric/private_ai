@@ -575,4 +575,53 @@ describe('AgentDashboard Component Tests', () => {
     // Verify modal closed
     expect(screen.queryByText('Confirm Node Registration')).toBeNull();
   });
+
+  test('switches to token count tab and displays graphs, tables, and filters', async () => {
+    const localMockFetch = vi.fn().mockImplementation((url) => {
+      const urlStr = typeof url === 'string' ? url : (url && (url.url || url.toString())) || '';
+      if (urlStr.includes('/api/token-usage')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            totalTokens: 1024,
+            tableData: [
+              { model_name: 'gemini-2.0-flash', provider_type: 'online', total_tokens: 1024, call_count: 1 }
+            ],
+            graphData: [
+              { created_at: '2026-07-06T10:00:00.000Z', model_name: 'gemini-2.0-flash', provider_type: 'online', token_count: 1024 }
+            ]
+          })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => [] });
+    });
+    vi.stubGlobal('fetch', localMockFetch);
+    console.log("global.fetch === localMockFetch:", global.fetch === localMockFetch);
+
+    render(<AgentDashboard token={token} toolLogs={[]} />);
+
+    // Click Show Token Count tab
+    const tokenTabBtn = screen.getByText('Show Token Count');
+    fireEvent.click(tokenTabBtn);
+
+    // Verify KPI card and that fetch was triggered for default 24h
+    await waitFor(() => {
+      expect(localMockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/token-usage?timeframe=24h'), expect.any(Object));
+      expect(screen.getAllByText(/1[.,]024|1024/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Overall Token Count')).toBeInTheDocument();
+    });
+
+    // Verify table content
+    expect(screen.getByText('gemini-2.0-flash')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
+
+    // Switch timeframe filter to "Last Hour"
+    const lastHourBtn = screen.getByText('Last Hour');
+    fireEvent.click(lastHourBtn);
+
+    // Check that fetch was triggered for 1h
+    await waitFor(() => {
+      expect(localMockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/token-usage?timeframe=1h'), expect.any(Object));
+    });
+  });
 });

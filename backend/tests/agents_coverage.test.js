@@ -88,7 +88,8 @@ describe('Agents Coverage Extender Tests', () => {
       headers: { get: () => 'application/json' },
       json: async () => ({
         choices: [{ message: { content: JSON.stringify({ tool: 'none', thought: 'no tool' }) } }],
-        content: [{ text: JSON.stringify({ tool: 'none', thought: 'no tool' }) }]
+        content: [{ text: JSON.stringify({ tool: 'none', thought: 'no tool' }) }],
+        usage: { input_tokens: 5, output_tokens: 15 }
       })
     });
 
@@ -137,7 +138,8 @@ describe('Agents Coverage Extender Tests', () => {
     const { runAgentLoop } = require('../ai');
     const mockDb = {
       all: jest.fn().mockRejectedValue(new Error('DB Query failure')),
-      get: jest.fn().mockRejectedValue(new Error('DB Get failure'))
+      get: jest.fn().mockRejectedValue(new Error('DB Get failure')),
+      run: jest.fn().mockRejectedValue(new Error('DB Run failure'))
     };
 
     global.fetch = jest.fn().mockResolvedValue({
@@ -219,7 +221,8 @@ describe('Agents Coverage Extender Tests', () => {
   test('runAgentLoop should route supervisor tool decisions correctly', async () => {
     const mockDb = {
       all: jest.fn().mockResolvedValue([]),
-      get: jest.fn().mockResolvedValue({ name: 'Jeffery', zipcode: '32421', country: 'US', temp_unit: 'imperial' })
+      get: jest.fn().mockResolvedValue({ name: 'Jeffery', zipcode: '32421', country: 'US', temp_unit: 'imperial' }),
+      run: jest.fn().mockRejectedValue(new Error('DB run failed'))
     };
 
     const decisions = [
@@ -276,7 +279,8 @@ describe('Agents Coverage Extender Tests', () => {
         }
         return Promise.resolve([]);
       }),
-      get: jest.fn().mockResolvedValue({ name: 'Jeffery', zipcode: '32421', country: 'US', temp_unit: 'imperial' })
+      get: jest.fn().mockResolvedValue({ name: 'Jeffery', zipcode: '32421', country: 'US', temp_unit: 'imperial' }),
+      run: jest.fn().mockRejectedValue(new Error('DB run failed'))
     };
 
     // 1. URL parser throw branch test by passing an invalid local url 'not_valid_url'
@@ -284,7 +288,8 @@ describe('Agents Coverage Extender Tests', () => {
       ok: true,
       headers: { get: () => 'application/json' },
       json: async () => ({
-        choices: [{ message: { content: JSON.stringify({ tool: 'none', thought: 'url fail test' }) } }]
+        choices: [{ message: { content: JSON.stringify({ tool: 'none', thought: 'url fail test' }) } }],
+        usage: { total_tokens: 25 }
       })
     });
 

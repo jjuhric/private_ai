@@ -223,7 +223,9 @@ async function runAgentTurn(agentName, systemPrompt, settings, userMessage, hist
     localBaseUrl,
     localApiKey,
     localApiStyle,
-    onlineUrl
+    onlineUrl,
+    db,
+    userId
   } = settings;
 
   const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
@@ -254,6 +256,21 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     });
     const result = await model.generateContent(fullPrompt);
     respText = result.response.text();
+
+    // Log token usage
+    let tokenCount = 0;
+    if (result.response.usageMetadata && result.response.usageMetadata.totalTokenCount) {
+      tokenCount = result.response.usageMetadata.totalTokenCount;
+    } else {
+      tokenCount = Math.ceil((fullPrompt.length + respText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'gemini-2.0-flash', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log Gemini agent turn tokens:', err));
+    }
   } else {
     let targetUrl = provider === 'local' 
       ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
@@ -346,6 +363,23 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     respText = targetStyle === 'anthropic' 
       ? (data.content?.[0]?.text || '') 
       : (data.choices?.[0]?.message?.content || data.response || data.content || '');
+
+    // Log token usage
+    let tokenCount = 0;
+    if (data.usage && data.usage.total_tokens) {
+      tokenCount = data.usage.total_tokens;
+    } else if (data.usage && data.usage.input_tokens && data.usage.output_tokens) {
+      tokenCount = data.usage.input_tokens + data.usage.output_tokens;
+    } else {
+      tokenCount = Math.ceil((fullPrompt.length + respText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'unknown', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log OpenAI/Local agent turn tokens:', err));
+    }
   }
 
   respText = respText
@@ -383,7 +417,9 @@ async function runAgentResponse(agentName, systemPrompt, settings, userMessage, 
     localBaseUrl,
     localApiKey,
     localApiStyle,
-    onlineUrl
+    onlineUrl,
+    db,
+    userId
   } = settings;
 
   const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
@@ -400,7 +436,23 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     const genAI = new GoogleGenerativeAI(activeKey);
     const model = genAI.getGenerativeModel({ model: modelName || 'gemini-2.5-flash' });
     const result = await model.generateContent(responderInstruction);
-    return result.response.text();
+    const respText = result.response.text();
+
+    // Log token usage
+    let tokenCount = 0;
+    if (result.response.usageMetadata && result.response.usageMetadata.totalTokenCount) {
+      tokenCount = result.response.usageMetadata.totalTokenCount;
+    } else {
+      tokenCount = Math.ceil((responderInstruction.length + respText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'gemini-2.5-flash', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log Gemini response tokens:', err));
+    }
+    return respText;
   } else {
     let targetUrl = provider === 'local' 
       ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
@@ -465,7 +517,26 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     }
 
     const data = await res.json();
-    return targetStyle === 'anthropic' ? (data.content?.[0]?.text || '') : (data.choices?.[0]?.message?.content || '');
+    const respText = targetStyle === 'anthropic' ? (data.content?.[0]?.text || '') : (data.choices?.[0]?.message?.content || '');
+
+    // Log token usage
+    let tokenCount = 0;
+    if (data.usage && data.usage.total_tokens) {
+      tokenCount = data.usage.total_tokens;
+    } else if (data.usage && data.usage.input_tokens && data.usage.output_tokens) {
+      tokenCount = data.usage.input_tokens + data.usage.output_tokens;
+    } else {
+      const promptText = targetStyle === 'anthropic' ? systemPrompt + responderInstruction : JSON.stringify(body);
+      tokenCount = Math.ceil((promptText.length + respText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'unknown', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log non-gemini response tokens:', err));
+    }
+    return respText;
   }
 }
 
