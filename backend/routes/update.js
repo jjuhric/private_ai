@@ -34,8 +34,8 @@ router.post('/', express.raw({ type: 'application/json' }), (req, res) => {
   // Run update commands asynchronously in the background
   console.log('Update webhook validated. Starting pull & rebuild process...');
   const updateCmd = process.env.DEPLOY_MODE === 'backend-only'
-    ? 'git pull origin main && npm install && sudo systemctl restart private-ai'
-    : 'git pull origin main && npm run install:all && npm run build && sudo systemctl restart private-ai';
+    ? 'git checkout . && git reset --hard && (git pull origin main || echo Git pull failed) && npm install && sudo systemctl restart private-ai'
+    : 'git checkout . && git reset --hard && (git pull origin main || echo Git pull failed) && npm run install:all && npm run build && sudo systemctl restart private-ai';
   exec(updateCmd, { cwd: process.cwd() }, (err, stdout, stderr) => {
     if (err) {
       console.error(`Auto-update execution failed: ${err.message}`);

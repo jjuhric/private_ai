@@ -77,8 +77,10 @@ if [ "$SKIP_UPDATE" = false ] && [ -f ".env" ]; then
     # Verify Git and pull
     if command -v git &> /dev/null; then
         if [ -d ".git" ]; then
-            log "Pulling latest updates from git..."
-            git pull
+            log "Discarding any local changes and pulling latest updates from git..."
+            git checkout . || true
+            git reset --hard || true
+            git pull || true
         fi
     fi
 
@@ -141,8 +143,10 @@ if [ -d "$TARGET_DIR" ]; then
     
     # Check if there is a git remote first
     if [ "$SKIP_UPDATE" = false ] && git remote &> /dev/null; then
-        log "Pulling latest updates from Github..."
-        git pull
+        log "Discarding any local changes and pulling latest updates from Github..."
+        git checkout . || true
+        git reset --hard || true
+        git pull || true
     fi
 else
     log "Project directory does not exist at $TARGET_DIR. Performing clean setup..."

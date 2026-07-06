@@ -41,7 +41,7 @@ class SafeUpdateService {
         await execPromise(`git clone "${this.repoUrl}" "${this.stagingDir}"`);
       } else {
         logger.info('[Safe Update] Resetting and pulling in staging...');
-        await execPromise('git reset --hard && git checkout main && git pull origin main', { cwd: this.stagingDir });
+        await execPromise('git checkout . && git reset --hard && git checkout main && (git pull origin main || echo Git pull failed)', { cwd: this.stagingDir });
       }
 
       // Copy environment configuration to staging for realistic test run
@@ -67,7 +67,7 @@ class SafeUpdateService {
 
       // 4. If staging passed validation, pull in Active directory
       logger.info('[Safe Update] Validation passed! Applying changes to active directory...');
-      await execPromise('git pull origin main', { cwd: this.activeDir });
+      await execPromise('git checkout . && git reset --hard && (git pull origin main || echo Git pull failed)', { cwd: this.activeDir });
       
       // Update active node_modules if needed
       logger.info('[Safe Update] Re-installing production dependencies in active...');

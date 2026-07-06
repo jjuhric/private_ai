@@ -60,8 +60,13 @@ if (-not $SkipUpdate -and (Test-Path ".env")) {
         Write-Host "[ERROR] Git is not installed. Unable to pull updates." -ForegroundColor Red
     } else {
         if (Test-Path ".git") {
-            Write-Log "Pulling latest updates from git..." "Cyan"
+            Write-Log "Discarding any local changes and pulling latest updates from git..." "Cyan"
+            & git checkout .
+            & git reset --hard
             & git pull
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "⚠️ Warning: git pull failed (exit code $LASTEXITCODE). Continuing setup anyway..." -ForegroundColor Yellow
+            }
         }
     }
 
@@ -115,8 +120,13 @@ if (-not $nodeCheck) {
 
 # 3. Pull latest git changes if in a repo clone
 if (-not $SkipUpdate -and (Test-Path ".git")) {
-    Write-Log "Repository detected. Fetching latest commits..."
+    Write-Log "Repository detected. Discarding local changes and fetching latest commits..."
+    & git checkout .
+    & git reset --hard
     & git pull
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "⚠️ Warning: git pull failed (exit code $LASTEXITCODE). Continuing setup anyway..." -ForegroundColor Yellow
+    }
 }
 
 # 4. Load existing defaults from .env and Database
