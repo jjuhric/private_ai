@@ -88,6 +88,26 @@ function LMStudioLogsView({ token }) {
   const [status, setStatus] = useState('connecting');
   const [filter, setFilter] = useState('all'); // 'all', 'server', 'model'
 
+  const handleClearLogs = async () => {
+    if (!window.confirm('Are you sure you want to wipe the active LM Studio log file on disk?')) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/lmstudio/clear-logs', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setLogs([]);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to clear logs.');
+      }
+    } catch (err) {
+      alert(`Error clearing logs: ${err.message}`);
+    }
+  };
+
   useEffect(() => {
     let url = `/api/lmstudio/log-stream?token=${encodeURIComponent(token)}`;
     const eventSource = new EventSource(url);
@@ -161,7 +181,7 @@ function LMStudioLogsView({ token }) {
             Status: {status} (CLI output captures)
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {['all', 'server', 'model'].map(f => (
             <button
               key={f}
@@ -179,6 +199,21 @@ function LMStudioLogsView({ token }) {
               {f.toUpperCase()}
             </button>
           ))}
+          <button
+            onClick={handleClearLogs}
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#fca5a5',
+              fontSize: '0.75rem',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              marginLeft: '8px'
+            }}
+          >
+            Clear Logs
+          </button>
         </div>
       </div>
 

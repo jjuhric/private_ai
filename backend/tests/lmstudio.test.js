@@ -476,4 +476,42 @@ describe('LM Studio and Model Selection Tests', () => {
     const selected2 = await selectBestModel(settingsNormalDefault, 'test query', []);
     expect(selected2).toBe('google/gemma-2-9b-it');
   });
+
+  test('POST /api/lmstudio/clear-logs returns 403 when user is not main host', async () => {
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { is_main_host: 0 };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    const res = await request(app)
+      .post('/api/lmstudio/clear-logs')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: 'Only the main host is authorized to clear logs.' });
+  });
+
+  test('POST /api/lmstudio/clear-logs returns success when user is main host', async () => {
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { is_main_host: 1 };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    const res = await request(app)
+      .post('/api/lmstudio/clear-logs')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
 });
