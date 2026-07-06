@@ -22,7 +22,7 @@ for arg in "$@"; do
 done
 
 echo "===================================================="
-echo "  Private AI Assistant Setup & Update Utility V4.3.0 "
+echo "  Private AI Assistant Setup & Update Utility V4.4.0 "
 echo "===================================================="
 
 # Helper function to print logs
@@ -355,7 +355,7 @@ write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
 write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
 write_env_var "WEATHER_API_KEY" "${WEATHER_KEY}"
 write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
-write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
+write_env_var "PREFERRED_LOCAL_MODEL" "google/gemma-4-e4b"
 write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
 if [ "$IS_MAIN_HOST" = "0" ]; then
