@@ -1,6 +1,6 @@
 {
   "name": "private-ai-assistant",
-  "version": "4.6.3",
+  "version": "4.6.4",
   "description": "Local and Online AI Assistant with multi-agent orchestration and tools",
   "main": "backend/server.js",
   "scripts": {
