@@ -672,7 +672,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       const { handleCoderTool } = require('../tools/coder_tools');
       output = await handleCoderTool(decision.tool, decision.params, {
         userId,
-        onCommandApprovalRequired: settings.onCommandApprovalRequired
+        onCommandApprovalRequired: settings.onCommandApprovalRequired,
+        settings,
+        agentName
       });
     } else if (decision.tool === 'github') {
       const { handleGitHubTool } = require('../tools/github_tool');

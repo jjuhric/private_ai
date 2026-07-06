@@ -242,6 +242,7 @@ async function callGeminiStream(apiKey, modelName, systemInstruction, history, u
 async function runAgentLoop({
   db,
   userId,
+  chatId,
   provider,
   modelName,
   supervisorModel,
@@ -273,6 +274,7 @@ async function runAgentLoop({
   const settings = {
     db,
     userId,
+    chatId,
     provider,
     modelName,
     onlineProvider,
@@ -373,11 +375,111 @@ async function runAgentLoop({
 - Built-in Tools Directory: ${path.join(workingDirectory, 'backend/tools/')}
 - Dynamic Tools Registry: ${path.join(workingDirectory, 'tool_registry/tools/')}`;
 
-  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
+  let systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
   const maxToolCalls = 10;
+
+  // Intercept chat-based approvals for code execution
+  const lastAssistantMsg = [...cleanedHistory].reverse().find(msg => msg.role === 'assistant');
+  let customSystemPromptContext = '';
+
+  if (lastAssistantMsg) {
+    if (lastAssistantMsg.content.includes('[Supervisor Approval Required]')) {
+      // Parse agent and command
+      let parsedAgent = null;
+      let parsedCommand = null;
+      
+      const agentIndex = lastAssistantMsg.content.indexOf('Agent:');
+      const commandIndex = lastAssistantMsg.content.indexOf('Command:');
+      const qaIndex = lastAssistantMsg.content.indexOf('QA Analysis:');
+      const errorIndex = lastAssistantMsg.content.indexOf('Error:');
+      const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : lastAssistantMsg.content.indexOf('This command could cause'));
+      
+      if (agentIndex !== -1 && commandIndex !== -1 && endCommandIndex !== -1 && endCommandIndex > commandIndex) {
+        parsedAgent = lastAssistantMsg.content.substring(agentIndex + 6, commandIndex).trim();
+        parsedCommand = lastAssistantMsg.content.substring(commandIndex + 8, endCommandIndex).trim();
+      }
+
+      if (parsedAgent && parsedCommand) {
+        const reply = userMessage.trim().toLowerCase();
+        if (reply.startsWith('1') || reply === 'yes' || reply.includes('approve') || reply.includes('go ahead') || reply.includes('ok')) {
+          onThought(`User approved the command: "${parsedCommand}". Executing...\n`);
+          const { handleCoderTool } = require('./tools/coder_tools');
+          
+          let toolOutput = '';
+          try {
+            toolOutput = await handleCoderTool('execute_command', { command: parsedCommand }, {
+              userId,
+              settings,
+              skipVerification: true,
+              agentName: parsedAgent
+            });
+          } catch (err) {
+            toolOutput = `Error running command: ${err.message}`;
+          }
+          
+          accumulatedToolOutputs.push({
+            tool: `delegate_to_${parsedAgent}`,
+            output: toolOutput
+          });
+          
+          currentHistory.push({
+            role: 'assistant',
+            content: lastAssistantMsg.content
+          });
+          currentHistory.push({
+            role: 'user',
+            content: userMessage
+          });
+          currentHistory.push({
+            role: 'user',
+            content: `[Output for execute_command]:\n${toolOutput}`
+          });
+          
+          toolCallsCount = 1; // Mark that we did 1 tool call turn already
+        } else if (reply.startsWith('2') || reply === 'no' || reply.includes('reject') || reply.includes('refuse')) {
+          onThought("User rejected running the command. Asking why...\n");
+          const promptMsg = "Why did you choose not to go forward with this code?";
+          onContent(promptMsg);
+          
+          if (db && typeof db.run === 'function' && chatId) {
+            await db.run(
+              'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+              [chatId, 'assistant', promptMsg]
+            ).catch(err => console.error('Failed to save rejection prompt to database:', err));
+          }
+          return;
+        }
+      }
+    } else if (lastAssistantMsg.content.includes('Why did you choose not to go forward with this code?')) {
+      // The user is responding with their reason for rejection.
+      // Find the original command proposal in history.
+      const originalProposal = [...cleanedHistory].reverse().find(msg => msg.role === 'assistant' && msg.content.includes('[Supervisor Approval Required]'));
+      let rejectedCommandInfo = '';
+      if (originalProposal) {
+        let parsedCommand = null;
+        const commandIndex = originalProposal.content.indexOf('Command:');
+        const qaIndex = originalProposal.content.indexOf('QA Analysis:');
+        const errorIndex = originalProposal.content.indexOf('Error:');
+        const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : originalProposal.content.indexOf('This command could cause'));
+        if (commandIndex !== -1 && endCommandIndex !== -1 && endCommandIndex > commandIndex) {
+          parsedCommand = originalProposal.content.substring(commandIndex + 8, endCommandIndex).trim();
+          rejectedCommandInfo = `The user rejected running this command: "${parsedCommand}".\n`;
+        }
+      }
+      
+      customSystemPromptContext = `\n\n### User Command Rejection Context:
+${rejectedCommandInfo}The user chose not to run the code/command and provided this reason: "${userMessage}".
+Please evaluate their reason. If changes to the code or command are required based on their feedback, make those changes (e.g. call the coder agent to edit the files, or adjust the command) and ask for approval again (which will undergo QA and Supervisor review again).
+If no changes are required and you can proceed without executing the code, then continue.`;
+    }
+  }
+
+  if (customSystemPromptContext) {
+    systemPrompt += customSystemPromptContext;
+  }
 
   while (toolCallsCount < maxToolCalls) {
     if (abortSignal?.aborted || (isAborted && isAborted())) {

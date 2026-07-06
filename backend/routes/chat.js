@@ -227,6 +227,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
     await runAgentLoop({
       db,
       userId: req.user.id,
+      chatId,
       provider: settings.provider,
       modelName: actualModel,
       supervisorModel: actualModel,

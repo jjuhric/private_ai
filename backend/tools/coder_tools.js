@@ -85,8 +85,37 @@ async function handleExecuteCommand(params, options = {}) {
   if (!command) return 'Error: "command" parameter is required.';
   let result = null;
 
-  // If command approval is enabled, wait for the user to approve
-  if (options.onCommandApprovalRequired) {
+  // QA and Supervisor verification for agent loop executions
+  if (options.settings && process.env.NODE_ENV !== 'test' && !options.skipVerification) {
+    const { verifyCommandWithQAAndSupervisor } = require('../utils/codeVerifier');
+    const agentName = options.agentName || 'unknown_agent';
+    try {
+      const { qaResult, supervisorResult } = await verifyCommandWithQAAndSupervisor(command, agentName, options.settings);
+      
+      if (supervisorResult.can_cause_disruptions || !qaResult.approved) {
+        return `INPUT_REQUIRED_FROM_USER: [Supervisor Approval Required]
+Agent: ${agentName}
+Command: ${command}
+QA Analysis: ${qaResult.reason}
+Supervisor Evaluation: ${supervisorResult.reason}
+This command could cause disruptions. Do you want to run this? Please reply with:
+1 - Yes
+2 - No`;
+      }
+    } catch (err) {
+      console.error('Verification failed:', err);
+      return `INPUT_REQUIRED_FROM_USER: [Supervisor Approval Required]
+Agent: ${agentName}
+Command: ${command}
+Error: QA/Supervisor verification failed: ${err.message}
+This command could cause disruptions. Do you want to run this? Please reply with:
+1 - Yes
+2 - No`;
+    }
+  }
+
+  // If command approval is enabled, wait for the user to approve (legacy)
+  if (options.onCommandApprovalRequired && !options.settings) {
     const commandId = 'cmd_' + Math.random().toString(36).substring(2, 15);
     
     // Fire event to client via SSE callback
