@@ -16,10 +16,7 @@ function resolveLlmModelsUrl(baseUrl, apiStyle = 'openai') {
     return `${cleanUrl}/api/v1/models`;
   }
 
-  if (url.includes('/v1')) {
-    return `${url}/models`;
-  }
-  return `${url}/v1/models`;
+  return `${url}/models`;
 }
 
 router.get('/', authenticateToken, async (req, res) => {

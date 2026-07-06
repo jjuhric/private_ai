@@ -55,11 +55,7 @@ async function getEmbedding(text, userSettings = {}) {
           modelsUrl = `http://${modelsUrl}`;
         }
         modelsUrl = modelsUrl.replace(/\/$/, '');
-        if (modelsUrl.includes('/v1')) {
-          modelsUrl = `${modelsUrl}/models`;
-        } else {
-          modelsUrl = `${modelsUrl}/v1/models`;
-        }
+        modelsUrl = `${modelsUrl}/models`;
 
         const headers = {};
         if (apiKey && apiKey !== 'lm-studio') {

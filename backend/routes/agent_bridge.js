@@ -104,11 +104,7 @@ router.get('/health', async (req, res) => {
         fetchUrl = `http://${fetchUrl}`;
       }
       fetchUrl = fetchUrl.replace(/\/$/, '');
-      if (fetchUrl.includes('/v1')) {
-        fetchUrl = `${fetchUrl}/models`;
-      } else {
-        fetchUrl = `${fetchUrl}/v1/models`;
-      }
+      fetchUrl = `${fetchUrl}/models`;
 
       const llmRes = await fetch(fetchUrl, { signal: controller.signal });
       clearTimeout(id);
