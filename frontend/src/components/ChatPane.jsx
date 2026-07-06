@@ -118,7 +118,7 @@ export default function ChatPane({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', color: '#ff6b6b', margin: 0 }}>
                         🛡️ Host Script Execution Request
-                        {settings?.is_main_host === 1 && (
+                        {(settings?.is_main_host === 1 || settings?.is_main_host === true) && (
                           <span style={{ fontSize: '0.75rem', background: '#ff4444', color: '#fff', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px' }}>
                             WINDOWS STRICT MODE
                           </span>
@@ -144,7 +144,7 @@ export default function ChatPane({
                       </div>
                     )}
                     <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--text-secondary)' }}>
-                      {settings?.is_main_host === 1
+                      {(settings?.is_main_host === 1 || settings?.is_main_host === true)
                         ? "⚠️ STRICT MODE: The AI wants to execute a terminal command on the Main Host. Because Windows runs the LLM, any system changes here are inherently risky. Please review carefully."
                         : "The AI wants to execute a terminal command. You can review, edit, or reject this request."
                       }

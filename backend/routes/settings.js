@@ -115,7 +115,7 @@ router.put('/', authenticateToken, async (req, res) => {
         req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', finalGithub, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
-        device_type || 'windows', typeof is_main_host === 'number' ? is_main_host : 0, resolvedWorkingDir
+        device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir
       ]
     );
     res.json({ success: true, message: 'Settings updated successfully.' });

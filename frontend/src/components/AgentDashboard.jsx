@@ -453,7 +453,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
             <BarChart2 size={14} style={{ marginRight: '6px' }} />
             Show Token Count
           </button>
-          {settings?.is_main_host && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '3000' || window.location.port === '5173') && (
+          {(settings?.is_main_host === true || settings?.is_main_host === 1 || settings?.is_main_host === '1') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '3000' || window.location.port === '5173') && (
             <button 
               className={`btn btn-secondary ${activeSubTab === 'logs' ? 'active' : ''}`}
               onClick={() => setActiveSubTab('logs')}
@@ -969,7 +969,7 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
         <TokenCountView token={token} />
       )}
 
-      {activeSubTab === 'logs' && settings?.is_main_host && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '3000' || window.location.port === '5173') && (
+      {activeSubTab === 'logs' && (settings?.is_main_host === true || settings?.is_main_host === 1 || settings?.is_main_host === '1') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '3000' || window.location.port === '5173') && (
         <LMStudioLogsView token={token} />
       )}
 
