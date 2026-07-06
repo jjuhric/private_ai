@@ -115,10 +115,12 @@ export default function ChatPane({
         {messages.map(msg => (
           <div key={msg.id} className={`message-bubble-wrapper ${msg.role}`}>
             {msg.thoughts && <ExpandableThoughts thoughts={msg.thoughts} />}
-            <div 
-              className="message-bubble"
-              dangerouslySetInnerHTML={{ __html: marked.parse(msg.content) }}
-            />
+            {msg.content && msg.content.trim() !== '' && (
+              <div 
+                className="message-bubble"
+                dangerouslySetInnerHTML={{ __html: marked.parse(msg.content) }}
+              />
+            )}
           </div>
         ))}
 
