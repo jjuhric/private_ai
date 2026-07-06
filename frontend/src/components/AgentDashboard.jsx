@@ -20,9 +20,38 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
   const [restartServiceName, setRestartServiceName] = useState('private-ai');
   const [restartingService, setRestartingService] = useState(false);
 
-  // Scanner and Walkthrough State
+   // Scanner and Walkthrough State
   const [scanning, setScanning] = useState(false);
   const [discoveredNodes, setDiscoveredNodes] = useState([]);
+  
+  // Health Polling State & Logic (Rule 5)
+  const [nodeHealthMap, setNodeHealthMap] = useState({});
+
+  const performNodeHealthPoll = async (configuredNodes) => {
+    const results = await Promise.all(
+      configuredNodes.map(async (node) => {
+        try {
+          const targetUrl = `http://${node.ip_address}:${node.port}/api/bridge/health`;
+          const res = await fetch(targetUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            return { id: node.id, health: data };
+          }
+        } catch (err) {}
+        return { id: node.id, health: { status: 'offline', dependencies: {} } };
+      })
+    );
+
+    setNodeHealthMap(prev => {
+      const nextHealth = { ...prev };
+      for (const res of results) {
+        nextHealth[res.id] = res.health;
+      }
+      return nextHealth;
+    });
+  };
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [selectedGuideDevice, setSelectedGuideDevice] = useState('rpi-5-8gb');
 
@@ -83,6 +112,16 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
       fetchNodes();
     }
   }, [activeSubTab]);
+
+  useEffect(() => {
+    if (activeSubTab === 'nodes' && nodes.length > 0) {
+      performNodeHealthPoll(nodes);
+      const intervalId = setInterval(() => {
+        performNodeHealthPoll(nodes);
+      }, 60000);
+      return () => clearInterval(intervalId);
+    }
+  }, [activeSubTab, nodes]);
 
   const fetchNodes = async () => {
     try {
@@ -642,27 +681,57 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
                     <th style={{ padding: '8px' }}>Name</th>
                     <th style={{ padding: '8px' }}>Type</th>
                     <th style={{ padding: '8px' }}>IP:Port</th>
+                    <th style={{ padding: '8px' }}>Subsystems Health</th>
                     <th style={{ padding: '8px' }}>Last Seen</th>
                     <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {nodes.map(node => (
-                    <tr key={node.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '10px 8px' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: node.is_online ? '#34d399' : '#ff6b6b' }}></div>
-                      </td>
-                      <td style={{ padding: '10px 8px', color: '#fff', fontWeight: 500 }}>{node.node_name}</td>
-                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.device_type}</td>
-                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.ip_address}:{node.port}</td>
-                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{new Date(node.last_seen).toLocaleString()}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                        <button className="btn btn-icon" onClick={() => handleDeleteNode(node.id)} style={{ color: '#ff6b6b', padding: '4px' }}>
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {nodes.map(node => {
+                    const health = nodeHealthMap[node.id];
+                    const isOnline = health ? health.status === 'online' : node.is_online;
+                    return (
+                      <tr key={node.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '10px 8px' }}>
+                          <div style={{ 
+                            width: '10px', 
+                            height: '10px', 
+                            borderRadius: '50%', 
+                            background: isOnline ? '#34d399' : '#ff6b6b',
+                            boxShadow: isOnline ? '0 0 8px #34d399' : 'none'
+                          }}></div>
+                        </td>
+                        <td style={{ padding: '10px 8px', color: '#fff', fontWeight: 500 }}>{node.node_name}</td>
+                        <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.device_type}</td>
+                        <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.ip_address}:{node.port}</td>
+                        <td style={{ padding: '10px 8px' }}>
+                          {health && health.dependencies ? (
+                            <div style={{ display: 'flex', gap: '6px', fontSize: '0.75rem' }}>
+                              <span className="badge" style={{ padding: '2px 6px', borderRadius: '4px', background: health.dependencies.llm_provider === 'stable' ? '#059669' : '#dc2626', color: '#fff' }}>
+                                LLM: {health.dependencies.llm_provider === 'stable' ? 'OK' : 'ERR'}
+                              </span>
+                              <span className="badge" style={{ padding: '2px 6px', borderRadius: '4px', background: health.dependencies.database === 'stable' ? '#059669' : '#dc2626', color: '#fff' }}>
+                                DB: {health.dependencies.database === 'stable' ? 'OK' : 'ERR'}
+                              </span>
+                              <span className="badge" style={{ padding: '2px 6px', borderRadius: '4px', background: health.dependencies.mqtt_broker === 'stable' ? '#059669' : '#dc2626', color: '#fff' }}>
+                                MQTT: {health.dependencies.mqtt_broker === 'stable' ? 'OK' : 'ERR'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                              Awaiting telemetry sync...
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{new Date(node.last_seen).toLocaleString()}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                          <button className="btn btn-icon" onClick={() => handleDeleteNode(node.id)} style={{ color: '#ff6b6b', padding: '4px' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (

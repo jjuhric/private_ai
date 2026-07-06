@@ -364,4 +364,83 @@ describe('Agents Coverage Extender Tests', () => {
 
     await expect(runWorkerAgent('weather_expert', badSettings, 'Test fail', {}, 1, 'token')).rejects.toThrow('LLM Error: 503');
   });
+
+  test('runWorkerAgent new options: status streaming, command approval, prompt interception', async () => {
+    const onIntermediateStatusUpdate = jest.fn();
+    const onStatusUpdate = jest.fn();
+    const onCommandApprovalRequired = jest.fn().mockResolvedValue(true);
+    const onPromptHumanInterception = jest.fn().mockResolvedValue('user context info');
+
+    const settings = {
+      provider: 'openai',
+      model_name: 'gpt-4',
+      onIntermediateStatusUpdate,
+      onStatusUpdate,
+      onCommandApprovalRequired,
+      onPromptHumanInterception
+    };
+
+    let fetchCalls = 0;
+    global.fetch = jest.fn().mockImplementation(async () => {
+      fetchCalls++;
+      if (fetchCalls === 1) {
+        // Mutation action to trigger onCommandApprovalRequired
+        return {
+          ok: true,
+          headers: { get: () => 'application/json' },
+          json: async () => ({
+            choices: [{ message: { content: JSON.stringify({ tool: 'write_file', action: 'write', params: { filePath: 't.txt', content: 'test' } }) } }]
+          })
+        };
+      }
+      if (fetchCalls === 2) {
+        // Return output with INPUT_REQUIRED_FROM_USER to trigger onPromptHumanInterception
+        return {
+          ok: true,
+          headers: { get: () => 'application/json' },
+          json: async () => ({
+            choices: [{ message: { content: JSON.stringify({ tool: 'weather', action: 'get', params: { zipcode: '123' } }) } }]
+          })
+        };
+      }
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({ tool: 'none' }) } }]
+        })
+      };
+    });
+
+    const mockCoder = require('../tools/coder_tools');
+    mockCoder.handleCoderTool.mockResolvedValueOnce('INPUT_REQUIRED_FROM_USER: What is the city?');
+
+    const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1, 'token');
+    expect(result).toBeDefined();
+    expect(onIntermediateStatusUpdate).toHaveBeenCalled();
+    expect(onStatusUpdate).toHaveBeenCalled();
+    expect(onCommandApprovalRequired).toHaveBeenCalled();
+    expect(onPromptHumanInterception).toHaveBeenCalled();
+  });
+
+  test('runWorkerAgent mutation action rejected path', async () => {
+    const onCommandApprovalRequired = jest.fn().mockResolvedValue(false);
+    const settings = {
+      provider: 'openai',
+      model_name: 'gpt-4',
+      onCommandApprovalRequired
+    };
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify({ tool: 'write_file', action: 'write', params: { filePath: 't.txt', content: 'test' } }) } }]
+      })
+    });
+
+    const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1, 'token');
+    expect(result).toContain('Pipeline Interrupted');
+    expect(onCommandApprovalRequired).toHaveBeenCalled();
+  });
 });

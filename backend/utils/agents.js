@@ -1,28 +1,17 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const AGENT_PROMPTS = {
-  supervisor: `You are the Supervisor Agent of the Private AI system.
-Your job is to orchestrate, delegate tasks to specialized sub-agents, gather their findings, and compile the final response.
+  supervisor: `You are the Supervisor Agent and the core intermediary between the human user and all specialized sub-agents across the distributed network.
+Your primary role is orchestration, context gathering, and task delegation.
 
-### Available Sub-Agents & Their Expertise:
-1. delegate_to_memory_agent (params: { task }): Best for recalling past memories/preferences, remembering new facts, or forgetting/deleting obsolete facts. Use this to search memories if you need past user context or previously stored details to answer.
-2. delegate_to_web_searcher (params: { query }): Best for web searching, reading/scraping external links, and finding recent news.
-3. delegate_to_calendar_handler (params: { action, params }): Best for managing meetings, appointments, and event scheduling (list, add, delete).
-4. delegate_to_coder (params: { task }): Best for reading/writing local workspace files, git/GitHub integrations, and executing shell commands.
-5. delegate_to_qa_engineer (params: { task }): Best for reviewing code quality, finding bugs/vulnerabilities, and running project tests.
-6. delegate_to_weather_expert (params: { action, zipcode, country }): Best for retrieving current, hourly, or daily forecasts.
-7. delegate_to_host_specialist (params: { query }): Best for inspecting local computer system details (CPU, memory, disk, OS, networks, processes), checking power/battery status, restarting services, and running scripts.
-8. delegate_to_document_vault (params: { query }): Best for querying local private files, notes, or uploaded documents in the Vault.
-9. delegate_to_node_agent (params: { task }): Best for listing remote network nodes, querying their system information, or executing commands/files remotely on them (RPi, ESP32, etc.).
-10. delegate_to_developer (params: { task }): Best for dynamic custom tool creation, extending agent capabilities, and managing the development pipeline. Use when the user requests creating a new tool or capabilities on a node.
+### INTER-NODE ROUTING RULES (CRITICAL - RULE 2):
+1. **Local Freedom**: Sub-agents residing on the same host environment can communicate and exchange data freely without your intervention.
+2. **Cross-Node Isolation**: Expert agents cannot jump machine boundaries directly. For example, a Coder agent running on the Main Windows Host is strictly forbidden from directly commanding a Host Specialist agent on a remote Raspberry Pi. 
+3. **Supervisor-to-Supervisor Handshake**: To query or modify a remote network node, you must delegate the instruction to your localized 'node_agent'. The node agent will act as a structural network bridge to connect you with the remote Node's Supervisor Agent, establishing an isolated supervisor-to-supervisor handshake.
 
-### Direct Core Tools:
-- time (action: 'current_time' or 'lookup_timezone'): Use to find the current date/time.
-
-### CRITICAL RULES:
-1. Delegation first: Do not answer questions yourself if they require external actions (searching, coding, calendar, host specs, weather, vault query, remote node execution). Always delegate to the appropriate specialized agent.
-2. Inspect Memories & Profile: You will receive the user's profile details and core identity/location memories. If you need other custom user facts or past context, delegate to the memory agent first to recall them.
-3. Iterative Decision: Review the sub-agent's structured report. Decide if it has compiled enough information to answer the user request or if further delegation/turns are needed.`,
+### HUMAN-IN-THE-LOOP (HITL) PERMISSIONS (RULE 1 & 8):
+- You are the absolute main intermediary between humans and network agents. If a task requires more human information or verification, you must pause execution and ask the human immediately.
+- The Main Host Machine has permission to make tools, update workspace files, or run system updates to itself or remote nodes, but it **CRITICALLY REQUIRES Human-In-The-Loop (HITL) approval** before executing any write or mutation operations.`,
 
   node_agent: `You are the Network Node Routing Agent.
 Your job is to list remote network nodes and route commands, files, or queries to them.
@@ -71,19 +60,12 @@ Rules:
 - Perform the requested calendar actions and check the outcomes.
 - Format your output clearly (listing events, confirming additions, etc.), stating if the task was completed successfully.`,
 
-  coder: `You are the Coding Agent (Superior Developer).
-Your job is to read/write files and execute shell commands inside the workspace directory.
-Available Tools:
-- read_file (params: { filePath })
-- write_file (params: { filePath, content })
-- list_dir (params: { dirPath })
-- execute_command (params: { command, safety_analysis: { risk_level, reason, potential_harm, recommendation } })
-- github (action: 'list_repos' | 'get_repo' | 'list_issues', params: { owner, repo })
+  coder: `You are the Coding Agent. Your job is to inspect, manage, and write functional source code files inside the local workspace directory.
 
-Rules:
-- Safety Rule: Before calling execute_command, you MUST populate the 'safety_analysis' parameter. Specify risk_level ("low" | "medium" | "high"), reason (what this does in plain English), potential_harm (what could go wrong if run incorrectly), and recommendation ("safe_to_approve" | "review_carefully" | "do_not_approve").
-- Execute coding actions carefully and verify changes (e.g. running tests via execute_command if applicable).
-- Format your findings, outputting relevant files, build outputs, or repo details, and clearly state whether the coding task is complete.`,
+### SYSTEM STABILITY AND FILE SAFETY INSTRUCTIONS:
+1. **Do No Harm**: You must be extremely careful when altering files. Never overwrite critical runtime directories, environment files, or system paths blindly without validating current structures first.
+2. **Structural Validation**: Inspect configuration files, check imports, and run tests before finalizing code writes.
+3. **Modification Bounds**: You can write code modules, patch bugs, or manage updates on this machine, but you must report back to the Supervisor to let the Human-In-The-Loop check and approve your changes before you execute them.`,
 
   qa_engineer: `You are the Quality Assurance Agent.
 Your job is to inspect code for vulnerabilities, bugs, and verify quality standards.
@@ -392,10 +374,12 @@ Generate a detailed final report summarizing your actions and findings. Make it 
 }
 
 async function runWorkerAgent(agentName, settings, task, db, userId, githubToken) {
-  let systemPrompt = AGENT_PROMPTS[agentName];
-  if (!systemPrompt) throw new Error(`Unknown agent: ${agentName}`);
+  global.activeAgentOps = (global.activeAgentOps || 0) + 1;
+  try {
+    let systemPrompt = AGENT_PROMPTS[agentName];
+    if (!systemPrompt) throw new Error(`Unknown agent: ${agentName}`);
 
-  // Fetch and inject user profile details if db and userId are available
+    // Fetch and inject user profile details if db and userId are available
   if (db && userId) {
     try {
       const profile = await db.get(
@@ -446,6 +430,35 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     
     if (!decision.tool || decision.tool === 'none') {
       break;
+    }
+
+    // Rule 3: Stream immediate step announcements to prevent continuous thinking states
+    if (settings.onIntermediateStatusUpdate) {
+      settings.onIntermediateStatusUpdate({
+        message: `Asking ${decision.tool} agent for operational task: "${decision.action || 'processing'}"...`,
+        thought: decision.thought
+      });
+    }
+    if (settings.onStatusUpdate) {
+      settings.onStatusUpdate(`Asking ${decision.tool} agent for operational task: "${decision.action || 'processing'}"...`);
+    }
+
+    // Rule 1 & 8: Intercept write actions or tool generation cycles
+    const isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) || 
+                             (decision.tool === 'dev_pipeline' && decision.action === 'create_tool') ||
+                             (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command', 'update_node'].includes(decision.action));
+
+    if (isMutationAction && settings.onCommandApprovalRequired) {
+      const approved = await settings.onCommandApprovalRequired({
+        tool: decision.tool,
+        action: decision.action,
+        params: decision.params,
+        explanation: `Tool creation or file mutation request initiated by expert thread module.`
+      });
+      
+      if (!approved) {
+        return "Pipeline Interrupted: Dynamic tool update or file update mutation was explicitly rejected by the human operator.";
+      }
     }
 
     if (settings.onToolCall) {
@@ -535,6 +548,15 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       }
     }
 
+    // Rule 7 Loop: Missing input context collection
+    if (output && typeof output === 'string' && output.includes('INPUT_REQUIRED_FROM_USER')) {
+      if (settings.onPromptHumanInterception) {
+        const userPayloadResponse = await settings.onPromptHumanInterception({ message: output });
+        decision.params.userInputContext = userPayloadResponse;
+        continue; // Seamlessly loop back and re-run with parameters active
+      }
+    }
+
     toolOutputs.push({ tool: decision.tool, action: decision.action, output });
     
     history.push({
@@ -550,6 +572,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
   }
 
   return await runAgentResponse(agentName, systemPrompt, settings, task, history, toolOutputs);
+  } finally {
+    global.activeAgentOps = Math.max(0, global.activeAgentOps - 1);
+  }
 }
 
 module.exports = {

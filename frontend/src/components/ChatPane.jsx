@@ -16,7 +16,8 @@ export default function ChatPane({
   handleSendMessage,
   handleStop,
   messagesEndRef,
-  handleResolveCommand
+  handleResolveCommand,
+  streamStatus
 }) {
   const [editedCommands, setEditedCommands] = useState({});
 
@@ -214,7 +215,7 @@ export default function ChatPane({
             {(streamContent || isStreaming) && (
               <div 
                 className={`message-bubble ${!streamContent ? 'typing-cursor' : ''}`}
-                dangerouslySetInnerHTML={{ __html: marked.parse(streamContent || 'Thinking...') }}
+                dangerouslySetInnerHTML={{ __html: marked.parse(streamContent || streamStatus || 'Thinking...') }}
               />
             )}
           </div>

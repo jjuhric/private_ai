@@ -156,4 +156,83 @@ describe('GitHub Tool Tests', () => {
     expect(parsed.success).toBe(true);
     expect(parsed.url).toBe('https://github.com/pr/1');
   });
+
+  describe('stage_feature_pr action tests', () => {
+    test('stage_feature_pr action - success path', async () => {
+      const cp = require('child_process');
+      const originalExec = cp.exec;
+      cp.exec = jest.fn((cmd, opts, callback) => {
+        const cb = typeof opts === 'function' ? opts : callback;
+        cb(null, 'mock stdout', 'mock stderr');
+      });
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ html_url: 'https://github.com/owner/repo/pull/1' })
+      });
+
+      const result = await handleGitHubTool('token', 'stage_feature_pr', {
+        branchName: 'feat-new-tool',
+        commitMessage: 'add cool tool',
+        repoOwner: 'owner',
+        repoName: 'repo',
+        files: []
+      });
+
+      expect(result).toContain('GitHub Workflow Success');
+      expect(result).toContain('https://github.com/owner/repo/pull/1');
+
+      cp.exec = originalExec; // restore
+    });
+
+    test('stage_feature_pr action - blocked by test failure', async () => {
+      const cp = require('child_process');
+      const originalExec = cp.exec;
+      cp.exec = jest.fn((cmd, opts, callback) => {
+        const cb = typeof opts === 'function' ? opts : callback;
+        if (cmd === 'npm run test:coverage') {
+          cb(new Error('Test crashed'));
+        } else {
+          cb(null, 'mock stdout', 'mock stderr');
+        }
+      });
+
+      const result = await handleGitHubTool('token', 'stage_feature_pr', {
+        branchName: 'feat-new-tool',
+        commitMessage: 'add cool tool',
+        repoOwner: 'owner',
+        repoName: 'repo',
+        files: []
+      });
+
+      expect(result).toContain('GitHub Automation Blocked');
+
+      cp.exec = originalExec; // restore
+    });
+
+    test('stage_feature_pr action - check out failure', async () => {
+      const cp = require('child_process');
+      const originalExec = cp.exec;
+      cp.exec = jest.fn((cmd, opts, callback) => {
+        const cb = typeof opts === 'function' ? opts : callback;
+        if (cmd.startsWith('git checkout')) {
+          cb(new Error('Checkout failed'));
+        } else {
+          cb(null, 'mock stdout', 'mock stderr');
+        }
+      });
+
+      const result = await handleGitHubTool('token', 'stage_feature_pr', {
+        branchName: 'feat-new-tool',
+        commitMessage: 'add cool tool',
+        repoOwner: 'owner',
+        repoName: 'repo',
+        files: []
+      });
+
+      expect(result).toContain('Git Isolation Error');
+
+      cp.exec = originalExec; // restore
+    });
+  });
 });

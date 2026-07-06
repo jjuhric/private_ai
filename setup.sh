@@ -38,6 +38,20 @@ log_error() {
     echo -e "\n[ERROR] $1" >&2
 }
 
+# Detect presence of configuration targets
+if [ ! -f ".env" ]; then
+    echo "⚠️ Warning: Target environment layout configuration file [.env] was not found!"
+    echo "Would you like to configure mandatory environment properties via this console shell now? (y/N)"
+    read -r configure_now
+    
+    if [ "$configure_now" = "y" ] || [ "$configure_now" = "Y" ]; then
+        NON_INTERACTIVE=false
+    else
+        echo "💡 Initialization Notice: Missing configurations can be completed using the Setup Wizard Dashboard directly inside your browser once runtime starts up."
+        NON_INTERACTIVE=true
+    fi
+fi
+
 # Update check: If already setup, treat as update
 if [ "$SKIP_UPDATE" = false ] && [ -f ".env" ]; then
     log "Existing setup detected (.env file exists). Treating as an update..."
@@ -136,6 +150,13 @@ DEFAULT_GITHUB_TOKEN=""
 DEFAULT_BUILD_FE="y"
 DEFAULT_PORT="3000"
 DEFAULT_MAIN_HOST_IP="uhrick-home.local"
+DEFAULT_DB_PATH="backend/database.db"
+DEFAULT_MQTT_BROKER_URL="mqtt://localhost:1883"
+DEFAULT_MQTT_NODE_ID="windows-main"
+DEFAULT_MQTT_USERNAME=""
+DEFAULT_MQTT_PASSWORD=""
+DEFAULT_TOOL_REGISTRY_REPO="https://github.com/jjuhric/private_ai_tools.git"
+DEFAULT_TOOL_REGISTRY_LOCAL_PATH="./tool_registry"
 
 if [ -f ".env" ]; then
     DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
@@ -145,6 +166,13 @@ if [ -f ".env" ]; then
     DEFAULT_GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_ONLINE_PROVIDER=$(grep -E "^ONLINE_PROVIDER=" .env | cut -d'=' -f2 || echo "gemini")
     DEFAULT_MAIN_HOST_IP=$(grep -E "^MAIN_HOST_IP=" .env | cut -d'=' -f2 || echo "uhrick-home.local")
+    DEFAULT_DB_PATH=$(grep -E "^DB_PATH=" .env | cut -d'=' -f2 || echo "backend/database.db")
+    DEFAULT_MQTT_BROKER_URL=$(grep -E "^MQTT_BROKER_URL=" .env | cut -d'=' -f2 || echo "mqtt://localhost:1883")
+    DEFAULT_MQTT_NODE_ID=$(grep -E "^MQTT_NODE_ID=" .env | cut -d'=' -f2 || echo "windows-main")
+    DEFAULT_MQTT_USERNAME=$(grep -E "^MQTT_USERNAME=" .env | cut -d'=' -f2 || echo "")
+    DEFAULT_MQTT_PASSWORD=$(grep -E "^MQTT_PASSWORD=" .env | cut -d'=' -f2 || echo "")
+    DEFAULT_TOOL_REGISTRY_REPO=$(grep -E "^TOOL_REGISTRY_REPO=" .env | cut -d'=' -f2 || echo "https://github.com/jjuhric/private_ai_tools.git")
+    DEFAULT_TOOL_REGISTRY_LOCAL_PATH=$(grep -E "^TOOL_REGISTRY_LOCAL_PATH=" .env | cut -d'=' -f2 || echo "./tool_registry")
     
     # Try to load existing settings from database using read_settings.js helper (to override .env defaults if DB is populated)
     if [ -d "backend/node_modules" ]; then
@@ -275,6 +303,7 @@ write_env_var() {
 }
 
 write_env_var "PORT" "${APP_PORT}"
+write_env_var "DB_PATH" "${DEFAULT_DB_PATH}"
 write_env_var "LOCAL_LLM_URL" "${LOCAL_URL}"
 write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
 write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
@@ -282,6 +311,12 @@ write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
 write_env_var "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
+write_env_var "MQTT_BROKER_URL" "${DEFAULT_MQTT_BROKER_URL}"
+write_env_var "MQTT_NODE_ID" "${DEFAULT_MQTT_NODE_ID}"
+write_env_var "MQTT_USERNAME" "${DEFAULT_MQTT_USERNAME}"
+write_env_var "MQTT_PASSWORD" "${DEFAULT_MQTT_PASSWORD}"
+write_env_var "TOOL_REGISTRY_REPO" "${DEFAULT_TOOL_REGISTRY_REPO}"
+write_env_var "TOOL_REGISTRY_LOCAL_PATH" "${DEFAULT_TOOL_REGISTRY_LOCAL_PATH}"
 if [ "$IS_MAIN_HOST" = "0" ]; then
     write_env_var "MAIN_HOST_IP" "${MAIN_HOST_IP}"
 fi

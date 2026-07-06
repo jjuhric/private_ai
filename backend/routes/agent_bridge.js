@@ -69,6 +69,62 @@ async function authenticateBridge(req, res, next) {
   return res.status(403).json({ error: 'Forbidden: Invalid token or bridge secret' });
 }
 
+// GET /api/bridge/health - Health check diagnostics (Rule 5 & 6)
+router.get('/health', async (req, res) => {
+  const diagnostics = {
+    status: 'online',
+    timestamp: new Date().toISOString(),
+    dependencies: {
+      database: 'offline',
+      llm_provider: 'offline',
+      mqtt_broker: 'offline'
+    }
+  };
+
+  try {
+    const db = await getDb();
+    const dbCheck = await db.get('SELECT 1');
+    if (dbCheck) diagnostics.dependencies.database = 'stable';
+  } catch (err) {
+    diagnostics.status = 'degraded';
+    diagnostics.dependencies.database = `error: ${err.message}`;
+  }
+
+  try {
+    const db = await getDb();
+    const settings = await db.get('SELECT local_url, provider FROM user_settings LIMIT 1');
+    
+    if (settings && settings.provider === 'local') {
+      const targetUrl = settings.local_url || 'http://192.168.1.42:1234/v1';
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 2000); // 2s timeout
+      
+      const llmRes = await fetch(`${new URL(targetUrl).origin}/v1/models`, { signal: controller.signal });
+      clearTimeout(id);
+      if (llmRes.ok) diagnostics.dependencies.llm_provider = 'stable';
+    } else {
+      diagnostics.dependencies.llm_provider = 'configured-external';
+    }
+  } catch (err) {
+    diagnostics.status = 'degraded';
+    diagnostics.dependencies.llm_provider = `unreachable: ${err.message}`;
+  }
+
+  try {
+    const mqttService = require('../services/mqtt_service');
+    if (mqttService.client && mqttService.connected) {
+      diagnostics.dependencies.mqtt_broker = 'stable';
+    } else {
+      diagnostics.dependencies.mqtt_broker = 'disconnected';
+    }
+  } catch (err) {
+    diagnostics.dependencies.mqtt_broker = 'not_configured';
+  }
+
+  const statusCode = diagnostics.status === 'online' ? 200 : 207;
+  return res.status(statusCode).json(diagnostics);
+});
+
 // POST /api/bridge/execute - Execute command remotely on this node
 router.post('/execute', authenticateBridge, async (req, res) => {
   const { action, params = {} } = req.body;
@@ -91,9 +147,18 @@ router.post('/execute', authenticateBridge, async (req, res) => {
       'security_scan',
       'get_capabilities'
     ];
-    if (settings && settings.is_main_host === 1 && req.isBridge && !ALLOWED_SYSTEM_INFO_ACTIONS.includes(action)) {
-      console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
-      return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' });
+
+    if (settings && settings.is_main_host === 1) {
+      const blockedActions = ['update_node', 'apply_update', 'install_tool', 'write_file'];
+      if (blockedActions.includes(action) && req.isBridge) {
+        console.warn(`[Security Alert] Blocked cross-node mutation request for action: ${action}`);
+        return res.status(403).json({ error: 'Access Denied: Peripheral node endpoints are unauthorized to mutate files or execute commands on the Main Host machine.' });
+      }
+      
+      if (!ALLOWED_SYSTEM_INFO_ACTIONS.includes(action) && req.isBridge) {
+        console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
+        return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' });
+      }
     }
 
     let output = '';

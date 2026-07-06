@@ -130,6 +130,73 @@ async function handleGitHubTool(token, action, params) {
       if (!res.ok) throw new Error(`Failed to merge PR: ${res.statusText}`);
       const data = await res.json();
       return JSON.stringify({ success: data.merged, message: data.message });
+    } else if (action === 'stage_feature_pr') {
+      const { branchName, commitMessage, repoOwner, repoName, files = [] } = params;
+      const targetWorkspace = require('path').join(__dirname, '../../');
+      
+      const { exec } = require('child_process');
+
+      return new Promise((resolve) => {
+        // 1. Run syntactical safety test pass validations before pushing code structures
+        exec('npm run test:coverage', { cwd: targetWorkspace }, (testErr) => {
+          if (testErr) {
+            return resolve(`GitHub Automation Blocked: Pre-push quality coverage testing returned fatal execution crashes.`);
+          }
+
+          // 2. Perform checkout branch isolation mechanics
+          exec(`git checkout -b ${branchName}`, { cwd: targetWorkspace }, (branchErr) => {
+            if (branchErr) return resolve(`Git Isolation Error: Unable to check out target feature branch: ${branchErr.message}`);
+
+            // 3. Stage changes securely
+            exec('git add .', { cwd: targetWorkspace }, (addErr) => {
+              if (addErr) return resolve(`Git Stage Failure: ${addErr.message}`);
+
+              // 4. Commit code changes safely
+              exec(`git commit -m "${commitMessage}"`, { cwd: targetWorkspace }, async (commitErr) => {
+                if (commitErr) return resolve(`Git Commit Failure: ${commitErr.message}`);
+
+                // 5. Push remote upstream branch paths
+                exec(`git push origin ${branchName}`, { cwd: targetWorkspace }, async (pushErr) => {
+                  if (pushErr) return resolve(`Git Remote Push Failure: ${pushErr.message}`);
+
+                  // 6. Fire open upstream PR tracking endpoint requests via HTTP interfaces
+                  try {
+                    const prEndpoint = `https://api.github.com/repos/${repoOwner}/${repoName}/pulls`;
+                    const prPayload = {
+                      title: `Feature Deployment: ${commitMessage}`,
+                      head: branchName,
+                      base: 'main',
+                      body: 'Automated agent development module pull request packaging.'
+                    };
+
+                    const prRes = await fetch(prEndpoint, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'Private-AI-Assistant'
+                      },
+                      body: JSON.stringify(prPayload)
+                    });
+
+                    if (prRes.ok) {
+                      const prData = await prRes.json();
+                      resolve(`GitHub Workflow Success: Changes pushed and Pull Request generated smoothly: ${prData.html_url}`);
+                    } else {
+                      const errText = await prRes.text();
+                      resolve(`Git Push completed successfully, but PR generation endpoint failed: ${errText}`);
+                    }
+                  } catch (httpErr) {
+                    resolve(`PR generation communication error: ${httpErr.message}`);
+                  }
+                });
+              });
+            });
+          });
+        });
+      });
     }
   } catch (err) {
     return JSON.stringify({ error: err.message });

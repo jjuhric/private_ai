@@ -74,6 +74,7 @@ function App() {
   const [streamThoughts, setStreamThoughts] = useState('');
   const [streamContent, setStreamContent] = useState('');
   const [toolLogs, setToolLogs] = useState([]); // array of active/past tool calls
+  const [streamStatus, setStreamStatus] = useState('');
 
   const messagesEndRef = useRef(null);
 
@@ -552,6 +553,7 @@ function App() {
     setActiveAgent('supervisor');
     setStreamThoughts('');
     setStreamContent('');
+    setStreamStatus('');
     setToolLogs([]);
 
     let accumulatedRawContent = '';
@@ -602,7 +604,9 @@ function App() {
               // text was not json
             }
 
-            if (eventType === 'agent_status') {
+            if (eventType === 'status') {
+              setStreamStatus(dataValue);
+            } else if (eventType === 'agent_status') {
               if (dataValue && dataValue.agent !== undefined) {
                 setActiveAgent(dataValue.agent);
               }
@@ -610,6 +614,7 @@ function App() {
               coordinatorThoughts += dataValue;
               setStreamThoughts(coordinatorThoughts);
             } else if (eventType === 'content') {
+              setStreamStatus(''); // Wipe stream status once real content rendering starts
               accumulatedRawContent += dataValue;
               
               const startTagGemma = '<|channel>thought';
@@ -797,6 +802,7 @@ function App() {
             handleStop={handleStop}
             messagesEndRef={messagesEndRef}
             handleResolveCommand={handleResolveCommand}
+            streamStatus={streamStatus}
           />
         )}
         {activeTab === 'calendar' && (

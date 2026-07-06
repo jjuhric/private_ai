@@ -329,4 +329,43 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     expect(res.status).toBe(500);
     expect(res.body.error).toContain('Internal handler crash');
   });
+
+  describe('GET /health endpoint and restricted mutations', () => {
+    test('GET /health: returns online status and dependencies status', async () => {
+      mockDb.get.mockResolvedValueOnce({ 1: 1 }); // Database check success
+      mockDb.get.mockResolvedValueOnce({ local_url: 'http://localhost:1234/v1', provider: 'local' }); // Settings check
+
+      // Mock fetch response for models check
+      const mockFetchResponse = { ok: true, json: () => Promise.resolve([]) };
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn().mockResolvedValue(mockFetchResponse);
+
+      const res = await request(app).get('/api/bridge/health');
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('online');
+      expect(res.body.dependencies.database).toBe('stable');
+      expect(res.body.dependencies.llm_provider).toBe('stable');
+
+      global.fetch = originalFetch;
+    });
+
+    test('POST /execute: denies mutation actions on Main Host', async () => {
+      // Mock db.get:
+      // 1. authenticateBridge local_key check
+      mockDb.get.mockResolvedValueOnce({ local_key: null });
+      // 2. authenticateBridge node check
+      mockDb.get.mockResolvedValueOnce({ id: 1, user_id: 1, bridge_secret: 'test-bridge-token' });
+      // 3. is_main_host settings check
+      mockDb.get.mockResolvedValueOnce({ is_main_host: 1 });
+
+      const res = await request(app)
+        .post('/api/bridge/execute')
+        .set('Authorization', 'Bearer test-bridge-token')
+        .send({ action: 'write_file', params: { filePath: 'test.js', content: 'alert(1)' } });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toContain('Access Denied');
+    });
+  });
 });

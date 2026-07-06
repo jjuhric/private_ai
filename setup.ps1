@@ -16,6 +16,19 @@ function Write-Log ($Msg, $Color = "White") {
     Write-Host "`n[INFO] $Msg" -ForegroundColor $Color
 }
 
+$EnvPath = ".env"
+if (-not (Test-Path $EnvPath)) {
+    Write-Host "⚠️ Warning: Environment file [.env] not detected in target project root path mappings." -ForegroundColor Yellow
+    $Choice = Read-Host "Would you like to provision missing initial environment context keys right now? (y/N)"
+    
+    if ($Choice -eq "y" -or $Choice -eq "Y") {
+        $NonInteractive = $false
+    } else {
+        Write-Host "💡 Note: You can complete missing properties using the Setup Wizard layout directly in-app." -ForegroundColor Blue
+        $NonInteractive = $true
+    }
+}
+
 # Update check: If already setup, treat as update
 if (-not $SkipUpdate -and (Test-Path ".env")) {
     Write-Log "Existing setup detected (.env file exists). Treating as an update..." "Yellow"
@@ -95,6 +108,13 @@ $defaultGithubToken = ""
 $defaultBuildFe = "y"
 $defaultPort = "3000"
 $defaultMainHostIp = "uhrick-home.local"
+$defaultDbPath = "backend/database.db"
+$defaultMqttBrokerUrl = "mqtt://localhost:1883"
+$defaultMqttNodeId = "windows-main"
+$defaultMqttUsername = ""
+$defaultMqttPassword = ""
+$defaultToolRegistryRepo = "https://github.com/jjuhric/private_ai_tools.git"
+$defaultToolRegistryLocalPath = "./tool_registry"
 
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
@@ -106,6 +126,13 @@ if (Test-Path ".env") {
         if ($line -match "^GITHUB_TOKEN=(.*)") { $defaultGithubToken = $Matches[1].Trim() }
         if ($line -match "^ONLINE_PROVIDER=(.*)") { $defaultOnlineProvider = $Matches[1].Trim() }
         if ($line -match "^MAIN_HOST_IP=(.*)") { $defaultMainHostIp = $Matches[1].Trim() }
+        if ($line -match "^DB_PATH=(.*)") { $defaultDbPath = $Matches[1].Trim() }
+        if ($line -match "^MQTT_BROKER_URL=(.*)") { $defaultMqttBrokerUrl = $Matches[1].Trim() }
+        if ($line -match "^MQTT_NODE_ID=(.*)") { $defaultMqttNodeId = $Matches[1].Trim() }
+        if ($line -match "^MQTT_USERNAME=(.*)") { $defaultMqttUsername = $Matches[1].Trim() }
+        if ($line -match "^MQTT_PASSWORD=(.*)") { $defaultMqttPassword = $Matches[1].Trim() }
+        if ($line -match "^TOOL_REGISTRY_REPO=(.*)") { $defaultToolRegistryRepo = $Matches[1].Trim() }
+        if ($line -match "^TOOL_REGISTRY_LOCAL_PATH=(.*)") { $defaultToolRegistryLocalPath = $Matches[1].Trim() }
     }
     
     if (Test-Path "backend/node_modules") {
@@ -217,6 +244,7 @@ function Write-EnvVar ($Key, $Val) {
 }
 
 Write-EnvVar "PORT" $appPort
+Write-EnvVar "DB_PATH" $defaultDbPath
 Write-EnvVar "LOCAL_LLM_URL" $localUrl
 Write-EnvVar "LOCAL_LLM_KEY" $localKey
 Write-EnvVar "GEMINI_API_KEY" $onlineKey
@@ -224,6 +252,12 @@ Write-EnvVar "GITHUB_TOKEN" $githubToken
 Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
 Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 Write-EnvVar "SUPERVISOR_MODEL" "gemini-1.5-pro"
+Write-EnvVar "MQTT_BROKER_URL" $defaultMqttBrokerUrl
+Write-EnvVar "MQTT_NODE_ID" $defaultMqttNodeId
+Write-EnvVar "MQTT_USERNAME" $defaultMqttUsername
+Write-EnvVar "MQTT_PASSWORD" $defaultMqttPassword
+Write-EnvVar "TOOL_REGISTRY_REPO" $defaultToolRegistryRepo
+Write-EnvVar "TOOL_REGISTRY_LOCAL_PATH" $defaultToolRegistryLocalPath
 if ($isMainHost -eq "0") {
     Write-EnvVar "MAIN_HOST_IP" $mainHostIp
 }
