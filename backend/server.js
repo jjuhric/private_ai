@@ -170,7 +170,7 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
   const fs = require('fs');
   const { exec } = require('child_process');
 
-  const executeSyncPipeline = () => {
+  const executeSyncPipeline = async () => {
     // INTERCEPT: If the core system is currently busy executing agent logic threads, defer sync
     if (global.activeAgentOps > 0) {
       logger.info(`[Tool Sync Daemon] Deferring repository pull. System is busy handling active agent executions. Retrying in 5 minutes...`);
@@ -180,15 +180,32 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
 
     logger.info(`[Tool Sync Daemon] Executing scheduled centralized module checking routines...`);
 
+    let token = process.env.GITHUB_TOKEN || '';
+    try {
+      const settings = await db.get('SELECT github_token FROM user_settings LIMIT 1');
+      if (settings && settings.github_token) {
+        const { decrypt } = require('./utils/crypto');
+        token = decrypt(settings.github_token);
+      }
+    } catch (err) {
+      // Database might not be initialized or table empty yet
+    }
+
+    let authenticatedUrl = TOOLS_REPO_URL;
+    if (token && TOOLS_REPO_URL.startsWith('https://')) {
+      authenticatedUrl = TOOLS_REPO_URL.replace('https://', `https://${token}@`);
+    }
+
     if (fs.existsSync(LOCAL_STAGING_DIR)) {
       try {
         fs.rmSync(LOCAL_STAGING_DIR, { recursive: true, force: true });
       } catch (err) {}
     }
 
-    exec(`git clone ${TOOLS_REPO_URL} ${LOCAL_STAGING_DIR}`, async (err) => {
+    exec(`git clone ${authenticatedUrl} ${LOCAL_STAGING_DIR}`, async (err) => {
       if (err) {
-        logger.error(`[Tool Sync Daemon Error] Pull operations aborted: ${err.message}`);
+        const sanitizedErr = token ? err.message.replace(new RegExp(token, 'g'), '****') : err.message;
+        logger.error(`[Tool Sync Daemon Error] Pull operations aborted: ${sanitizedErr}`);
         return;
       }
 
