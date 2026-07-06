@@ -477,6 +477,26 @@ describe('LM Studio and Model Selection Tests', () => {
     expect(selected2).toBe('google/gemma-2-9b-it');
   });
 
+  test('selectBestModel does not use qwen and falls back to gemma when qwen is not preferred in settings', async () => {
+    const { selectBestModel } = require('../utils/model_selector');
+    const settings = {
+      provider: 'local',
+      modelName: 'google/gemma-4-e4b',
+      localBaseUrl: 'http://localhost:1234/v1',
+      localApiKey: 'key'
+    };
+
+    mockFetchResponses['/api/v1/models'] = {
+      ok: true,
+      json: async () => [
+        { id: 'qwen3.5-9b', isLoaded: true }
+      ]
+    };
+
+    const selected = await selectBestModel(settings, 'test query', []);
+    expect(selected).toBe('google/gemma-4-e4b');
+  });
+
   test('POST /api/lmstudio/clear-logs returns 403 when user is not main host', async () => {
     mockDb.get = jest.fn().mockImplementation(async (query, params) => {
       if (query.includes('user_settings')) {

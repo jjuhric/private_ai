@@ -3,15 +3,32 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const BLOCKED_MODEL_PATTERNS = ['embed', 'embedding', 'nomic-embed'];
 
 function checkAndFallbackModel(candidate, preferredModel) {
+  const preferredLower = (preferredModel || '').toLowerCase();
+  const isQwenPreferred = preferredLower.includes('qwen');
+
   let fallback = preferredModel || 'google/gemma-4-e4b';
   if (BLOCKED_MODEL_PATTERNS.some(p => fallback.toLowerCase().includes(p))) {
     fallback = 'google/gemma-4-e4b';
   }
-  if (candidate && BLOCKED_MODEL_PATTERNS.some(p => candidate.toLowerCase().includes(p))) {
-    console.warn(`[Model Selector] Warning: selected model "${candidate}" is an embedding-only model. Silently falling back to default model: "${fallback}"`);
-    return fallback;
+
+  // If preferred is not qwen, fallback should not be qwen
+  if (!isQwenPreferred && fallback.toLowerCase().includes('qwen')) {
+    fallback = 'google/gemma-4-e4b';
   }
-  return candidate || fallback;
+
+  let selected = candidate || fallback;
+  if (selected && BLOCKED_MODEL_PATTERNS.some(p => selected.toLowerCase().includes(p))) {
+    console.warn(`[Model Selector] Warning: selected model "${selected}" is an embedding-only model. Silently falling back to default model: "${fallback}"`);
+    selected = fallback;
+  }
+
+  // Force non-qwen if not preferred
+  if (!isQwenPreferred && selected.toLowerCase().includes('qwen')) {
+    console.log(`[Model Selector] Overriding selected model "${selected}" to "google/gemma-4-e4b" because Qwen is not preferred in settings.`);
+    selected = 'google/gemma-4-e4b';
+  }
+
+  return selected;
 }
 
 /**
@@ -36,8 +53,18 @@ async function selectBestModel(settings, userMessage, history) {
   if (provider === 'local') {
     const { listLocalModels } = require('./lmstudio');
     const availableModels = await listLocalModels(localBaseUrl, localApiKey);
-    const loadedModelObj = availableModels.find(m => m.isLoaded);
-    const loadedModel = loadedModelObj ? loadedModelObj.id : null;
+    
+    const preferredLower = (modelName || '').toLowerCase();
+    const isQwenPreferred = preferredLower.includes('qwen');
+
+    let loadedModelObj = availableModels.find(m => m.isLoaded);
+    let loadedModel = loadedModelObj ? loadedModelObj.id : null;
+
+    // If loaded model is Qwen but Qwen is not preferred, ignore it
+    if (loadedModel && loadedModel.toLowerCase().includes('qwen') && !isQwenPreferred) {
+      console.log(`[Model Selector] Ignoring loaded model "${loadedModel}" because Qwen is not preferred in settings.`);
+      loadedModel = null;
+    }
 
     // If no model is currently loaded, bypass routing and return configured default model to avoid cold-start load
     if (!loadedModel) {
