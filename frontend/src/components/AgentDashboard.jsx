@@ -87,11 +87,13 @@ function LMStudioLogsView({ token }) {
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState('connecting');
   const [filter, setFilter] = useState('all'); // 'all', 'server', 'model'
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const handleClearLogs = async () => {
-    if (!window.confirm('Are you sure you want to wipe the active LM Studio log file on disk?')) {
-      return;
-    }
+  const handleClearLogs = () => {
+    setShowConfirmModal(true);
+  };
+
+  const triggerClearLogs = async () => {
     try {
       const res = await fetch('/api/lmstudio/clear-logs', {
         method: 'POST',
@@ -283,6 +285,42 @@ function LMStudioLogsView({ token }) {
         })}
         <div ref={terminalEndRef} />
       </div>
+      {showConfirmModal && (
+        <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3 style={{ margin: 0, color: '#fff' }}>Private AI</h3>
+              <button className="btn-icon" onClick={() => setShowConfirmModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                Are you sure you want to wipe the active LM Studio log file on disk?
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowConfirmModal(false)}
+                  style={{ flex: 1 }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    triggerClearLogs();
+                  }}
+                  style={{ flex: 1, background: '#ef4444', border: 'none' }}
+                >
+                  Clear Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

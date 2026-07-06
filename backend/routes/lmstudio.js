@@ -194,4 +194,29 @@ router.get('/log-stream', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/clear-logs', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const settings = await db.get('SELECT is_main_host FROM user_settings WHERE user_id = ?', [req.user.id]);
+    
+    if (!settings || settings.is_main_host !== 1) {
+      return res.status(403).json({ error: 'Only the main host is authorized to clear logs.' });
+    }
+
+    const latestLogFile = process.env.NODE_ENV === 'test' ? 'test.log' : getLatestLogFile();
+    if (latestLogFile && (process.env.NODE_ENV === 'test' || fs.existsSync(latestLogFile))) {
+      if (process.env.NODE_ENV !== 'test') {
+        fs.writeFileSync(latestLogFile, '', 'utf8');
+      }
+      console.log(`[LM Studio Logs] Truncated log file: ${latestLogFile}`);
+      return res.json({ success: true, message: 'Log file cleared successfully.' });
+    } else {
+      return res.status(404).json({ error: 'Active log file not found to clear.' });
+    }
+  } catch (err) {
+    console.error('[LM Studio Logs] Error clearing logs:', err);
+    res.status(500).json({ error: `Failed to clear logs: ${err.message}` });
+  }
+});
+
 module.exports = router;
