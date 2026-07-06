@@ -312,7 +312,7 @@ Write-EnvVar "LOCAL_LLM_KEY" $localKey
 Write-EnvVar "GEMINI_API_KEY" $onlineKey
 Write-EnvVar "WEATHER_API_KEY" $weatherKey
 Write-EnvVar "GITHUB_TOKEN" $githubToken
-Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen/qwen3.5-9b"
+Write-EnvVar "PREFERRED_LOCAL_MODEL" "google/gemma-4-e4b"
 Write-EnvVar "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
 Write-EnvVar "SUPERVISOR_MODEL" "gemini-1.5-pro"
 if ($isMainHost -eq "0") {
