@@ -7,7 +7,7 @@ async function main() {
     const db = await getDb();
     
     // Attempt to read the first user registered in the database
-    const user = await db.get('SELECT username FROM users ORDER BY id ASC LIMIT 1');
+    const user = await db.get('SELECT username, name, zipcode FROM users ORDER BY id ASC LIMIT 1');
     
     // Attempt to read the settings record
     const settings = await db.get('SELECT * FROM user_settings ORDER BY id ASC LIMIT 1');
@@ -20,6 +20,8 @@ async function main() {
     
     const result = {
       username: user ? user.username : 'admin',
+      name: user ? user.name : '',
+      zipcode: user ? user.zipcode : '',
       device_type: settings ? settings.device_type : 'windows',
       is_main_host: settings ? settings.is_main_host : 1,
       local_url: settings ? settings.local_url : 'http://192.168.1.42:1234/v1',

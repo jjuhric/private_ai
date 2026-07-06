@@ -60,6 +60,10 @@ describe('ChatPane Component Tests', () => {
       />
     );
 
+    // Click thoughts header to expand them since thoughts start collapsed
+    const headers = screen.getAllByText(/Agent Plan & Internal Thoughts/);
+    fireEvent.click(headers[headers.length - 1]);
+
     expect(screen.getByText('thinking...')).toBeInTheDocument();
     expect(screen.getByText('still writing')).toBeInTheDocument();
     expect(screen.getByText('Running tool action: list ({})')).toBeInTheDocument();

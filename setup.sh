@@ -157,6 +157,8 @@ DEFAULT_MQTT_USERNAME=""
 DEFAULT_MQTT_PASSWORD=""
 DEFAULT_TOOL_REGISTRY_REPO="https://github.com/jjuhric/private_ai_tools.git"
 DEFAULT_TOOL_REGISTRY_LOCAL_PATH="./tool_registry"
+DEFAULT_USER_NAME=""
+DEFAULT_USER_ZIPCODE=""
 
 if [ -f ".env" ]; then
     DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
@@ -191,6 +193,8 @@ if [ -f ".env" ]; then
             DEFAULT_ONLINE_PROVIDER=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_provider || '$DEFAULT_ONLINE_PROVIDER'); } catch(e) { console.log('$DEFAULT_ONLINE_PROVIDER'); }")
             DEFAULT_ONLINE_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_key || '$DEFAULT_ONLINE_KEY'); } catch(e) { console.log('$DEFAULT_ONLINE_KEY'); }")
             DEFAULT_GITHUB_TOKEN=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.github_token || '$DEFAULT_GITHUB_TOKEN'); } catch(e) { console.log('$DEFAULT_GITHUB_TOKEN'); }")
+            DEFAULT_USER_NAME=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.name || ''); } catch(e) { console.log(''); }")
+            DEFAULT_USER_ZIPCODE=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.zipcode || ''); } catch(e) { console.log(''); }")
         fi
     fi
 fi
@@ -211,6 +215,8 @@ if [ "$NON_INTERACTIVE" = true ]; then
     LOCAL_KEY="$DEFAULT_LOCAL_KEY"
     ONLINE_KEY="$DEFAULT_ONLINE_KEY"
     GITHUB_TOKEN="$DEFAULT_GITHUB_TOKEN"
+    USER_NAME="$DEFAULT_USER_NAME"
+    USER_ZIPCODE="$DEFAULT_USER_ZIPCODE"
     BUILD_FE_YN="y"
     APP_PORT="$DEFAULT_PORT"
 else
@@ -261,19 +267,40 @@ else
     read -p "Enter Admin Password [${DEFAULT_ADMIN_PASS}]: " ADMIN_PASS
     ADMIN_PASS=${ADMIN_PASS:-$DEFAULT_ADMIN_PASS}
 
-    # Local LLM address
-    read -p "Enter Local LLM Base URL [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
-    LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
+    # User Profile Info
+    read -p "Enter your Name [${DEFAULT_USER_NAME}]: " USER_NAME
+    USER_NAME=${USER_NAME:-$DEFAULT_USER_NAME}
 
-    # Optional API Keys / Tokens
+    read -p "Enter your Zipcode [${DEFAULT_USER_ZIPCODE}]: " USER_ZIPCODE
+    USER_ZIPCODE=${USER_ZIPCODE:-$DEFAULT_USER_ZIPCODE}
+
+    # Local LLM address (REQUIRED)
+    while true; do
+        read -p "Enter Local LLM Base URL (REQUIRED) [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
+        LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
+        if [ ! -z "$LOCAL_URL" ]; then
+            break
+        fi
+        echo "❌ Error: Local LLM Base URL is required."
+    done
+
+    # Optional Local API Key
     read -p "Enter Local LLM API Key (optional) [${DEFAULT_LOCAL_KEY}]: " LOCAL_KEY
     LOCAL_KEY=${LOCAL_KEY:-$DEFAULT_LOCAL_KEY}
 
+    # Online Gemini Key (Optional)
     read -p "Enter Online Gemini API Key (optional) [${DEFAULT_ONLINE_KEY}]: " ONLINE_KEY
     ONLINE_KEY=${ONLINE_KEY:-$DEFAULT_ONLINE_KEY}
 
-    read -p "Enter GitHub Access Token (optional) [${DEFAULT_GITHUB_TOKEN}]: " GITHUB_TOKEN
-    GITHUB_TOKEN=${GITHUB_TOKEN:-$DEFAULT_GITHUB_TOKEN}
+    # GitHub Access Token (REQUIRED for updates & tools)
+    while true; do
+        read -p "Enter GitHub Access Token (REQUIRED for updates/tools) [${DEFAULT_GITHUB_TOKEN}]: " GITHUB_TOKEN
+        GITHUB_TOKEN=${GITHUB_TOKEN:-$DEFAULT_GITHUB_TOKEN}
+        if [ ! -z "$GITHUB_TOKEN" ]; then
+            break
+        fi
+        echo "❌ Error: GitHub Access Token is required to download updates and sync custom tools."
+    done
 
     # Deployment mode / Frontend compilation check
     read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
@@ -373,7 +400,9 @@ node backend/scripts/seed_settings.js \
     --local_key="$LOCAL_KEY" \
     --online_key="$ONLINE_KEY" \
     --github_token="$GITHUB_TOKEN" \
-    --online_provider="$DEFAULT_ONLINE_PROVIDER"
+    --online_provider="$DEFAULT_ONLINE_PROVIDER" \
+    --name="$USER_NAME" \
+    --zipcode="$USER_ZIPCODE"
 
 # 8. Build Frontend (if requested)
 if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then

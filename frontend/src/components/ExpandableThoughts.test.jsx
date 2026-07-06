@@ -31,11 +31,16 @@ describe('ExpandableThoughts Component Tests', () => {
     expect(screen.queryByText('Deep plan details')).toBeNull();
   });
 
-  test('respects defaultExpanded prop and reacts to updates', () => {
-    const { rerender } = render(<ExpandableThoughts thoughts="Thinking content" defaultExpanded={true} />);
-    expect(screen.getByText('Thinking content')).toBeInTheDocument();
+  test('collapses back to false when thoughts prop changes', () => {
+    const { rerender } = render(<ExpandableThoughts thoughts="Thinking content A" />);
+    const header = screen.getByText(/Agent Plan & Internal Thoughts/);
+    
+    // 1. Expand it
+    fireEvent.click(header);
+    expect(screen.getByText('Thinking content A')).toBeInTheDocument();
 
-    rerender(<ExpandableThoughts thoughts="Thinking content" defaultExpanded={false} />);
-    expect(screen.queryByText('Thinking content')).toBeNull();
+    // 2. Rerender with new thoughts should trigger useEffect and collapse it back to false
+    rerender(<ExpandableThoughts thoughts="Thinking content B" />);
+    expect(screen.queryByText('Thinking content B')).toBeNull();
   });
 });

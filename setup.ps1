@@ -115,6 +115,8 @@ $defaultMqttUsername = ""
 $defaultMqttPassword = ""
 $defaultToolRegistryRepo = "https://github.com/jjuhric/private_ai_tools.git"
 $defaultToolRegistryLocalPath = "./tool_registry"
+$defaultUserName = ""
+$defaultUserZipcode = ""
 
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
@@ -148,6 +150,8 @@ if (Test-Path ".env") {
                 if ($dbSettings.online_provider) { $defaultOnlineProvider = $dbSettings.online_provider }
                 if ($dbSettings.online_key) { $defaultOnlineKey = $dbSettings.online_key }
                 if ($dbSettings.github_token) { $defaultGithubToken = $dbSettings.github_token }
+                if ($dbSettings.name) { $defaultUserName = $dbSettings.name }
+                if ($dbSettings.zipcode) { $defaultUserZipcode = $dbSettings.zipcode }
             } catch {}
         }
     }
@@ -165,6 +169,8 @@ if ($NonInteractive) {
     $localKey = $defaultLocalKey
     $onlineKey = $defaultOnlineKey
     $githubToken = $defaultGithubToken
+    $userName = $defaultUserName
+    $userZipcode = $defaultUserZipcode
     $buildFeYN = "y"
     $appPort = $defaultPort
 } else {
@@ -194,17 +200,36 @@ if ($NonInteractive) {
     $adminPass = Read-Host "Enter Admin Password [$defaultAdminPass]"
     if ([string]::IsNullOrWhiteSpace($adminPass)) { $adminPass = $defaultAdminPass }
 
-    $localUrl = Read-Host "Enter Local LLM Base URL [$defaultLocalUrl]"
-    if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
+    # User Profile Info
+    $userName = Read-Host "Enter your Name [$defaultUserName]"
+    if ([string]::IsNullOrWhiteSpace($userName)) { $userName = $defaultUserName }
 
+    $userZipcode = Read-Host "Enter your Zipcode [$defaultUserZipcode]"
+    if ([string]::IsNullOrWhiteSpace($userZipcode)) { $userZipcode = $defaultUserZipcode }
+
+    # Local LLM Base URL (REQUIRED)
+    while ($true) {
+        $localUrl = Read-Host "Enter Local LLM Base URL (REQUIRED) [$defaultLocalUrl]"
+        if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
+        if (-not [string]::IsNullOrWhiteSpace($localUrl)) { break }
+        Write-Host "❌ Error: Local LLM Base URL is required." -ForegroundColor Red
+    }
+
+    # Optional Local API Key
     $localKey = Read-Host "Enter Local LLM API Key (optional) [$defaultLocalKey]"
     if ([string]::IsNullOrWhiteSpace($localKey)) { $localKey = $defaultLocalKey }
 
+    # Online Gemini Key (Optional)
     $onlineKey = Read-Host "Enter Online Gemini API Key (optional) [$defaultOnlineKey]"
     if ([string]::IsNullOrWhiteSpace($onlineKey)) { $onlineKey = $defaultOnlineKey }
 
-    $githubToken = Read-Host "Enter GitHub Access Token (optional) [$defaultGithubToken]"
-    if ([string]::IsNullOrWhiteSpace($githubToken)) { $githubToken = $defaultGithubToken }
+    # GitHub Access Token (REQUIRED for updates & tools)
+    while ($true) {
+        $githubToken = Read-Host "Enter GitHub Access Token (REQUIRED for updates/tools) [$defaultGithubToken]"
+        if ([string]::IsNullOrWhiteSpace($githubToken)) { $githubToken = $defaultGithubToken }
+        if (-not [string]::IsNullOrWhiteSpace($githubToken)) { break }
+        Write-Host "❌ Error: GitHub Access Token is required to download updates and sync custom tools." -ForegroundColor Red
+    }
 
     $buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
     if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
@@ -325,7 +350,9 @@ $seedCmd = "backend/scripts/seed_settings.js"
     --local_key="$localKey" `
     --online_key="$onlineKey" `
     --github_token="$githubToken" `
-    --online_provider="$defaultOnlineProvider"
+    --online_provider="$defaultOnlineProvider" `
+    --name="$userName" `
+    --zipcode="$userZipcode"
 
 # 9. Build Frontend
 if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {

@@ -52,6 +52,9 @@ async function main(argv = process.argv) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    const name = args.name || null;
+    const zipcode = args.zipcode || null;
+
     let userId;
     if (user) {
       userId = user.id;
@@ -63,21 +66,20 @@ async function main(argv = process.argv) {
       console.log(`Created new user "${username}" (ID: ${userId}).`);
     }
 
+    if (name || zipcode) {
+      await db.run('UPDATE users SET name = COALESCE(?, name), zipcode = COALESCE(?, zipcode) WHERE id = ?', [name, zipcode, userId]);
+    }
+
     // Encrypt keys
     const encryptedLocalKey = localKey ? encrypt(localKey) : null;
     const encryptedOnlineKey = onlineKey ? encrypt(onlineKey) : null;
     const encryptedGithubToken = githubToken ? encrypt(githubToken) : null;
 
-    // Determine default provider
-    const provider = onlineKey ? 'online' : 'local';
+    // Determine default provider (Rule: always default to local LLM first unless explicitly changed in settings)
+    const provider = 'local';
     
     // Determine default model names
     let modelName = process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.5-9b';
-    if (provider === 'online') {
-      if (onlineProvider === 'gemini') modelName = process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash';
-      else if (onlineProvider === 'openai') modelName = 'gpt-4o';
-      else if (onlineProvider === 'anthropic') modelName = 'claude-3-5-sonnet-latest';
-    }
 
     await db.run(`
       INSERT INTO user_settings (

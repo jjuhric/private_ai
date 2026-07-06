@@ -1,10 +1,10 @@
-# Private AI Assistant — Enterprise Suite (v4.1.0)
+# Private AI Assistant — Enterprise Suite (v4.2.0)
 
 [![Wiki](https://img.shields.io/badge/wiki-available-brightgreen)](https://github.com/jjuhric/private_ai/wiki)
 
 A secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Private AI features a ReAct multi-agent orchestration coordinator, live deep web scraping, real-time Google News summaries, persistent SQLite memory storage, task scheduling, system telemetry, and a mobile-responsive layout.
 
-Version `4.1.0` introduces the **Multi-Device Hermes Network Architecture**, enabling a unified, local mesh network where a Windows main host coordinates and delegates hardware/control tasks to distributed Raspberry Pi and ESP32 field nodes.
+Version `4.2.0` introduces the **Multi-Device Hermes Network Architecture**, enabling a unified, local mesh network where a Windows main host coordinates and delegates hardware/control tasks to distributed Raspberry Pi and ESP32 field nodes.
 
 ---
 
@@ -45,16 +45,21 @@ graph TB
 
 ## ⚙️ Device Setup & Deployment
 
-Private AI operates in a distributed network. Setup instructions differ based on the device role:
+Private AI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive, out-of-the-box walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/jjuhric/private_ai/wiki/Installation).
+
+### 🔍 Core Setup Requirements
+- **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
+- **GitHub Personal Access Token (PAT)**: **(REQUIRED)** Required to fetch tool repository components and download code updates.
+- **Local LLM (LM Studio / Ollama)**: **(REQUIRED)** The system defaults entirely to your Local LLM. Online API keys (e.g. Gemini) are optional fallbacks.
 
 ### 1. Windows Main Host (Running LLMs)
-The Windows PC acts as the central brain. It runs the LLM integration, coordinates multi-agent loops, and maintains the primary database.
+The Windows PC acts as the central brain. It runs the local LLM integration, coordinates multi-agent loops, and maintains the primary database.
 
 > [!WARNING]  
 > **Strict Approval Mode**: On Windows, all system modification tools (like running scripts, writing files, and executing commands) are locked down and require explicit Human-In-The-Loop (HITL) UAC approval before execution.
 
 #### Setup Steps:
-1. **Prerequisites**: Install Node.js (`v25.5.0` or higher) and Git.
+1. **Prerequisites**: Install Node.js (`v25.5.0` or higher), Git, and LM Studio/Ollama.
 2. **Install Dependencies**:
    ```powershell
    npm run install:all
@@ -63,7 +68,7 @@ The Windows PC acts as the central brain. It runs the LLM integration, coordinat
    ```powershell
    copy .env.example .env
    ```
-   Provide your online LLM API keys (Gemini, OpenAI, Anthropic) or local LLM connection details (LM Studio, Ollama).
+   Follow the setup prompts to input your name, zipcode, local LLM URL, and GitHub token.
 4. **Launch Development Servers**:
    ```powershell
    npm run dev
