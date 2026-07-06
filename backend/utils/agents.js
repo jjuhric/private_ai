@@ -14,11 +14,10 @@ You must delegate tasks to the correct sub-agent based on their specialized capa
 6. **web_searcher**: Performs web searches and Google News queries, aligning results with user interests.
 7. **document_vault**: Performs semantic queries over the user's private vector RAG vault.
 8. **github_agent**: Performs GitHub branch, commit, and PR operations (never pushes to main/master directly).
-9. **coder**: Inspects and writes files/code inside the workspace (requires HITL approval).
+9. **developer_agent**: Inspects, manages, and writes source code files inside the local workspace, and orchestrates software development pipelines (requires HITL approval).
 10. **qa_engineer**: Runs tests, audits security parameters, and reviews code.
 11. **tool_creator_agent**: Coordinates new custom tool design, plan files, and deployment.
 12. **agent_creator_agent**: Coordinates dynamic new agent creations and loop integration.
-13. **developer_agent**: Orchestrates software development pipelines.
 
 ### EMBEDDING MODEL PROHIBITION:
 - NEVER delegate generation tasks or route queries to any embedding-only model (such as 'nomic-embed-text' or other model names containing 'embed'). These models do not support text generation.
@@ -81,30 +80,6 @@ Rules:
 - Perform the requested calendar actions and check the outcomes.
 - Format your output clearly (listing events, confirming additions, etc.), stating if the task was completed successfully.`,
 
-  coder: `You are the Developer Agent (formerly separate Coding and Developer Agents). Your job is to inspect, manage, and write functional source code files inside the local workspace directory, as well as design, implement, and test new tools for the Private AI system.
-
-### SYSTEM STABILITY AND FILE SAFETY INSTRUCTIONS:
-1. **Do No Harm**: You must be extremely careful when altering files. Never overwrite critical runtime directories, environment files, or system paths blindly without validating current structures first.
-2. **Structural Validation**: Inspect configuration files, check imports, and run tests before finalizing code writes.
-3. **Modification Bounds**: You can write code modules, patch bugs, design new tools, or manage updates on this machine, but you must report back to the Supervisor to let the Human-In-The-Loop check and approve your changes before you execute them.
-
-Available Tools for Tool Design:
-- read_file (params: { filePath })
-- write_file (params: { filePath, content })
-- list_dir (params: { dirPath })
-- execute_command (params: { command, safety_analysis })
-- tool_manager (action: 'list_available' | 'list_installed' | 'get_manifest')
-- dev_pipeline (action: 'create_tool' | 'get_pipeline_status' | 'list_pipelines', params: { toolName, targetNode, targetAgent, originalPrompt })
-
-Rules for Tool Creation:
-1. When creating a new tool, ALWAYS generate three files:
-   - manifest.json (tool metadata, parameters, platform compatibility)
-   - handler.js (the tool's implementation code)
-   - handler.test.js (comprehensive unit tests with mocks)
-2. Follow the existing tool pattern: export a single handleXxxTool(action, params) function.
-3. All tool files go in the "tool_registry/tools/{toolName}/" directory.
-4. After writing code, run tests to verify they pass.
-5. If the request is to orchestrate a full tool development flow, call the 'dev_pipeline' tool action 'create_tool'.`,
 
   qa_engineer: `You are the Quality Assurance Agent.
 Your job is to inspect code for vulnerabilities, bugs, and verify quality standards.
@@ -585,7 +560,11 @@ Generate a detailed final report summarizing your actions and findings. Make it 
 async function runWorkerAgent(agentName, settings, task, db, userId, githubToken) {
   global.activeAgentOps = (global.activeAgentOps || 0) + 1;
   try {
-    let systemPrompt = AGENT_PROMPTS[agentName];
+    let targetAgent = agentName;
+    if (targetAgent === 'coder') {
+      targetAgent = 'developer_agent';
+    }
+    let systemPrompt = AGENT_PROMPTS[targetAgent];
     if (!systemPrompt) throw new Error(`Unknown agent: ${agentName}`);
 
     const path = require('path');
@@ -622,7 +601,7 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
 
   if (db) {
     try {
-      const caps = await db.all('SELECT tool_name, description, parameters FROM agent_capabilities WHERE agent_name = ?', [agentName]);
+      const caps = await db.all('SELECT tool_name, description, parameters FROM agent_capabilities WHERE agent_name = ?', [targetAgent]);
       if (caps && caps.length > 0) {
         systemPrompt += `\n\n### Dynamically Installed Custom Tools Available to You:`;
         for (const cap of caps) {

@@ -59,12 +59,6 @@ const agents = [
     desc: 'Performs GitHub operations: branching, committing, PRs. Cannot push to main/master or create repos.'
   },
   {
-    type: 'dev',
-    name: 'Coding Agent',
-    icon: Code,
-    desc: 'Reads, writes, and manages source code files. Reports back to Supervisor before executing mutations.'
-  },
-  {
     type: 'qa',
     name: 'QA Engineer',
     icon: Shield,
@@ -86,7 +80,7 @@ const agents = [
     type: 'developer',
     name: 'Developer Agent',
     icon: Layers,
-    desc: 'Orchestrates software development pipelines: manifest, handler code, tests, and deployment via dev_pipeline tool.'
+    desc: 'Orchestrates software development pipelines, manages workspace files, writes source code, and deploys new custom tools.'
   }
 ];
 
