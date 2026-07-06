@@ -63,8 +63,15 @@ if [ "$SKIP_UPDATE" = false ] && [ -f ".env" ]; then
         if [ ! -z "$PID" ]; then
             log "Stopping existing process $PID on port $PORT to release file locks..."
             kill -9 "$PID" 2>/dev/null || true
-            sleep 1
         fi
+        
+        # Stop Vite dev server process on port 5173
+        VITE_PID=$(lsof -t -i:5173 2>/dev/null || true)
+        if [ ! -z "$VITE_PID" ]; then
+            log "Stopping Vite development server process $VITE_PID on port 5173 to release file locks..."
+            kill -9 "$VITE_PID" 2>/dev/null || true
+        fi
+        sleep 1
     fi
     
     # Verify Git and pull

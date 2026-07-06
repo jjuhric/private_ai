@@ -44,8 +44,15 @@ if (-not $SkipUpdate -and (Test-Path ".env")) {
         $pidToKill = $proc.OwningProcess
         Write-Log "Stopping existing process $pidToKill on port $port to release file locks..." "Yellow"
         Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
     }
+    # Stop Vite dev server listening on port 5173
+    $viteProc = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($viteProc) {
+        $pidToKill = $viteProc.OwningProcess
+        Write-Log "Stopping Vite development server process $pidToKill on port 5173 to release file locks..." "Yellow"
+        Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 1
     
     # Verify Git
     $gitCheck = Get-Command git -ErrorAction SilentlyContinue
@@ -64,7 +71,10 @@ if (-not $SkipUpdate -and (Test-Path ".env")) {
     foreach ($path in $modulePaths) {
         if (Test-Path $path) {
             Write-Log "Deleting $path..." "Gray"
-            Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+            cmd.exe /c "rmdir /s /q `"$path`""
+            if (Test-Path $path) {
+                Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 
