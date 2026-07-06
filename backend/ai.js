@@ -220,7 +220,8 @@ async function runAgentLoop({
     onToolCall,
     onAgentStatus,
     onCommandApprovalRequired,
-    abortSignal
+    abortSignal,
+    workingDirectory: null // will be set dynamically below
   };
 
   // Core/Location memories will be fetched programmatically below.
@@ -286,7 +287,27 @@ async function runAgentLoop({
     console.error('Failed to query agent capabilities in runAgentLoop:', err);
   }
 
-  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}`;
+  let workingDirectory = '';
+  try {
+    const settingsRow = await db.get('SELECT working_directory FROM user_settings WHERE user_id = ?', [userId]);
+    workingDirectory = settingsRow?.working_directory;
+  } catch (err) {
+    console.error('Failed to query working_directory in runAgentLoop:', err);
+  }
+  const path = require('path');
+  const defaultWorkingDir = path.resolve(path.join(__dirname, '..'));
+  if (!workingDirectory) {
+    workingDirectory = defaultWorkingDir;
+  }
+  settings.workingDirectory = workingDirectory;
+
+  const workspaceContext = `\n\n### Workspace System Directories:
+- Root Working Directory: ${workingDirectory}
+- Built-in Agents File: ${path.join(workingDirectory, 'backend/utils/agents.js')}
+- Built-in Tools Directory: ${path.join(workingDirectory, 'backend/tools/')}
+- Dynamic Tools Registry: ${path.join(workingDirectory, 'tool_registry/tools/')}`;
+
+  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
@@ -336,7 +357,8 @@ async function runAgentLoop({
       'developer_agent',
       'node_agent',
       'github_agent',
-      'tool_creator_agent'
+      'tool_creator_agent',
+      'agent_creator_agent'
     ];
 
     if (agentNames.includes(toolName)) {
@@ -349,6 +371,8 @@ async function runAgentLoop({
       toolName = 'delegate_to_github_agent';
     } else if (toolName === 'tool_creator' || toolName === 'delegate_to_tool_creator') {
       toolName = 'delegate_to_tool_creator_agent';
+    } else if (toolName === 'agent_creator' || toolName === 'delegate_to_agent_creator') {
+      toolName = 'delegate_to_agent_creator_agent';
     }
     decision.tool = toolName;
 
@@ -384,6 +408,8 @@ async function runAgentLoop({
       } else if (agentName === 'github_agent') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
       } else if (agentName === 'tool_creator_agent') {
+        subTask = decision.params?.query || decision.params?.task || userMessage;
+      } else if (agentName === 'agent_creator_agent') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
       } else {
         subTask = userMessage;

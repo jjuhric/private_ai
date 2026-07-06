@@ -43,6 +43,8 @@ router.get('/', authenticateToken, async (req, res) => {
       (decOnlineKey && decOnlineKey.length > 5)
     );
 
+    const path = require('path');
+    const defaultWorkingDir = path.resolve(path.join(__dirname, '../..'));
     const responseSettings = {
       ...settings,
       github_token: settings.github_token ? maskKey(settings.github_token) : (process.env.GITHUB_TOKEN ? maskKey(process.env.GITHUB_TOKEN) : ''),
@@ -53,6 +55,7 @@ router.get('/', authenticateToken, async (req, res) => {
       preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
+      working_directory: settings.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir,
       is_setup_complete: isSetupComplete
     };
 
@@ -63,7 +66,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 router.put('/', authenticateToken, async (req, res) => {
-  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host } = req.body;
+  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory } = req.body;
   try {
     const db = await getDb();
     const { encrypt, decrypt } = require('../utils/crypto');
@@ -80,13 +83,17 @@ router.put('/', authenticateToken, async (req, res) => {
     const resolvedUrl = local_url || 'http://192.168.1.42:1234/v1';
     const resolvedStyle = local_api_style || 'openai';
 
+    const path = require('path');
+    const defaultWorkingDir = path.resolve(path.join(__dirname, '../..'));
+    const resolvedWorkingDir = working_directory || existing.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir;
+
     await db.run(
       `INSERT INTO user_settings (
          user_id, provider, model_name, github_token, gemini_key, local_key, 
          local_url, local_api_style, online_url, online_key, online_provider,
-         preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host
+         preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET
          provider = excluded.provider,
          model_name = excluded.model_name,
@@ -102,12 +109,13 @@ router.put('/', authenticateToken, async (req, res) => {
          preferred_online_model = COALESCE(excluded.preferred_online_model, preferred_online_model),
          supervisor_model = COALESCE(excluded.supervisor_model, supervisor_model),
          device_type = COALESCE(excluded.device_type, device_type),
-         is_main_host = COALESCE(excluded.is_main_host, is_main_host)`,
+         is_main_host = COALESCE(excluded.is_main_host, is_main_host),
+         working_directory = COALESCE(excluded.working_directory, working_directory)`,
       [
         req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', finalGithub, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
-        device_type || 'windows', typeof is_main_host === 'number' ? is_main_host : 0
+        device_type || 'windows', typeof is_main_host === 'number' ? is_main_host : 0, resolvedWorkingDir
       ]
     );
     res.json({ success: true, message: 'Settings updated successfully.' });

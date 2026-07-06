@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   supervisor_model TEXT,
   device_type TEXT DEFAULT 'windows',
   is_main_host INTEGER DEFAULT 0,
+  working_directory TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

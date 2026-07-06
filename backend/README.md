@@ -1,4 +1,4 @@
-# Private AI Assistant — Backend System (v3.0.0)
+# Private AI Assistant — Backend System (v3.1.0)
 
 The backend of the Private AI Assistant is a high-performance, secure Node.js system powered by Express and SQLite. It coordinates a multi-agent ReAct intelligence loop, handles real-time Server-Sent Events (SSE) streaming, integrates hardware-level telemetry, and exposes a secure REST API.
 
@@ -108,7 +108,8 @@ sequenceDiagram
 - **Weather Expert**: Connects to OpenWeatherMap to retrieve detailed forecasts.
 - **Host Specialist**: Reads system hardware configurations, battery status, and CPU temperatures.
 - **GitHub Agent**: Manages branches, commits changes, and generates pull requests on GitHub, with strict constraints blocking repository creation or direct changes to `main`/`master` branches.
-- **Tool Creation Agent**: Designs and coordinates new tool additions. It creates a plan, prompts the user via the supervisor for a `yes`/`no` approval, and coordinates with Developer/QA nodes to implement and test the new tool.
+- **Tool Creation Agent**: Designs and coordinates new tool additions. It creates a Tool Plan, prompts the user via the supervisor for a `yes`/`no` approval, and coordinates with Developer/QA nodes to implement and test the new tool. Local betterment tools are kept private via `.gitignore`, while shared tools are pushed to GitHub.
+- **Agent Creation Agent**: Designs and coordinates new agent creations or edits. It compiles an Agent Plan, requests user approval via the supervisor UAC dialog, and automates prompt additions and coordinator registrations.
 
 ---
 

@@ -80,17 +80,19 @@ async function main(argv = process.argv) {
     // Determine default provider (Rule: always default to local LLM first unless explicitly changed in settings)
     const provider = 'local';
     
-    // Determine default model names
     let modelName = process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b';
+    const path = require('path');
+    const defaultWorkingDir = path.resolve(path.join(__dirname, '../..'));
+    const workingDir = args.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir;
 
     await db.run(`
       INSERT INTO user_settings (
         user_id, provider, model_name, github_token, local_key, 
         local_url, local_api_style, online_key, online_provider,
         preferred_local_model, preferred_online_model, supervisor_model,
-        device_type, is_main_host
+        device_type, is_main_host, working_directory
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         provider = excluded.provider,
         model_name = excluded.model_name,
@@ -104,7 +106,8 @@ async function main(argv = process.argv) {
         preferred_online_model = COALESCE(excluded.preferred_online_model, preferred_online_model),
         supervisor_model = COALESCE(excluded.supervisor_model, supervisor_model),
         device_type = excluded.device_type,
-        is_main_host = excluded.is_main_host
+        is_main_host = excluded.is_main_host,
+        working_directory = COALESCE(excluded.working_directory, working_directory)
     `, [
       userId,
       provider,
@@ -119,7 +122,8 @@ async function main(argv = process.argv) {
       args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       args.supervisor_model || process.env.SUPERVISOR_MODEL || (onlineProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4o'),
       deviceType,
-      isMainHost
+      isMainHost,
+      workingDir
     ]);
 
     console.log('User settings initialized and seeded successfully.');

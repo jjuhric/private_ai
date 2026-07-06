@@ -348,6 +348,20 @@ export default function SettingsModal({
             </div>
           </div>
 
+          <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
+            <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>Workspace Configuration</h4>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label>Working Directory</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Absolute path to workspace root"
+                value={settings.working_directory || ''}
+                onChange={e => setSettings(prev => ({ ...prev, working_directory: e.target.value }))}
+              />
+            </div>
+          </div>
+
           <button
             className="btn-primary"
             style={{ marginTop: 8 }}

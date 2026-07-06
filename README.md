@@ -1,4 +1,4 @@
-# Private AI Assistant — Enterprise Suite (v4.3.0)
+# Private AI Assistant — Enterprise Suite (v4.4.0)
 
 <p align="center">
   <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
@@ -57,6 +57,7 @@ Private AI operates in a distributed network. Setup instructions differ based on
 - **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
 - **GitHub Personal Access Token (PAT)**: **(REQUIRED)** Required to fetch tool repository components and download code updates.
 - **Local LLM (LM Studio / Ollama)**: **(REQUIRED)** The system defaults entirely to your Local LLM. Online API keys (e.g. Gemini) are optional fallbacks.
+- **Working Directory**: **(REQUIRED)** The absolute local directory path where code files are saved and compiled. Dynamically resolved on startup and configurable in Settings.
 
 ### 1. Windows Main Host (Running LLMs)
 The Windows PC acts as the central brain. It runs the local LLM integration, coordinates multi-agent loops, and maintains the primary database.
@@ -127,8 +128,9 @@ When launching Private AI for the first time, you are greeted by an automated se
 Through the central chat pane, the **Supervisor Agent** acts as the primary coordinator, delegating tasks to various specialized agents:
 - **Mesh Communication & Routing**: Connected peripheral devices (Raspberry Pis, ESP32s) can communicate and execute commands on each other freely. However, the central Windows Main Host is protected: it can query its own system telemetry locally, but no remote node is allowed to query information or execute commands on the Main Host.
 - **GitHub Agent**: Performs GitHub operations such as creating branches, committing files, and generating pull requests. It has strict security constraints blocking repository creation and direct updates to the `main` or `master` branches of any repository.
-- **Tool Creation Agent**: Orchestrates dynamic tool development. It drafts a plan for the new tool, pauses coordinator execution to request user permission (requiring a `yes`/`no` response), and then coordinates writing/testing with the Coder and QA nodes.
-- **Coder & QA Nodes**: The Developer Agent and QA Engineer build and verify dynamic tool packages securely.
+- **Tool Creation Agent**: Orchestrates dynamic tool development. It drafts a **Tool Plan** (saved in the workspace as `plan.md`) describing the goal, risks, affected parts, and files to touch, pauses coordinator execution to request user permission (requiring a `yes`/`no` response), and then implements, tests, and deploys it. System-specific (local betterment) tools are automatically added to `.gitignore`, while general tools are shared via the `private_ai_tools` repository.
+- **Agent Creation Agent**: Designs and integrates new agents on the fly. It constructs an **Agent Plan** detailing the prompt, integration points, risk, and registry updates (saved as `agent_[name]_plan.md`), obtains user permission, and automatically edits files (`agents.js` and `ai.js`) and database capabilities.
+- **Coder & QA Nodes**: The Developer Agent and QA Engineer build and verify dynamic tool/agent packages securely.
 
 ### 3. Network Nodes Registry Dashboard
 Navigate to **System Control** -> **Field Nodes** tab to manage your smart home mesh:

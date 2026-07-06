@@ -111,6 +111,9 @@ async function getDb() {
     if (!settingsColumns.some(col => col.name === 'is_main_host')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN is_main_host INTEGER DEFAULT 0");
     }
+    if (!settingsColumns.some(col => col.name === 'working_directory')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN working_directory TEXT");
+    }
 
     // Migrate memories to add embedding column if missing
     const memoriesColumns = await dbConnection.all('PRAGMA table_info(memories)');
