@@ -123,11 +123,12 @@ When launching Private AI for the first time, you are greeted by an automated se
 * **Step 3: Model Configuration**: Configure preferred online (Gemini/OpenAI/Claude) and local models.
 * **Step 4: Review & Deploy**: Validates and saves configurations to the SQLite DB.
 
-### 2. Multi-Agent Supervisor
-Through the central chat pane, the **Supervisor Agent** acts as the primary scheduler. When you ask it to interact with local hardware, it checks node availability:
-- To toggle an LED or read a sensor in a remote room, the supervisor invokes the `delegate_to_remote_node` tool.
-- The command is sent via the backend **Agent Bridge** to the target node's IP address.
-- If the action is dangerous or targeted at the Windows host, the frontend alerts the user with a UAC Modal for approval.
+### 2. Multi-Agent Supervisor & Agents Pool
+Through the central chat pane, the **Supervisor Agent** acts as the primary coordinator, delegating tasks to various specialized agents:
+- **Mesh Communication & Routing**: Connected peripheral devices (Raspberry Pis, ESP32s) can communicate and execute commands on each other freely. However, the central Windows Main Host is protected: it can query its own system telemetry locally, but no remote node is allowed to query information or execute commands on the Main Host.
+- **GitHub Agent**: Performs GitHub operations such as creating branches, committing files, and generating pull requests. It has strict security constraints blocking repository creation and direct updates to the `main` or `master` branches of any repository.
+- **Tool Creation Agent**: Orchestrates dynamic tool development. It drafts a plan for the new tool, pauses coordinator execution to request user permission (requiring a `yes`/`no` response), and then coordinates writing/testing with the Coder and QA nodes.
+- **Coder & QA Nodes**: The Developer Agent and QA Engineer build and verify dynamic tool packages securely.
 
 ### 3. Network Nodes Registry Dashboard
 Navigate to **System Control** -> **Field Nodes** tab to manage your smart home mesh:

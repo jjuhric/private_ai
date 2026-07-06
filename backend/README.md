@@ -55,7 +55,7 @@ At the core of the backend is the **Multi-Agent Coordinator** (`backend/ai.js` &
 ### Coordinator Loop Process
 1. **Pre-Run Memory Check**: Before invoking the main coordinator, the **Memory Agent** queries the SQLite database for relevant past memories and inserts them into the supervisor's prompt.
 2. **Supervisor Decision**: The **Supervisor Agent** evaluates the user request and decides whether to output a final response or delegate to a specialized worker sub-agent.
-3. **Execution Turn**: The coordinator runs the loop for up to 10 turns.
+3. **Execution Turn & Human Pauses**: The coordinator runs the loop for up to 10 turns. If a sub-agent returns `INPUT_REQUIRED_FROM_USER: [message]`, the coordinator intercepts the message, streams it to the user, and immediately terminates the current turn to pause for user input.
 4. **Responder Streaming**: Once the supervisor finishes, the accumulated reasoning and final response are streamed chunk-by-chunk to the client using Server-Sent Events.
 
 ```mermaid
@@ -107,6 +107,8 @@ sequenceDiagram
 - **QA Engineer**: Audits source code and runs the test suites.
 - **Weather Expert**: Connects to OpenWeatherMap to retrieve detailed forecasts.
 - **Host Specialist**: Reads system hardware configurations, battery status, and CPU temperatures.
+- **GitHub Agent**: Manages branches, commits changes, and generates pull requests on GitHub, with strict constraints blocking repository creation or direct changes to `main`/`master` branches.
+- **Tool Creation Agent**: Designs and coordinates new tool additions. It creates a plan, prompts the user via the supervisor for a `yes`/`no` approval, and coordinates with Developer/QA nodes to implement and test the new tool.
 
 ---
 
