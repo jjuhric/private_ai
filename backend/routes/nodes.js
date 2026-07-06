@@ -88,6 +88,10 @@ router.get('/discovery', async (req, res) => {
 // Authenticated network scan endpoint
 router.post('/scan', authenticateToken, async (req, res) => {
   try {
+    const db = await getDb();
+    const existingNodes = (await db.all('SELECT ip_address, port FROM network_nodes WHERE user_id = ?', [req.user.id])) || [];
+    const existingSet = new Set(existingNodes.map(n => `${n.ip_address}:${n.port}`));
+
     const subnet = getLocalSubnet();
     const port = process.env.PORT || 3000;
     const discovered = [];
@@ -103,6 +107,9 @@ router.post('/scan', authenticateToken, async (req, res) => {
       const batch = ipList.slice(i, i + batchSize);
       await Promise.all(
         batch.map(async (ip) => {
+          if (existingSet.has(`${ip}:${port}`)) {
+            return;
+          }
           const isOpen = await checkIpPort(ip, port);
           if (isOpen) {
             const info = await getDiscoveryPayload(ip, port);
@@ -144,11 +151,23 @@ router.post('/', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'node_name, device_type, and ip_address are required' });
   }
 
+  const targetPort = port || 3000;
+
   try {
     const db = await getDb();
+
+    // Check if the node is already registered
+    const existing = await db.get(
+      'SELECT id FROM network_nodes WHERE user_id = ? AND ip_address = ? AND port = ?',
+      [req.user.id, ip_address, targetPort]
+    );
+    if (existing) {
+      return res.status(400).json({ error: 'Node with this IP address and port is already registered' });
+    }
+
     const result = await db.run(
       'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, bridge_secret, last_seen, is_online) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), 1)',
-      [req.user.id, node_name, device_type, ip_address, port || 3000, bridge_secret || null]
+      [req.user.id, node_name, device_type, ip_address, targetPort, bridge_secret || null]
     );
     
     res.json({ id: result.lastID, success: true, message: 'Node added successfully' });
