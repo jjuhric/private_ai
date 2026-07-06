@@ -99,7 +99,18 @@ router.get('/health', async (req, res) => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 2000); // 2s timeout
       
-      const llmRes = await fetch(`${new URL(targetUrl).origin}/v1/models`, { signal: controller.signal });
+      let fetchUrl = targetUrl.trim();
+      if (!fetchUrl.startsWith('http://') && !fetchUrl.startsWith('https://')) {
+        fetchUrl = `http://${fetchUrl}`;
+      }
+      fetchUrl = fetchUrl.replace(/\/$/, '');
+      if (fetchUrl.includes('/v1')) {
+        fetchUrl = `${fetchUrl}/models`;
+      } else {
+        fetchUrl = `${fetchUrl}/v1/models`;
+      }
+
+      const llmRes = await fetch(fetchUrl, { signal: controller.signal });
       clearTimeout(id);
       if (llmRes.ok) diagnostics.dependencies.llm_provider = 'stable';
     } else {

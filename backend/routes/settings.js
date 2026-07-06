@@ -3,6 +3,25 @@ const router = express.Router();
 const { getDb } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
+function resolveLlmModelsUrl(baseUrl, apiStyle = 'openai') {
+  let url = (baseUrl || '').trim();
+  if (!url) return '';
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `http://${url}`;
+  }
+  url = url.replace(/\/$/, '');
+
+  if (apiStyle === 'lm-studio') {
+    const cleanUrl = url.replace(/\/v1$/, '');
+    return `${cleanUrl}/api/v1/models`;
+  }
+
+  if (url.includes('/v1')) {
+    return `${url}/models`;
+  }
+  return `${url}/v1/models`;
+}
+
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
@@ -125,18 +144,7 @@ router.get('/local-models', authenticateToken, async (req, res) => {
 
     const authHeader = localApiKey && localApiKey !== 'lm-studio' ? { 'Authorization': `Bearer ${localApiKey}` } : {};
 
-    let endpoint = '';
-    try {
-      const urlObj = new URL(localUrl);
-      const origin = urlObj.origin;
-      if (localApiStyle === 'lm-studio') {
-        endpoint = `${origin}/api/v1/models`;
-      } else {
-        endpoint = `${origin}/v1/models`;
-      }
-    } catch (e) {
-      endpoint = `${localUrl.replace(/\/$/, '')}/v1/models`;
-    }
+    const endpoint = resolveLlmModelsUrl(localUrl, localApiStyle);
 
     const response = await fetch(endpoint, {
       headers: { ...authHeader, 'Accept': 'application/json' }
@@ -195,7 +203,8 @@ router.get('/online-models', authenticateToken, async (req, res) => {
         : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('gemini'));
     } else if (provider === 'openai') {
-      const response = await fetch(`${process.env.LOCAL_LLM_URL}/v1/models`, {
+      const endpoint = resolveLlmModelsUrl(process.env.LOCAL_LLM_URL);
+      const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${key}` }
       });
       if (!response.ok) throw new Error(`OpenAI API error: ${response.statusText}`);
@@ -203,7 +212,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
       const models = data.data ? data.data.map(m => m.id) : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('openai'));
     } else if (provider === 'custom' && url) {
-      let endpoint = `${url.replace(/\/$/, '')}/v1/models`;
+      const endpoint = resolveLlmModelsUrl(url);
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${key}` }
       });
@@ -242,7 +251,7 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
   try {
     if (provider === 'local') {
       const url = localUrl || 'http://92.168.1.42:1234/v1';
-      const fetchUrl = `${url.replace(/\/$/, '')}/v1/models`;
+      const fetchUrl = resolveLlmModelsUrl(url);
       const headers = {};
       if (localApiKey && !localApiKey.includes('••')) {
         headers['Authorization'] = `Bearer ${localApiKey}`;
@@ -281,7 +290,7 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        const testRes = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/models`, {
+        const testRes = await fetch(resolveLlmModelsUrl(baseUrl), {
           headers: { 'Authorization': `Bearer ${onlineKey}` },
           signal: controller.signal
         });
