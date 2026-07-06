@@ -100,6 +100,7 @@ export default function SettingsModal({
                   <option value="openai">OpenAI-compatible</option>
                   <option value="lm-studio">LM Studio API</option>
                   <option value="anthropic">Anthropic-compatible</option>
+                  <option value="local-gemini">Gemini Local Style</option>
                 </select>
               </div>
               <div className="form-group" style={{ margin: 0 }}>
@@ -107,7 +108,7 @@ export default function SettingsModal({
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g. http://92.168.1.42:1234/v1"
+                  placeholder="e.g. http://192.168.1.42:1234/v1"
                   value={settings.local_url || ''}
                   onChange={e => setSettings(prev => ({ ...prev, local_url: e.target.value }))}
                 />

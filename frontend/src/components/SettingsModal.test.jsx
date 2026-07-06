@@ -118,7 +118,7 @@ describe('SettingsModal Component Tests', () => {
     expect(mockSetSettings).toHaveBeenCalled();
 
     // Local Base URL text input
-    const urlInput = screen.getByPlaceholderText('e.g. http://92.168.1.42:1234/v1');
+    const urlInput = screen.getByPlaceholderText('e.g. http://192.168.1.42:1234/v1');
     fireEvent.change(urlInput, { target: { value: 'http://localhost:5000/v1' } });
     expect(mockSetSettings).toHaveBeenCalled();
 

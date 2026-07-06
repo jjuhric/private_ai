@@ -174,7 +174,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     respText = result.response.text();
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://92.168.1.42:1234/v1') 
+      ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
@@ -197,11 +197,17 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
         endpoint = `${origin}/v1/chat/completions`;
       } else if (targetStyle === 'anthropic') {
         endpoint = `${origin}/v1/messages`;
+      } else if (targetStyle === 'local-gemini') {
+        endpoint = `${origin}/api/v1/chat`;
       } else {
         endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
       }
     } catch (e) {
-      endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+      if (targetStyle === 'local-gemini') {
+        endpoint = `${targetUrl.replace(/\/$/, '')}/api/v1/chat`;
+      } else {
+        endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+      }
     }
 
     let body = {};
@@ -211,6 +217,12 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
         system: systemPrompt,
         messages: [{ role: 'user', content: fullPrompt }],
         max_tokens: 1024
+      };
+    } else if (targetStyle === 'local-gemini') {
+      body = {
+        model: modelName,
+        system_prompt: systemPrompt,
+        input: fullPrompt
       };
     } else {
       body = {
@@ -249,7 +261,9 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
     }
 
     const data = await res.json();
-    respText = targetStyle === 'anthropic' ? (data.content?.[0]?.text || '') : (data.choices?.[0]?.message?.content || '');
+    respText = targetStyle === 'anthropic' 
+      ? (data.content?.[0]?.text || '') 
+      : (data.choices?.[0]?.message?.content || data.response || data.content || '');
   }
 
   respText = respText
@@ -307,7 +321,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     return result.response.text();
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://92.168.1.42:1234/v1') 
+      ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');

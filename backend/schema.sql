@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   github_token TEXT,
   gemini_key TEXT, -- legacy, replaced by online_key
   local_key TEXT,
-  local_url TEXT DEFAULT 'http://92.168.1.42:1234/v1',
+  local_url TEXT DEFAULT 'http://192.168.1.42:1234/v1',
   local_api_style TEXT DEFAULT 'openai', -- 'openai', 'lm-studio', 'anthropic'
   online_url TEXT,
   online_key TEXT,

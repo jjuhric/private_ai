@@ -34,11 +34,17 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       endpoint = `${origin}/v1/chat/completions`;
     } else if (localStyle === 'anthropic') {
       endpoint = `${origin}/v1/messages`;
+    } else if (localStyle === 'local-gemini') {
+      endpoint = `${origin}/api/v1/chat`;
     } else {
       endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
     }
   } catch (e) {
-    endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+    if (localStyle === 'local-gemini') {
+      endpoint = `${baseUrl.replace(/\/$/, '')}/api/v1/chat`;
+    } else {
+      endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+    }
   }
 
   if (localStyle === 'anthropic') {
@@ -60,6 +66,18 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     if (systemMessage) {
       body.system = systemMessage;
     }
+  } else if (localStyle === 'local-gemini') {
+    const systemMessage = messages.find(m => m.role === 'system')?.content || '';
+    const conversation = messages
+      .filter(m => m.role !== 'system')
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n');
+
+    body = {
+      model: modelName,
+      system_prompt: systemMessage,
+      input: conversation
+    };
   } else {
     // OpenAI and LM Studio style formatting
     body = {
@@ -88,7 +106,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/event-stream')) {
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || data.content?.[0]?.text;
+    const content = data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.response || data.content;
     if (content) {
       onChunk(content);
     }
@@ -117,7 +135,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
         try {
           const parsed = JSON.parse(cleaned.substring(6));
           // Support both OpenAI format and Anthropic format chunk parsing
-          const text = parsed.choices?.[0]?.delta?.content || parsed.delta?.text;
+          const text = parsed.choices?.[0]?.delta?.content || parsed.delta?.text || parsed.response || parsed.content;
           if (text) onChunk(text);
         } catch (e) {
           // ignore malformed lines
@@ -435,7 +453,7 @@ Make sure to answer the user query directly and clearly.`;
     let targetStyle = '';
 
     if (provider === 'local') {
-      targetUrl = localBaseUrl || 'http://92.168.1.42:1234/v1';
+      targetUrl = localBaseUrl || 'http://192.168.1.42:1234/v1';
       targetKey = localApiKey;
       targetStyle = localApiStyle || 'openai';
     } else {

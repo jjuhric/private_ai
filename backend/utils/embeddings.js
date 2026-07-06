@@ -45,7 +45,7 @@ async function getEmbedding(text, userSettings = {}) {
     let modelName = 'text-embedding-ada-002';
 
     if (decryptedSettings.provider === 'local') {
-      baseUrl = decryptedSettings.local_url || 'http://92.168.1.42:1234/v1';
+      baseUrl = decryptedSettings.local_url || 'http://192.168.1.42:1234/v1';
       apiKey = decryptedSettings.local_key || '';
       modelName = decryptedSettings.model_name || 'text-embedding-ada-002';
     } else {
