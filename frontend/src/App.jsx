@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, ExternalLink } from 'lucide-react';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import ChatPane from './components/ChatPane';
@@ -11,6 +11,7 @@ import AgentDashboard from './components/AgentDashboard';
 import Toast from './components/Toast';
 import SetupWizard from './components/SetupWizard';
 import SudoModal from './components/SudoModal';
+import PopoutWindow from './components/PopoutWindow';
 
 function App() {
   // Auth state
@@ -70,6 +71,7 @@ function App() {
   // Input & Streaming state
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isChatPoppedOut, setIsChatPoppedOut] = useState(false);
   const [activeAgent, setActiveAgent] = useState(null);
   const [streamThoughts, setStreamThoughts] = useState('');
   const [streamContent, setStreamContent] = useState('');
@@ -179,6 +181,7 @@ function App() {
   const handleLogout = () => {
     setToken('');
     localStorage.removeItem('token');
+    setIsChatPoppedOut(false);
   };
 
   // Chats operations
@@ -779,15 +782,28 @@ function App() {
             </h2>
           </div>
 
-          <div className="model-config-badge">
-            <span className={`connection-dot ${settings.provider === 'gemini' ? 'online' : 'local'}`}></span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 550 }}>
-              {settings.provider === 'gemini' ? 'Online: Gemini' : 'Local AI'} ({settings.model_name.split('/').pop()})
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {activeTab === 'chat' && activeChatId && !isChatPoppedOut && (
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setIsChatPoppedOut(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '6px 12px' }}
+                title="Pop out chat to a separate window"
+              >
+                <ExternalLink size={14} /> Pop Out Chat
+              </button>
+            )}
+
+            <div className="model-config-badge">
+              <span className={`connection-dot ${settings.provider === 'gemini' ? 'online' : 'local'}`}></span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 550 }}>
+                {settings.provider === 'gemini' ? 'Online: Gemini' : 'Local AI'} ({settings.model_name.split('/').pop()})
+              </span>
+            </div>
           </div>
         </header>
 
-        {activeTab === 'chat' && (
+        {activeTab === 'chat' && !isChatPoppedOut && (
           <ChatPane
             settings={settings}
             messages={messages}
@@ -804,6 +820,22 @@ function App() {
             handleResolveCommand={handleResolveCommand}
             streamStatus={streamStatus}
           />
+        )}
+        {activeTab === 'chat' && isChatPoppedOut && (
+          <div className="chat-pane" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--text-secondary)' }}>
+            <ExternalLink size={48} className="text-accent-primary" style={{ opacity: 0.6, animation: 'pulse 2s infinite alternate' }} />
+            <h3>Chat is Popped Out</h3>
+            <p style={{ fontSize: '0.9rem', maxWidth: '350px', textAlign: 'center', lineHeight: '1.5' }}>
+              The chat has been opened in a separate window. You can browse the dashboard, calendar, or memories here while keeping the chat active.
+            </p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setIsChatPoppedOut(false)}
+              style={{ padding: '8px 18px', fontSize: '0.9rem' }}
+            >
+              Merge Chat Back
+            </button>
+          </div>
         )}
         {activeTab === 'calendar' && (
           <CalendarPane
@@ -877,6 +909,27 @@ function App() {
         type={toast.type}
         onClose={() => setToast({ message: '', type: 'info' })}
       />
+
+      {isChatPoppedOut && (
+        <PopoutWindow onClose={() => setIsChatPoppedOut(false)}>
+          <ChatPane
+            settings={settings}
+            messages={messages}
+            activeChatId={activeChatId}
+            isStreaming={isStreaming}
+            streamThoughts={streamThoughts}
+            streamContent={streamContent}
+            toolLogs={toolLogs}
+            inputText={inputText}
+            setInputText={setInputText}
+            handleSendMessage={handleSendMessage}
+            handleStop={handleStop}
+            messagesEndRef={messagesEndRef}
+            handleResolveCommand={handleResolveCommand}
+            streamStatus={streamStatus}
+          />
+        </PopoutWindow>
+      )}
     </div>
   );
 }
