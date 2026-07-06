@@ -122,6 +122,24 @@ async function getDb() {
     if (!hasAgentName) {
       await dbConnection.run('ALTER TABLE memories ADD COLUMN agent_name TEXT');
     }
+
+    // Migrate network_nodes to add new columns if missing
+    const nodeColumns = await dbConnection.all('PRAGMA table_info(network_nodes)');
+    if (!nodeColumns.some(col => col.name === 'mqtt_topic')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN mqtt_topic TEXT');
+    }
+    if (!nodeColumns.some(col => col.name === 'capabilities')) {
+      await dbConnection.run("ALTER TABLE network_nodes ADD COLUMN capabilities JSON DEFAULT '[]'");
+    }
+    if (!nodeColumns.some(col => col.name === 'os_type')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN os_type TEXT');
+    }
+    if (!nodeColumns.some(col => col.name === 'arch')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN arch TEXT');
+    }
+    if (!nodeColumns.some(col => col.name === 'node_version')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN node_version TEXT');
+    }
     
     // Auto-migrate deprecated gemini-1.5-flash entries to gemini-2.0-flash
     await dbConnection.run("UPDATE user_settings SET model_name = 'gemini-2.0-flash' WHERE model_name = 'gemini-1.5-flash'");

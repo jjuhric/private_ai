@@ -254,7 +254,21 @@ async function runAgentLoop({
     console.error('Failed to load user profile in agent loop:', err);
   }
 
-  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}`;
+  let dynamicCapabilitiesContext = '';
+  try {
+    const caps = await db.all('SELECT agent_name, tool_name, description, parameters FROM agent_capabilities');
+    if (caps && caps.length > 0) {
+      dynamicCapabilitiesContext = `\n\n### Dynamically Installed Custom Tools in the Mesh:`;
+      for (const cap of caps) {
+        dynamicCapabilitiesContext += `\n- Agent "**${cap.agent_name}**" has tool "**${cap.tool_name}**": ${cap.description}\n  Tool parameters: ${cap.parameters}`;
+      }
+      dynamicCapabilitiesContext += `\n\nWhen delegating tasks to these agents, you can expect them to be able to execute these custom tools.`;
+    }
+  } catch (err) {
+    console.error('Failed to query agent capabilities in runAgentLoop:', err);
+  }
+
+  const systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
@@ -315,6 +329,8 @@ async function runAgentLoop({
         subTask = decision.params?.task || userMessage;
       } else if (agentName === 'document_vault') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
+      } else if (agentName === 'developer') {
+        subTask = decision.params?.task || userMessage;
       } else {
         subTask = userMessage;
       }

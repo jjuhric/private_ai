@@ -1,0 +1,23 @@
+{
+  "name": "template_tool",
+  "version": "1.0.0",
+  "description": "Template tool description",
+  "author": "developer_agent",
+  "target_agents": ["coder"],
+  "compatible_platforms": ["windows", "linux", "darwin"],
+  "compatible_devices": ["windows", "rpi5", "rpi4"],
+  "entry_point": "handler.js",
+  "test_file": "handler.test.js",
+  "exported_function": "handleTemplateTool",
+  "tool_declaration": {
+    "actions": ["execute_action"],
+    "parameters": {
+      "execute_action": {
+        "param1": "string (required)"
+      }
+    }
+  },
+  "dependencies": [],
+  "env_vars": [],
+  "created_at": "2026-07-05T23:00:00Z"
+}

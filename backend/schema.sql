@@ -77,8 +77,14 @@ CREATE TABLE IF NOT EXISTS network_nodes (
   last_seen DATETIME,
   is_online INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  mqtt_topic TEXT,
+  capabilities JSON DEFAULT '[]',
+  os_type TEXT,
+  arch TEXT,
+  node_version TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
 
 CREATE TABLE IF NOT EXISTS memories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,4 +114,41 @@ CREATE TABLE IF NOT EXISTS vault_chunks (
   content TEXT NOT NULL,
   embedding TEXT,
   FOREIGN KEY (document_id) REFERENCES vault_documents(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS installed_tools (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tool_name TEXT NOT NULL UNIQUE,
+  version TEXT NOT NULL,
+  target_agent TEXT NOT NULL,
+  manifest TEXT NOT NULL,            -- store serialized JSON manifest
+  installed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  status TEXT DEFAULT 'active'
+);
+
+CREATE TABLE IF NOT EXISTS agent_capabilities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_name TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  parameters TEXT,                   -- store serialized JSON schema
+  added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(agent_name, tool_name)
+);
+
+CREATE TABLE IF NOT EXISTS dev_pipeline (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  request_id TEXT UNIQUE NOT NULL,
+  original_prompt TEXT NOT NULL,
+  target_node TEXT,
+  target_agent TEXT,
+  tool_name TEXT,
+  status TEXT DEFAULT 'pending',
+  dev_agent_output TEXT,
+  qa_agent_output TEXT,
+  branch_name TEXT,
+  pr_url TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

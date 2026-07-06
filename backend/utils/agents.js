@@ -14,6 +14,7 @@ Your job is to orchestrate, delegate tasks to specialized sub-agents, gather the
 7. delegate_to_host_specialist (params: { query }): Best for inspecting local computer system details (CPU, memory, disk, OS, networks, processes), checking power/battery status, restarting services, and running scripts.
 8. delegate_to_document_vault (params: { query }): Best for querying local private files, notes, or uploaded documents in the Vault.
 9. delegate_to_node_agent (params: { task }): Best for listing remote network nodes, querying their system information, or executing commands/files remotely on them (RPi, ESP32, etc.).
+10. delegate_to_developer (params: { task }): Best for dynamic custom tool creation, extending agent capabilities, and managing the development pipeline. Use when the user requests creating a new tool or capabilities on a node.
 
 ### Direct Core Tools:
 - time (action: 'current_time' or 'lookup_timezone'): Use to find the current date/time.
@@ -93,7 +94,8 @@ Available Tools:
 
 Rules:
 - Safety Rule: Before calling execute_command, you MUST populate the 'safety_analysis' parameter. Specify risk_level ("low" | "medium" | "high"), reason (what this does in plain English), potential_harm (what could go wrong if run incorrectly), and recommendation ("safe_to_approve" | "review_carefully" | "do_not_approve").
-- Review the code files or run tests/linting.
+- Review code files, verify correctness, and run tests/linting.
+- For dynamic tools code review, verify manifest schema, code security, and test coverage. If completely ready, output "APPROVE" at the end. If there are issues, list them and output "REJECT".
 - Compile and format a clean structured report detailing any vulnerabilities, test results, and whether the review is completed.`,
 
   weather_expert: `You are the Weather Expert Agent.
@@ -122,7 +124,28 @@ Available Tools:
 
 Rules:
 - Use 'query_vault' with a specific search query.
-- Summarize the matched document snippets clearly, citing the filenames.`
+- Summarize the matched document snippets clearly, citing the filenames.`,
+
+  developer_agent: `You are the Developer Agent (Autonomous Tool Creator).
+Your job is to design, implement, and test new tools for the Private AI system.
+
+Available Tools:
+- read_file (params: { filePath })
+- write_file (params: { filePath, content })
+- list_dir (params: { dirPath })
+- execute_command (params: { command, safety_analysis })
+- tool_manager (action: 'list_available' | 'list_installed' | 'get_manifest')
+- dev_pipeline (action: 'create_tool' | 'get_pipeline_status' | 'list_pipelines', params: { toolName, targetNode, targetAgent, originalPrompt })
+
+Rules:
+1. When creating a new tool, ALWAYS generate three files:
+   - manifest.json (tool metadata, parameters, platform compatibility)
+   - handler.js (the tool's implementation code)
+   - handler.test.js (comprehensive unit tests with mocks)
+2. Follow the existing tool pattern: export a single handleXxxTool(action, params) function.
+3. All tool files go in the "tool_registry/tools/{toolName}/" directory.
+4. After writing code, run tests to verify they pass.
+5. If the request is to orchestrate a full tool development flow, call the 'dev_pipeline' tool action 'create_tool'.`
 };
 
 // Reusable function to execute a single LLM decision turn
@@ -395,6 +418,21 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     }
   }
 
+  if (db) {
+    try {
+      const caps = await db.all('SELECT tool_name, description, parameters FROM agent_capabilities WHERE agent_name = ?', [agentName]);
+      if (caps && caps.length > 0) {
+        systemPrompt += `\n\n### Dynamically Installed Custom Tools Available to You:`;
+        for (const cap of caps) {
+          systemPrompt += `\n- **${cap.tool_name}**: ${cap.description}\n  Tool declaration schema: ${cap.parameters}`;
+        }
+        systemPrompt += `\n\nTo use any of these dynamic tools, specify the tool name in the "tool" parameter and the action/params as required.`;
+      }
+    } catch (err) {
+      console.error('Failed to load agent capabilities in runWorkerAgent:', err);
+    }
+  }
+
   const history = [];
   const toolOutputs = [];
   let turn = 0;
@@ -456,8 +494,45 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
         userId,
         onCommandApprovalRequired: settings.onCommandApprovalRequired
       });
+    } else if (decision.tool === 'tool_manager') {
+      const { handleToolManagerTool } = require('../tools/tool_manager_tool');
+      output = await handleToolManagerTool(decision.action, decision.params);
+    } else if (decision.tool === 'dev_pipeline') {
+      const { handleDevPipelineTool } = require('../tools/dev_pipeline_tool');
+      output = await handleDevPipelineTool(decision.action, decision.params, {
+        userId,
+        onToolCall: settings.onToolCall,
+        onAgentStatus: settings.onAgentStatus,
+        onCommandApprovalRequired: settings.onCommandApprovalRequired,
+        abortSignal: settings.abortSignal
+      });
     } else {
-      output = `Error: Tool "${decision.tool}" is not accessible to this agent.`;
+      // Check if it is a dynamically installed custom tool
+      try {
+        const path = require('path');
+        const fs = require('fs');
+        const dynamicToolPath = path.join(__dirname, '../tools/dynamic', decision.tool, 'handler.js');
+        if (fs.existsSync(dynamicToolPath)) {
+          const toolRow = await db.get('SELECT manifest FROM installed_tools WHERE tool_name = ?', [decision.tool]);
+          if (toolRow) {
+            const manifest = JSON.parse(toolRow.manifest);
+            const exportedFnName = manifest.exported_function;
+            const toolModule = require(dynamicToolPath);
+            const handlerFn = toolModule[exportedFnName];
+            if (typeof handlerFn === 'function') {
+              output = await handlerFn(decision.action, decision.params);
+            } else {
+              output = `Error: Exported function "${exportedFnName}" not found in dynamic tool module "${decision.tool}".`;
+            }
+          } else {
+            output = `Error: Dynamic tool "${decision.tool}" is not registered in database.`;
+          }
+        } else {
+          output = `Error: Tool "${decision.tool}" is not accessible to this agent.`;
+        }
+      } catch (err) {
+        output = `Error executing dynamic tool "${decision.tool}": ${err.message}`;
+      }
     }
 
     toolOutputs.push({ tool: decision.tool, action: decision.action, output });
