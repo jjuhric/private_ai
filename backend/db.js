@@ -82,7 +82,7 @@ async function getDb() {
     }
     
     if (!settingsColumns.some(col => col.name === 'local_url')) {
-      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN local_url TEXT DEFAULT 'http://localhost:1234/v1'");
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN local_url TEXT DEFAULT 'http://192.168.1.42:1234/v1'");
     }
     if (!settingsColumns.some(col => col.name === 'local_api_style')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN local_api_style TEXT DEFAULT 'openai'");
