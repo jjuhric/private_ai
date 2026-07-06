@@ -47,7 +47,38 @@ async function getEmbedding(text, userSettings = {}) {
     if (decryptedSettings.provider === 'local') {
       baseUrl = decryptedSettings.local_url || 'http://192.168.1.42:1234/v1';
       apiKey = decryptedSettings.local_key || '';
-      modelName = decryptedSettings.model_name || 'text-embedding-ada-002';
+      modelName = 'text-embedding-ada-002';
+
+      try {
+        let modelsUrl = baseUrl.trim();
+        if (!modelsUrl.startsWith('http://') && !modelsUrl.startsWith('https://')) {
+          modelsUrl = `http://${modelsUrl}`;
+        }
+        modelsUrl = modelsUrl.replace(/\/$/, '');
+        if (modelsUrl.includes('/v1')) {
+          modelsUrl = `${modelsUrl}/models`;
+        } else {
+          modelsUrl = `${modelsUrl}/v1/models`;
+        }
+
+        const headers = {};
+        if (apiKey && apiKey !== 'lm-studio') {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+        const modelsRes = await fetch(modelsUrl, { headers });
+        if (modelsRes.ok) {
+          const modelsData = await modelsRes.json();
+          const modelsList = modelsData.data || [];
+          const foundEmbedModel = modelsList.find(m => 
+            m.id && (m.id.toLowerCase().includes('embed') || m.id.toLowerCase().includes('nomic'))
+          );
+          if (foundEmbedModel) {
+            modelName = foundEmbedModel.id;
+          }
+        }
+      } catch (err) {
+        console.warn('Embeddings: Failed to auto-detect local embedding model:', err.message);
+      }
     } else {
       baseUrl = decryptedSettings.online_url || '';
       apiKey = decryptedSettings.online_key || '';
