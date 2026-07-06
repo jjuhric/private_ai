@@ -17,7 +17,8 @@
     "test:e2e": "npm run build && node -e \"const fs = require('fs'); ['backend/test_database.db', 'backend/test_database.db-shm', 'backend/test_database.db-wal'].forEach(f => fs.existsSync(f) && fs.unlinkSync(f))\" && playwright test",
     "coverage:backend": "npm run test:coverage --prefix backend",
     "coverage:frontend": "npm run test:coverage --prefix frontend",
-    "coverage": "npm run coverage:backend && npm run coverage:frontend"
+    "coverage": "npm run coverage:backend && npm run coverage:frontend",
+    "update": "node -e \"const isWin = process.platform === 'win32'; const spawn = require('child_process').spawn; if (isWin) { spawn('powershell.exe', ['-ExecutionPolicy', 'Bypass', '-File', './setup.ps1', '-NonInteractive'], { stdio: 'inherit' }); } else { spawn('./setup.sh', ['--non-interactive'], { stdio: 'inherit' }); }\""
   },
   "dependencies": {
     "concurrently": "^8.2.2",
