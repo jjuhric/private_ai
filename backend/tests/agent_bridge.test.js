@@ -365,7 +365,7 @@ describe('agent_bridge.js API Endpoint Tests', () => {
         .send({ action: 'write_file', params: { filePath: 'test.js', content: 'alert(1)' } });
 
       expect(res.status).toBe(403);
-      expect(res.body.error).toContain('Access Denied');
+      expect(res.body.error).toContain('Access denied: Commands cannot be routed to the Parent Node');
     });
   });
 });

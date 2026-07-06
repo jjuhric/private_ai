@@ -63,9 +63,9 @@ describe('network_node_tool.js Tests', () => {
     expect(res).toContain('Error: Node with ID 1 not found');
   });
 
-  test('remote_node_bridge: blocks parent node execution', async () => {
+  test('remote_node_bridge: blocks parent node execution completely', async () => {
     mockDb.get.mockResolvedValueOnce({ id: 1, node_name: 'Parent', is_main_host: 1 });
-    const res = await handleNetworkNodeTool('remote_node_bridge', { nodeId: 1, action: 'run_command' }, { userId: 1 });
+    const res = await handleNetworkNodeTool('remote_node_bridge', { nodeId: 1, action: 'system_info' }, { userId: 1 });
     expect(res).toContain('Error: Access denied. Commands cannot be routed to the Parent Node');
   });
 

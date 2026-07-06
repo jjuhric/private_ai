@@ -152,36 +152,13 @@ router.get('/health', async (req, res) => {
 router.post('/execute', authenticateBridge, async (req, res) => {
   const { action, params = {} } = req.body;
   if (!action) return res.status(400).json({ error: 'action is required' });
-
   try {
     const db = await getDb();
-
-    // SECURITY CHECK: If this node is the Parent Node (Main Host), reject all remote network incoming commands immediately
     const settings = await db.get('SELECT is_main_host FROM user_settings LIMIT 1');
-    const ALLOWED_SYSTEM_INFO_ACTIONS = [
-      'system_info', 
-      'get_specifications', 
-      'get_power', 
-      'get_temperature', 
-      'get_network_info', 
-      'get_process_list', 
-      'get_service_status', 
-      'get_journal_logs', 
-      'security_scan',
-      'get_capabilities'
-    ];
 
-    if (settings && settings.is_main_host === 1) {
-      const blockedActions = ['update_node', 'apply_update', 'install_tool', 'write_file'];
-      if (blockedActions.includes(action) && req.isBridge) {
-        console.warn(`[Security Alert] Blocked cross-node mutation request for action: ${action}`);
-        return res.status(403).json({ error: 'Access Denied: Peripheral node endpoints are unauthorized to mutate files or execute commands on the Main Host machine.' });
-      }
-      
-      if (!ALLOWED_SYSTEM_INFO_ACTIONS.includes(action) && req.isBridge) {
-        console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
-        return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' });
-      }
+    if (settings && settings.is_main_host === 1 && req.isBridge) {
+      console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
+      return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' });
     }
 
     let output = '';

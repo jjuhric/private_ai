@@ -81,7 +81,7 @@ async function main(argv = process.argv) {
     const provider = 'local';
     
     // Determine default model names
-    let modelName = process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.5-9b';
+    let modelName = process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b';
 
     await db.run(`
       INSERT INTO user_settings (
@@ -115,7 +115,7 @@ async function main(argv = process.argv) {
       args.local_api_style || 'openai',
       encryptedOnlineKey,
       onlineProvider,
-      args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen3.5-9b',
+      args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b',
       args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       args.supervisor_model || process.env.SUPERVISOR_MODEL || (onlineProvider === 'gemini' ? 'gemini-1.5-pro' : 'gpt-4o'),
       deviceType,

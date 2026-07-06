@@ -9,6 +9,19 @@ async function handleGitHubTool(token, action, params) {
   }
 
   try {
+    // Restriction: Reject repository creation
+    if (action === 'create_repository' || action === 'create_repo') {
+      return JSON.stringify({ error: 'Error: Repository creation is not allowed' });
+    }
+
+    // Restriction: Reject direct updates/creation of main/master branches
+    const targetBranch = params?.branch || params?.branchName;
+    if (targetBranch && (targetBranch === 'main' || targetBranch === 'master')) {
+      if (['create_branch', 'commit_files', 'stage_feature_pr'].includes(action)) {
+        return JSON.stringify({ error: 'Error: Cannot modify main or master branch directly' });
+      }
+    }
+
     if (action === 'list_repos') {
       const url = token 
         ? 'https://api.github.com/user/repos?sort=updated&per_page=5'
@@ -122,6 +135,15 @@ async function handleGitHubTool(token, action, params) {
     } else if (action === 'merge_pr') {
       const { owner, repo, prNumber } = params;
       if (!owner || !repo || !prNumber) return JSON.stringify({ error: 'owner, repo, and prNumber are required' });
+
+      // Fetch PR base ref first to ensure we aren't merging into main/master
+      const getPrRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, { headers });
+      if (!getPrRes.ok) throw new Error(`Failed to fetch PR details for merge check: ${getPrRes.statusText}`);
+      const prDetails = await getPrRes.json();
+      const targetBase = prDetails.base?.ref;
+      if (targetBase === 'main' || targetBase === 'master') {
+        return JSON.stringify({ error: 'Error: Cannot merge PR into main or master branch' });
+      }
 
       const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/merge`, {
         method: 'PUT',

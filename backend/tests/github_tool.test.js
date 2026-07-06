@@ -235,4 +235,50 @@ describe('GitHub Tool Tests', () => {
       cp.exec = originalExec; // restore
     });
   });
+
+  describe('Restrictions: repo creation and main/master branches', () => {
+    test('create_repository or create_repo should be rejected', async () => {
+      const res = await handleGitHubTool('token', 'create_repo', {});
+      const parsed = JSON.parse(res);
+      expect(parsed.error).toContain('Repository creation is not allowed');
+    });
+
+    test('create_branch with main or master should be rejected', async () => {
+      const res = await handleGitHubTool('token', 'create_branch', { branch: 'main' });
+      const parsed = JSON.parse(res);
+      expect(parsed.error).toContain('Cannot modify main or master branch directly');
+    });
+
+    test('commit_files with main or master should be rejected', async () => {
+      const res = await handleGitHubTool('token', 'commit_files', { branch: 'master' });
+      const parsed = JSON.parse(res);
+      expect(parsed.error).toContain('Cannot modify main or master branch directly');
+    });
+
+    test('merge_pr with base branch as main or master should be rejected', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ base: { ref: 'main' } })
+      });
+
+      const res = await handleGitHubTool('token', 'merge_pr', { owner: 'owner', repo: 'repo', prNumber: 42 });
+      const parsed = JSON.parse(res);
+      expect(parsed.error).toContain('Cannot merge PR into main or master branch');
+    });
+
+    test('merge_pr with base branch as feature branch should be allowed', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ base: { ref: 'feature-branch' } })
+      });
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ merged: true, message: 'Merged successfully' })
+      });
+
+      const res = await handleGitHubTool('token', 'merge_pr', { owner: 'owner', repo: 'repo', prNumber: 42 });
+      const parsed = JSON.parse(res);
+      expect(parsed.success).toBe(true);
+    });
+  });
 });

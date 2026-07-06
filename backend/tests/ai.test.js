@@ -442,7 +442,7 @@ describe('Agent Loop & LLM Stream Unit Tests', () => {
       db,
       userId,
       provider: 'local',
-      modelName: 'qwen/qwen3.5-9b',
+      modelName: 'google/gemma-4-e4b',
       userMessage: 'What is the capital of France?',
       history,
       localApiKey: 'test_key',

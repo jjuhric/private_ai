@@ -334,7 +334,9 @@ async function runAgentLoop({
       'memory_agent',
       'document_vault',
       'developer_agent',
-      'node_agent'
+      'node_agent',
+      'github_agent',
+      'tool_creator_agent'
     ];
 
     if (agentNames.includes(toolName)) {
@@ -343,6 +345,10 @@ async function runAgentLoop({
       toolName = 'delegate_to_host_specialist';
     } else if (toolName === 'developer' || toolName === 'delegate_to_developer') {
       toolName = 'delegate_to_developer_agent';
+    } else if (toolName === 'github' || toolName === 'delegate_to_github') {
+      toolName = 'delegate_to_github_agent';
+    } else if (toolName === 'tool_creator' || toolName === 'delegate_to_tool_creator') {
+      toolName = 'delegate_to_tool_creator_agent';
     }
     decision.tool = toolName;
 
@@ -375,6 +381,10 @@ async function runAgentLoop({
         subTask = decision.params?.task || userMessage;
       } else if (agentName === 'node_agent') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
+      } else if (agentName === 'github_agent') {
+        subTask = decision.params?.query || decision.params?.task || userMessage;
+      } else if (agentName === 'tool_creator_agent') {
+        subTask = decision.params?.query || decision.params?.task || userMessage;
       } else {
         subTask = userMessage;
       }
@@ -387,6 +397,13 @@ async function runAgentLoop({
         toolOutput = `Agent "${agentName}" delegation failed: ${err.message}`;
       }
       if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
+
+      // Check if sub-agent output requires user input/permission
+      if (toolOutput && typeof toolOutput === 'string' && toolOutput.includes('INPUT_REQUIRED_FROM_USER')) {
+        const cleanedOutput = toolOutput.replace('INPUT_REQUIRED_FROM_USER:', '').trim();
+        onContent(cleanedOutput);
+        return; // Return immediately to pause the coordinator loop
+      }
     } else {
       // Execute direct fallback tools of supervisor
       if (decision.tool === 'calendar') {
