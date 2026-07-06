@@ -142,6 +142,13 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     return { deviceType, isMainHost, capabilities };
   }
 
+  if (action === 'get_system_report') {
+    const specs = await handleHostMachineTool('get_specifications', params, userId);
+    const temp = await getTemperatureInfo();
+    const net = await handleHostMachineTool('get_network_info', params, userId);
+    return `${specs}\n\n${temp}\n\n${net}`;
+  }
+
   if (action === 'get_power') {
     return await getPowerInfo();
   }
