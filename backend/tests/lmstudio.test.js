@@ -6,6 +6,24 @@ let mockDb = null;
 let mockFetchResponses = {};
 let mockGenerateContent = jest.fn();
 
+let mockSpawnStdoutOn = jest.fn();
+let mockSpawnStderrOn = jest.fn();
+let mockSpawnOn = jest.fn();
+let mockSpawnKill = jest.fn();
+
+jest.mock('child_process', () => {
+  return {
+    spawn: jest.fn().mockImplementation(() => {
+      return {
+        stdout: { on: mockSpawnStdoutOn },
+        stderr: { on: mockSpawnStderrOn },
+        on: mockSpawnOn,
+        kill: mockSpawnKill
+      };
+    })
+  };
+});
+
 jest.mock('@google/generative-ai', () => {
   return {
     GoogleGenerativeAI: jest.fn().mockImplementation(() => {
@@ -28,9 +46,11 @@ jest.mock('../db', () => {
 
 const { JWT_SECRET } = require('../middleware/auth');
 const chatRouter = require('../routes/chat');
+const lmstudioRouter = require('../routes/lmstudio');
 const app = express();
 app.use(express.json());
 app.use('/api', chatRouter);
+app.use('/api/lmstudio', lmstudioRouter);
 
 describe('LM Studio and Model Selection Tests', () => {
   let token;
@@ -344,5 +364,79 @@ describe('LM Studio and Model Selection Tests', () => {
 
     const selected = await selectBestModel(settings, 'test query', []);
     expect(selected).toBe('model-2');
+  });
+
+  test('GET /api/lmstudio/log-stream returns 403 when user is not main host', async () => {
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { is_main_host: 0 };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    const res = await request(app)
+      .get('/api/lmstudio/log-stream')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: 'Only the main host is authorized to stream logs.' });
+  });
+
+  test('GET /api/lmstudio/log-stream successfully initiates SSE stream when user is main host', async () => {
+    const { spawn } = require('child_process');
+    mockDb.get = jest.fn().mockImplementation(async (query, params) => {
+      if (query.includes('user_settings')) {
+        return { is_main_host: 1 };
+      }
+      if (query.includes('users')) {
+        return { id: 1 };
+      }
+      return null;
+    });
+
+    let stdoutCallback;
+    let stderrCallback;
+    let errorCallback;
+    let closeCallback;
+
+    mockSpawnStdoutOn.mockImplementation((event, cb) => {
+      if (event === 'data') stdoutCallback = cb;
+    });
+    mockSpawnStderrOn.mockImplementation((event, cb) => {
+      if (event === 'data') stderrCallback = cb;
+    });
+    mockSpawnOn.mockImplementation((event, cb) => {
+      if (event === 'error') errorCallback = cb;
+      if (event === 'close') closeCallback = cb;
+    });
+
+    const sseRequest = request(app)
+      .get('/api/lmstudio/log-stream')
+      .set('Authorization', `Bearer ${token}`);
+
+    const responsePromise = sseRequest.then(res => res);
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(spawn).toHaveBeenCalledWith('lms', ['log', 'stream', '--json'], expect.any(Object));
+
+    if (stdoutCallback) {
+      stdoutCallback(Buffer.from('{"level":"info","message":"Loading Gemma..."}\n'));
+    }
+    if (stderrCallback) {
+      stderrCallback(Buffer.from('warning output'));
+    }
+    if (errorCallback) {
+      errorCallback(new Error('Process crash'));
+    }
+    if (closeCallback) {
+      closeCallback(0);
+    }
+
+    const res = await responsePromise;
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/event-stream');
   });
 });

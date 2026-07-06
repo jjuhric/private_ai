@@ -51,7 +51,8 @@ function App() {
     local_api_style: 'openai',
     online_url: '',
     online_key: '',
-    online_provider: 'gemini'
+    online_provider: 'gemini',
+    is_main_host: false
   });
   const [localModels, setLocalModels] = useState([]);
   const [onlineModels, setOnlineModels] = useState([]);
@@ -345,7 +346,8 @@ function App() {
           online_key: data.online_key || '',
           online_provider: data.online_provider || 'gemini',
           preferred_local_model: data.preferred_local_model || '',
-          preferred_online_model: data.preferred_online_model || ''
+          preferred_online_model: data.preferred_online_model || '',
+          is_main_host: data.is_main_host === 1 || data.is_main_host === true || false
         });
         setIsSetupComplete(data.is_setup_complete !== false);
       }
@@ -852,6 +854,7 @@ function App() {
             toolLogs={toolLogs}
             activeAgent={activeAgent}
             isStreaming={isStreaming}
+            settings={settings}
           />
         )}
       </main>
