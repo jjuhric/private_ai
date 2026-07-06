@@ -58,11 +58,12 @@ CURRENTLY LOADED LOCAL MODEL:
 
 SELECTION RULES:
 1. Select the most appropriate model ID from the AVAILABLE MODELS list.
-2. IMPORTANT: Loading/switching models in LM Studio takes ~10-30 seconds. If the currently loaded model ("${loadedModel}") is adequate to perform the task, KEEP it (return the loaded model ID). Only switch to a different model if the task capability requirement strictly justifies the load time.
+2. IMPORTANT: Loading/switching models in LM Studio takes ~10-30 seconds. If the currently loaded model ("${loadedModel}") is adequate to perform the task, KEEP it.
+   EXCEPTION: If the currently loaded model is the large/heavy model (e.g., "qwen" or "qwen3.5-9b"), you MUST switch back to the workhorse/middle model ("e4b" or "gemma-4-e4b") or the weakest model ("e2b" or "gemma-4-e2b") if the task does not strictly require the heavy model's capabilities, in order to free up system RAM.
 3. MODEL CAPACITY PREFERENCE:
    - Bias selection HEAVILY toward the "middle" capabilities model (e.g., 4B/7B models like "e4b" or "gemma-4-e4b") as the default workhorse for most standard tasks, tools, and general orchestration.
    - Use the weakest model (e.g., 2B models like "e2b" or "gemma-4-e2b") ONLY for very simple, casual, or trivial tasks (e.g., short greetings, date/time queries, simple questions).
-   - Use the best model (e.g., "qwen" or "qwen3.5-9b") ONLY for complex coding, advanced software pipeline engineering, deep reasoning, or logic-heavy requirements.
+   - Use the best/heavy model (e.g., "qwen" or "qwen3.5-9b") ONLY for complex coding, advanced software pipeline engineering, deep reasoning, or logic-heavy requirements.
 
 You MUST respond in this exact JSON format:
 {
