@@ -8,7 +8,7 @@ param (
 # Requires PowerShell 5.1 or higher
 
 Write-Host "====================================================" -ForegroundColor Cyan
-Write-Host "  Private AI Assistant Windows Setup Utility V4.0.0 " -ForegroundColor Cyan
+Write-Host "  Private AI Assistant Windows Setup Utility V4.3.0 " -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 
 # 1. Helper function for logs

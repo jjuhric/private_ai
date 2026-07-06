@@ -1,10 +1,16 @@
-# Private AI Assistant — Enterprise Suite (v4.2.0)
+# Private AI Assistant — Enterprise Suite (v4.3.0)
+
+<p align="center">
+  <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
+</p>
 
 [![Wiki](https://img.shields.io/badge/wiki-available-brightgreen)](https://github.com/jjuhric/private_ai/wiki)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-active-success)](README.md)
 
-A secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Private AI features a ReAct multi-agent orchestration coordinator, live deep web scraping, real-time Google News summaries, persistent SQLite memory storage, task scheduling, system telemetry, and a mobile-responsive layout.
+A highly secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Private AI features a ReAct multi-agent orchestration coordinator, live deep web scraping, real-time Google News summaries, persistent SQLite memory storage, task scheduling, system telemetry, and a mobile-responsive layout.
 
-Version `4.2.0` introduces the **Multi-Device Hermes Network Architecture**, enabling a unified, local mesh network where a Windows main host coordinates and delegates hardware/control tasks to distributed Raspberry Pi and ESP32 field nodes.
+Version `4.3.0` introduces the **Multi-Device Hermes Network Architecture**, enabling a unified, local mesh network where a Windows main host coordinates and delegates hardware/control tasks to distributed Raspberry Pi and ESP32 field nodes.
 
 ---
 
@@ -45,7 +51,7 @@ graph TB
 
 ## ⚙️ Device Setup & Deployment
 
-Private AI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive, out-of-the-box walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/jjuhric/private_ai/wiki/Installation).
+Private AI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/jjuhric/private_ai/wiki/Installation).
 
 ### 🔍 Core Setup Requirements
 - **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
@@ -60,20 +66,20 @@ The Windows PC acts as the central brain. It runs the local LLM integration, coo
 
 #### Setup Steps:
 1. **Prerequisites**: Install Node.js (`v25.5.0` or higher), Git, and LM Studio/Ollama.
-2. **Install Dependencies**:
+2. **Install & Setup**:
+   Open PowerShell as Admin and run:
    ```powershell
-   npm run install:all
-   ```
-3. **Configure Environment**:
-   ```powershell
-   copy .env.example .env
+   git clone https://github.com/jjuhric/private_ai.git
+   cd private_ai
+   Set-ExecutionPolicy Bypass -Scope Process -Force
+   .\setup.ps1
    ```
    Follow the setup prompts to input your name, zipcode, local LLM URL, and GitHub token.
-4. **Launch Development Servers**:
+3. **Launch Development Servers**:
    ```powershell
    npm run dev
    ```
-5. **Setup Wizard**: Access `http://localhost:5173` to launch the Setup Wizard. Choose **Windows** as the device type during initialization.
+4. **Setup Wizard**: Access `http://localhost:3000` to launch the Setup Wizard. Choose **Windows** as the device type during initialization.
 
 ---
 
@@ -81,18 +87,15 @@ The Windows PC acts as the central brain. It runs the local LLM integration, coo
 Raspberry Pi nodes run lightweight backend endpoints to read telemetry (CPU temp, INA219 current/power draw), perform local GPIO manipulation, or run system-level shell scripts.
 
 #### Setup Steps:
-1. **Configure Environment**:
+1. **Prepare Node environment**:
    ```bash
-   cp .env.example .env
-   ```
-   Set `PORT=5173` and add `DEPLOY_MODE=backend-only` to disable building the React frontend assets (recommended for headless Pi Zero 2W).
-2. **Automated systemd Service Registration**:
-   ```bash
+   git clone https://github.com/jjuhric/private_ai.git
+   cd private_ai
    chmod +x setup.sh
    ./setup.sh
    ```
-   This will install backend packages, configure permissions, and setup a `private-ai` systemd background service.
-3. **Service Management**:
+   Provide the IP address of your Windows Main Host when prompted, and select the Raspberry Pi model.
+2. **Service Management**:
    - Check Status: `sudo systemctl status private-ai`
    - Restart: `sudo systemctl restart private-ai`
    - Logs: `journalctl -u private-ai -f`
@@ -108,9 +111,6 @@ ESP32 microcontrollers serve as low-power, cheap sensor nodes or relay controls 
    Open `esp32_firmware/main.py` and input your local WiFi SSID and Password inside the `main()` connection block.
 3. **Deploy Firmware**:
    Copy `esp32_firmware/main.py` onto your ESP32 device as `main.py` using tools like Thonny, Adafruit-AMPY, or mpremote.
-4. **REST Commands**: The ESP32 exposes:
-   - `POST /api/gpio/write` (e.g. `{"pin": 2, "value": 1}`) to toggle pins.
-   - Validates requests via a shared authorization `BRIDGE_SECRET` header.
 
 ---
 
@@ -143,6 +143,11 @@ To automatically update when changes are pushed to `main`, configure a GitHub we
 * The server verifies webhook payloads using GitHub's **HMAC-SHA256 signature** validation based on `UPDATE_WEBHOOK_SECRET`.
 * Under `DEPLOY_MODE=backend-only`, updates pull commits and execute `npm install` without rebuilding the React client, preventing memory overload on weak nodes like RPi Zero 2W.
 * On full hosts, it rebuilds frontend bundles and restarts the underlying system service.
+
+To update manually on any platform, simply execute:
+```bash
+npm run update
+```
 
 ---
 
