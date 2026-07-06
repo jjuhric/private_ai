@@ -7,12 +7,24 @@ const execPromise = util.promisify(exec);
 const { measurePower } = require('./ina219_tool');
 const { measureCpuTemp } = require('./temp_tool');
 
-// Helper to resolve paths safely relative to the workspace directory
+// Helper to resolve paths safely relative to the workspace or home directory
 function resolveSafePath(userPath) {
   const workspaceRoot = path.resolve(process.cwd());
-  const resolved = path.resolve(workspaceRoot, userPath);
-  if (!resolved.startsWith(workspaceRoot)) {
-    throw new Error('Access denied: path is outside the workspace directory.');
+  const homeRoot = path.resolve(os.homedir());
+  
+  let resolved;
+  if (userPath === '~') {
+    resolved = homeRoot;
+  } else if (userPath.startsWith('~/') || userPath.startsWith('~\\')) {
+    resolved = path.resolve(homeRoot, userPath.slice(2));
+    if (!resolved.startsWith(homeRoot)) {
+      throw new Error('Access denied: path is outside the home directory.');
+    }
+  } else {
+    resolved = path.resolve(workspaceRoot, userPath);
+    if (!resolved.startsWith(workspaceRoot)) {
+      throw new Error('Access denied: path is outside the workspace directory.');
+    }
   }
   return resolved;
 }
