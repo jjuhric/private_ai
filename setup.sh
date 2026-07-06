@@ -55,6 +55,17 @@ fi
 # Update check: If already setup, treat as update
 if [ "$SKIP_UPDATE" = false ] && [ -f ".env" ]; then
     log "Existing setup detected (.env file exists). Treating as an update..."
+
+    # Stop existing process listening on port to release file locks
+    PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
+    if command -v lsof &> /dev/null; then
+        PID=$(lsof -t -i:"$PORT" 2>/dev/null || true)
+        if [ ! -z "$PID" ]; then
+            log "Stopping existing process $PID on port $PORT to release file locks..."
+            kill -9 "$PID" 2>/dev/null || true
+            sleep 1
+        fi
+    fi
     
     # Verify Git and pull
     if command -v git &> /dev/null; then

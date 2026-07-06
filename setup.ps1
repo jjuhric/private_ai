@@ -32,6 +32,20 @@ if (-not (Test-Path $EnvPath)) {
 # Update check: If already setup, treat as update
 if (-not $SkipUpdate -and (Test-Path ".env")) {
     Write-Log "Existing setup detected (.env file exists). Treating as an update..." "Yellow"
+
+    # Stop existing process listening on port before running npm install
+    $envLines = Get-Content ".env"
+    $port = "3000"
+    foreach ($line in $envLines) {
+        if ($line -match "^PORT=(.*)") { $port = $Matches[1].Trim() }
+    }
+    $proc = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($proc) {
+        $pidToKill = $proc.OwningProcess
+        Write-Log "Stopping existing process $pidToKill on port $port to release file locks..." "Yellow"
+        Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+    }
     
     # Verify Git
     $gitCheck = Get-Command git -ErrorAction SilentlyContinue
