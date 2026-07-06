@@ -106,7 +106,7 @@ sequenceDiagram
 - **Coder**: Implements directory analysis, local file read/writes, and runs project terminal tasks.
 - **QA Engineer**: Audits source code and runs the test suites.
 - **Weather Expert**: Connects to OpenWeatherMap to retrieve detailed forecasts.
-- **Host Specialist**: Reads system hardware configurations, battery status, and CPU temperatures.
+- **System Agent**: Reads system hardware configurations, battery status, CPU temperatures, and executes local system tasks.
 - **GitHub Agent**: Manages branches, commits changes, and generates pull requests on GitHub, with strict constraints blocking repository creation or direct changes to `main`/`master` branches.
 - **Tool Creation Agent**: Designs and coordinates new tool additions. It creates a Tool Plan, prompts the user via the supervisor for a `yes`/`no` approval, and coordinates with Developer/QA nodes to implement and test the new tool. Local betterment tools are kept private via `.gitignore`, while shared tools are pushed to GitHub.
 - **Agent Creation Agent**: Designs and coordinates new agent creations or edits. It compiles an Agent Plan, requests user approval via the supervisor UAC dialog, and automates prompt additions and coordinator registrations.
