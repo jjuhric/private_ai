@@ -1,6 +1,6 @@
 {
   "name": "private-ai-assistant",
-  "version": "4.4.0",
+  "version": "4.5.0",
   "description": "Local and Online AI Assistant with multi-agent orchestration and tools",
   "main": "backend/server.js",
   "scripts": {
@@ -18,7 +18,7 @@
     "coverage:backend": "npm run test:coverage --prefix backend",
     "coverage:frontend": "npm run test:coverage --prefix frontend",
     "coverage": "npm run coverage:backend && npm run coverage:frontend",
-    "update": "node -e \"const isWin = process.platform === 'win32'; const spawn = require('child_process').spawn; if (isWin) { spawn('powershell.exe', ['-ExecutionPolicy', 'Bypass', '-File', './setup.ps1', '-NonInteractive'], { stdio: 'inherit' }); } else { spawn('./setup.sh', ['--non-interactive'], { stdio: 'inherit' }); }\""
+    "update": "node backend/scripts/update.js"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

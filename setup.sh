@@ -22,7 +22,7 @@ for arg in "$@"; do
 done
 
 echo "===================================================="
-echo "  Private AI Assistant Setup & Update Utility V4.4.0 "
+echo "  Private AI Assistant Setup & Update Utility V4.5.0 "
 echo "===================================================="
 
 # Helper function to print logs

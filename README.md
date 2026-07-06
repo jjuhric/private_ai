@@ -1,4 +1,4 @@
-# Private AI Assistant — Enterprise Suite (v4.4.0)
+# Private AI Assistant — Enterprise Suite (v4.5.0)
 
 <p align="center">
   <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
