@@ -322,6 +322,30 @@ async function runAgentLoop({
       break;
     }
 
+    // Normalize direct agent calls to delegation format
+    let toolName = decision.tool;
+    const agentNames = [
+      'web_searcher',
+      'calendar_handler',
+      'coder',
+      'qa_engineer',
+      'weather_expert',
+      'host_specialist',
+      'memory_agent',
+      'document_vault',
+      'developer_agent',
+      'node_agent'
+    ];
+
+    if (agentNames.includes(toolName)) {
+      toolName = `delegate_to_${toolName}`;
+    } else if (toolName === 'system_info') {
+      toolName = 'delegate_to_host_specialist';
+    } else if (toolName === 'developer' || toolName === 'delegate_to_developer') {
+      toolName = 'delegate_to_developer_agent';
+    }
+    decision.tool = toolName;
+
     onThought(`Supervisor invoking tool/delegate: "${decision.tool}" with action "${decision.action}"...\n`);
     onToolCall({ tool: decision.tool, action: decision.action || 'delegate', params: decision.params });
 
@@ -347,8 +371,10 @@ async function runAgentLoop({
         subTask = decision.params?.task || userMessage;
       } else if (agentName === 'document_vault') {
         subTask = decision.params?.query || decision.params?.task || userMessage;
-      } else if (agentName === 'developer') {
+      } else if (agentName === 'developer' || agentName === 'developer_agent') {
         subTask = decision.params?.task || userMessage;
+      } else if (agentName === 'node_agent') {
+        subTask = decision.params?.query || decision.params?.task || userMessage;
       } else {
         subTask = userMessage;
       }
