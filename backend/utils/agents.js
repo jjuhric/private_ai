@@ -431,6 +431,7 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
   const toolOutputs = [];
   let turn = 0;
   const maxTurns = 5;
+  const seenToolCalls = new Set();
 
   while (turn < maxTurns) {
     if (settings.abortSignal?.aborted) {
@@ -441,6 +442,14 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     if (!decision.tool || decision.tool === 'none') {
       break;
     }
+
+    // Loop detection protection
+    const toolCallSignature = `${decision.tool}:${decision.action || 'default'}:${JSON.stringify(decision.params || {})}`;
+    if (seenToolCalls.has(toolCallSignature)) {
+      console.warn(`[Loop Detector] Detected duplicate tool call in worker loop: "${toolCallSignature}". Force terminating worker turn.`);
+      break;
+    }
+    seenToolCalls.add(toolCallSignature);
 
     // Rule 3: Stream immediate step announcements to prevent continuous thinking states
     if (settings.onIntermediateStatusUpdate) {

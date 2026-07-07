@@ -380,6 +380,7 @@ async function runAgentLoop({
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
   const maxToolCalls = 10;
+  const seenToolCalls = new Set();
 
   // Intercept chat-based approvals for code execution
   const lastAssistantMsg = [...cleanedHistory].reverse().find(msg => msg.role === 'assistant');
@@ -587,6 +588,14 @@ If no changes are required and you can proceed without executing the code, then 
       toolName = 'delegate_to_agent_creator_agent';
     }
     decision.tool = toolName;
+
+    // Loop detection protection
+    const toolCallSignature = `${decision.tool}:${decision.action || 'default'}:${JSON.stringify(decision.params || {})}`;
+    if (seenToolCalls.has(toolCallSignature)) {
+      onThought(`[Loop Detector] Detected duplicate tool call in coordinator loop: "${toolCallSignature}". Force terminating loop to prevent runaway execution.\n`);
+      break;
+    }
+    seenToolCalls.add(toolCallSignature);
 
     onThought(`Supervisor invoking tool/delegate: "${decision.tool}" with action "${decision.action}"...\n`);
     onToolCall({ tool: decision.tool, action: decision.action || 'delegate', params: decision.params });
