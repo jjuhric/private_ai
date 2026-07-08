@@ -20,9 +20,15 @@ async function handleListNetworkNodes(userId) {
 }
 
 async function handleRemoteNodeBridge(params, options = {}) {
-  const { nodeId, action, actionParams = {} } = params;
+  const { nodeId, action } = params;
   if (!nodeId) return 'Error: "nodeId" is required.';
   if (!action) return 'Error: "action" is required.';
+
+  let actionParams = params.actionParams || {};
+  if (Object.keys(actionParams).length === 0) {
+    const { command, filePath, content } = params;
+    actionParams = { command, filePath, content };
+  }
 
   try {
     const db = await getDb();

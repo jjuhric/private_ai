@@ -11,20 +11,31 @@ function resolveSafePath(userPath) {
   const homeRoot = path.resolve(os.homedir());
   
   let resolved;
-  if (userPath === '~') {
-    resolved = homeRoot;
-  } else if (userPath.startsWith('~/') || userPath.startsWith('~\\')) {
-    resolved = path.resolve(homeRoot, userPath.slice(2));
+  const isHomePrefix = userPath === '~' || userPath.startsWith('~/') || userPath.startsWith('~\\');
+  
+  if (isHomePrefix) {
+    resolved = userPath === '~' ? homeRoot : path.resolve(homeRoot, userPath.slice(2));
     if (!resolved.startsWith(homeRoot)) {
       throw new Error('Access denied: path is outside the home directory.');
     }
-  } else {
-    resolved = path.resolve(workspaceRoot, userPath);
-    if (!resolved.startsWith(workspaceRoot)) {
-      throw new Error('Access denied: path is outside the workspace directory.');
-    }
+    return resolved;
   }
-  return resolved;
+  
+  resolved = path.resolve(workspaceRoot, userPath);
+  const isAbsolute = path.isAbsolute(userPath);
+  
+  if (isAbsolute) {
+    if (resolved.startsWith(workspaceRoot) || resolved.startsWith(homeRoot)) {
+      return resolved;
+    }
+    throw new Error('Access denied: absolute path is outside the allowed workspace or home directories.');
+  }
+  
+  if (resolved.startsWith(workspaceRoot)) {
+    return resolved;
+  }
+  
+  throw new Error('Access denied: path is outside the workspace directory.');
 }
 
 async function handleReadFile(params) {
