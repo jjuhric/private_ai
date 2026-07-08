@@ -651,7 +651,17 @@ If no changes are required and you can proceed without executing the code, then 
       try {
         toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId, githubToken);
       } catch (err) {
-        toolOutput = `Agent "${agentName}" delegation failed: ${err.message}`;
+        if (agentName === 'system_specialist') {
+          toolOutput = JSON.stringify({
+            status: "error",
+            summary: "Failed to execute task",
+            data: {
+              error: err.message
+            }
+          });
+        } else {
+          toolOutput = `Agent "${agentName}" delegation failed: ${err.message}`;
+        }
       }
       if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
 

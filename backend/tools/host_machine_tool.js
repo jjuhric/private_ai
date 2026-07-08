@@ -154,6 +154,14 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     return { deviceType, isMainHost, capabilities };
   }
 
+  if (action === 'get_os_info') {
+    return {
+      platform: os.platform(),
+      type: os.type(),
+      release: os.release()
+    };
+  }
+
   if (action === 'get_system_report') {
     const specs = await handleHostMachineTool('get_specifications', params, userId);
     const temp = await getTemperatureInfo();
