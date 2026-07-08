@@ -109,8 +109,8 @@ async function handleWeatherTool(db, userId, action, params) {
       const list = data.list || [];
       
       let md = `### ⏰ Hourly Weather Forecast for **${cityName}** (Next 24 Hours)\n\n`;
-      md += `| Time | Temp | Feels Like | Weather | Rain (1h) | Wind | Humidity |\n`;
-      md += `| --- | --- | --- | --- | --- | --- | --- |\n`;
+      md += `| Time | Temp | Feels Like | Weather | Rain % | Rain (1h) | Wind | Humidity |\n`;
+      md += `| --- | --- | --- | --- | --- | --- | --- | --- |\n`;
 
       // Display up to 24 hourly entries
       const entries = list.slice(0, 24);
@@ -119,14 +119,45 @@ async function handleWeatherTool(db, userId, action, params) {
         const temp = item.main.temp;
         const feelsLike = item.main.feels_like;
         const desc = item.weather[0].description;
+        const pop = item.pop !== undefined ? `${(item.pop * 100).toFixed(0)}%` : '0%';
         const rain = item.rain ? item.rain['1h'] || item.rain['3h'] || '0' : '0';
         const wind = item.wind.speed;
         const humidity = item.main.humidity;
 
-        md += `| ${time} | ${temp}${unitSymbol} | ${feelsLike}${unitSymbol} | ${desc} | ${rain} mm | ${wind} ${speedUnit} | ${humidity}% |\n`;
+        md += `| ${time} | ${temp}${unitSymbol} | ${feelsLike}${unitSymbol} | ${desc} | ${pop} | ${rain} mm | ${wind} ${speedUnit} | ${humidity}% |\n`;
       });
 
-      return md;
+      let alertsMd = '';
+      if (country === 'US' || country === 'USA') {
+        try {
+          const alertsUrl = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
+          const alertsRes = await fetch(alertsUrl, {
+            headers: {
+              'User-Agent': 'PrivateAI/1.0 (jjuhr@privateai.com)'
+            }
+          });
+          if (alertsRes.ok) {
+            const alertsData = await alertsRes.json();
+            const features = alertsData.features || [];
+            if (features.length > 0) {
+              alertsMd += `\n### ⚠️ ACTIVE WEATHER ALERTS (HIGHLY IMPORTANT)\n\n`;
+              features.forEach(f => {
+                const props = f.properties || {};
+                alertsMd += `- **${props.event}** (${props.severity || 'Unknown Severity'})\n`;
+                alertsMd += `  *Headline*: ${props.headline || 'No headline'}\n`;
+                alertsMd += `  *Description*: ${props.description || 'No description'}\n\n`;
+              });
+            } else {
+              alertsMd += `\n### ⚠️ ACTIVE WEATHER ALERTS\nNo active watches or warnings reported.\n`;
+            }
+          }
+        } catch (alertsErr) {
+          console.error('Failed to query weather.gov active alerts:', alertsErr.message);
+          alertsMd += `\n### ⚠️ ACTIVE WEATHER ALERTS\n(Unable to retrieve alerts from weather.gov: ${alertsErr.message})\n`;
+        }
+      }
+
+      return md + alertsMd;
     } catch (err) {
       return `Error: Failed to fetch hourly forecast: ${err.message}`;
     }

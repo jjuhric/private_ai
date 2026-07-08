@@ -80,7 +80,7 @@ router.post('/chat/stream', authenticateToken, async (req, res) => {
   // Get user settings
   let settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
   if (!settings) {
-    settings = { provider: 'local', model_name: 'google/gemma-4-e4b' };
+    settings = { provider: 'local', model_name: 'google/gemma-4-e2b' };
   }
 
   // Get chat history

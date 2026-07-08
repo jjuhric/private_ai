@@ -3,29 +3,18 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const BLOCKED_MODEL_PATTERNS = ['embed', 'embedding', 'nomic-embed'];
 
 function checkAndFallbackModel(candidate, preferredModel) {
-  const preferredLower = (preferredModel || '').toLowerCase();
-  const isQwenPreferred = preferredLower.includes('qwen');
+  const fallback = 'google/gemma-4-e2b';
+  let selected = candidate || preferredModel || fallback;
 
-  let fallback = preferredModel || 'google/gemma-4-e4b';
-  if (BLOCKED_MODEL_PATTERNS.some(p => fallback.toLowerCase().includes(p))) {
-    fallback = 'google/gemma-4-e4b';
-  }
-
-  // If preferred is not qwen, fallback should not be qwen
-  if (!isQwenPreferred && fallback.toLowerCase().includes('qwen')) {
-    fallback = 'google/gemma-4-e4b';
-  }
-
-  let selected = candidate || fallback;
-  if (selected && BLOCKED_MODEL_PATTERNS.some(p => selected.toLowerCase().includes(p))) {
-    console.warn(`[Model Selector] Warning: selected model "${selected}" is an embedding-only model. Silently falling back to default model: "${fallback}"`);
+  if (BLOCKED_MODEL_PATTERNS.some(p => selected.toLowerCase().includes(p))) {
     selected = fallback;
   }
 
-  // Force non-qwen if not preferred
-  if (!isQwenPreferred && selected.toLowerCase().includes('qwen')) {
-    console.log(`[Model Selector] Overriding selected model "${selected}" to "google/gemma-4-e4b" because Qwen is not preferred in settings.`);
-    selected = 'google/gemma-4-e4b';
+  const selectedLower = selected.toLowerCase();
+  const isLocalModel = selectedLower.includes('gemma') || selectedLower.includes('qwen') || selectedLower.includes('e4b') || selectedLower.includes('e2b');
+  if (isLocalModel && !selectedLower.includes('e2b')) {
+    console.log(`[Model Selector] Overriding selected local model "${selected}" to "${fallback}" due to disk size constraints.`);
+    selected = fallback;
   }
 
   return selected;
@@ -54,15 +43,12 @@ async function selectBestModel(settings, userMessage, history) {
     const { listLocalModels } = require('./lmstudio');
     const availableModels = await listLocalModels(localBaseUrl, localApiKey);
     
-    const preferredLower = (modelName || '').toLowerCase();
-    const isQwenPreferred = preferredLower.includes('qwen');
-
     let loadedModelObj = availableModels.find(m => m.isLoaded);
     let loadedModel = loadedModelObj ? loadedModelObj.id : null;
 
-    // If loaded model is Qwen but Qwen is not preferred, ignore it
-    if (loadedModel && loadedModel.toLowerCase().includes('qwen') && !isQwenPreferred) {
-      console.log(`[Model Selector] Ignoring loaded model "${loadedModel}" because Qwen is not preferred in settings.`);
+    // Ignore loaded model if it exceeds 2B size constraint (i.e. contains qwen or e4b)
+    if (loadedModel && (loadedModel.toLowerCase().includes('qwen') || loadedModel.toLowerCase().includes('e4b'))) {
+      console.log(`[Model Selector] Ignoring loaded model "${loadedModel}" because it exceeds the 2B size constraint.`);
       loadedModel = null;
     }
 
@@ -86,11 +72,10 @@ CURRENTLY LOADED LOCAL MODEL:
 SELECTION RULES:
 1. Select the most appropriate model ID from the AVAILABLE MODELS list.
 2. IMPORTANT: Loading/switching models in LM Studio takes ~10-30 seconds. If the currently loaded model ("${loadedModel}") is adequate to perform the task, KEEP it.
-   EXCEPTION: If the currently loaded model is the large/heavy model (e.g., "qwen" or "qwen3.5-9b"), you MUST switch back to the workhorse/middle model ("e4b" or "gemma-4-e4b") or the weakest model ("e2b" or "gemma-4-e2b") if the task does not strictly require the heavy model's capabilities, in order to free up system RAM.
+   EXCEPTION: If the currently loaded model is a large/heavy model, you MUST switch back to the workhorse/weakest model ("e2b" or "gemma-4-e2b") to free up system RAM.
 3. MODEL CAPACITY PREFERENCE:
-   - Bias selection HEAVILY toward the "middle" capabilities model (e.g., 4B/7B models like "e4b" or "gemma-4-e4b") as the default workhorse for most standard tasks, tools, and general orchestration.
-   - Use the weakest model (e.g., 2B models like "e2b" or "gemma-4-e2b") ONLY for very simple, casual, or trivial tasks (e.g., short greetings, date/time queries, simple questions).
-   - Use the best/heavy model (e.g., "qwen" or "qwen3.5-9b") ONLY for complex coding, advanced software pipeline engineering, deep reasoning, or logic-heavy requirements.
+   - Bias selection HEAVILY toward the weakest, most lightweight model (e.g., 2B models like "e2b" or "gemma-4-e2b") as the default workhorse to fit under disk size and memory limits.
+   - Avoid selecting any model larger than 2B parameters (such as "e4b" or "qwen-3.5-9b") as they exceed system limits.
 
 You MUST respond in this exact JSON format:
 {

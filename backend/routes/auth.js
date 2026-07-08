@@ -35,7 +35,7 @@ router.post('/register', authLimiter, async (req, res) => {
     // Initialize default user settings
     await db.run(
       'INSERT INTO user_settings (user_id, provider, model_name) VALUES (?, ?, ?)',
-      [result.lastID, 'local', 'google/gemma-4-e4b']
+      [result.lastID, 'local', 'google/gemma-4-e2b']
     );
 
     res.json({ success: true, userId: result.lastID });

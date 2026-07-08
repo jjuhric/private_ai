@@ -382,50 +382,65 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
 
     const path = require('path');
     const workingDirectory = settings.workingDirectory || path.resolve(path.join(__dirname, '../..'));
-    const workspaceContext = `\n\n### Workspace System Directories:
+    
+    // Selectively append workspace context
+    const needsWorkspace = ['developer_agent', 'qa_engineer', 'tool_creator_agent', 'agent_creator_agent', 'coder', 'github_agent'].includes(targetAgent);
+    if (needsWorkspace) {
+      const workspaceContext = `\n\n### Workspace System Directories:
 - Root Working Directory: ${workingDirectory}
 - Built-in Agents File: ${path.join(workingDirectory, 'backend/utils/agents.js')}
 - Built-in Tools Directory: ${path.join(workingDirectory, 'backend/tools/')}
 - Dynamic Tools Registry: ${path.join(workingDirectory, 'tool_registry/tools/')}`;
-    systemPrompt += workspaceContext;
+      systemPrompt += workspaceContext;
+    }
 
     // Fetch and inject user profile details if db and userId are available
-  if (db && userId) {
-    try {
-      const profile = await db.get(
-        'SELECT name, zipcode, country, temp_unit, dob, gender, political_leaning, interests FROM users WHERE id = ?',
-        [userId]
-      );
-      if (profile) {
-        systemPrompt += `\n\n### User Profile Context:
-- Profile Name: ${profile.name || 'Not set'}
-- Profile Zipcode: ${profile.zipcode || 'Not set'}
-- Profile Country: ${profile.country || 'US'}
-- Profile Temp Unit: ${profile.temp_unit || 'imperial'}
-- Date of Birth (DOB): ${profile.dob || 'Not set'}
-- Gender: ${profile.gender || 'Not set'}
-- Political Leaning: ${profile.political_leaning || 'Undecided'}
-- Specific Interests: ${profile.interests || '[]'}`;
-      }
-    } catch (err) {
-      console.error('Failed to load user profile in runWorkerAgent:', err);
-    }
-  }
+    if (db && userId) {
+      try {
+        const profile = await db.get(
+          'SELECT name, zipcode, country, temp_unit, dob, gender, political_leaning, interests FROM users WHERE id = ?',
+          [userId]
+        );
+        if (profile) {
+          systemPrompt += `\n\n### User Profile Context:`;
+          systemPrompt += `\n- Profile Name: ${profile.name || 'Not set'}`;
 
-  if (db) {
-    try {
-      const caps = await db.all('SELECT tool_name, description, parameters FROM agent_capabilities WHERE agent_name = ?', [targetAgent]);
-      if (caps && caps.length > 0) {
-        systemPrompt += `\n\n### Dynamically Installed Custom Tools Available to You:`;
-        for (const cap of caps) {
-          systemPrompt += `\n- **${cap.tool_name}**: ${cap.description}\n  Tool declaration schema: ${cap.parameters}`;
+          const needsLocation = ['weather_expert', 'web_searcher', 'system_specialist'].includes(targetAgent);
+          if (needsLocation) {
+            systemPrompt += `\n- Profile Zipcode: ${profile.zipcode || 'Not set'}`;
+            systemPrompt += `\n- Profile Country: ${profile.country || 'US'}`;
+            systemPrompt += `\n- Profile Temp Unit: ${profile.temp_unit || 'imperial'}`;
+          }
+
+          const needsPersonalDetails = ['web_searcher', 'memory_agent'].includes(targetAgent);
+          if (needsPersonalDetails) {
+            systemPrompt += `\n- Date of Birth (DOB): ${profile.dob || 'Not set'}`;
+            systemPrompt += `\n- Gender: ${profile.gender || 'Not set'}`;
+            systemPrompt += `\n- Political Leaning: ${profile.political_leaning || 'Undecided'}`;
+            systemPrompt += `\n- Specific Interests: ${profile.interests || '[]'}`;
+          }
         }
-        systemPrompt += `\n\nTo use any of these dynamic tools, specify the tool name in the "tool" parameter and the action/params as required.`;
+      } catch (err) {
+        console.error('Failed to load user profile in runWorkerAgent:', err);
       }
-    } catch (err) {
-      console.error('Failed to load agent capabilities in runWorkerAgent:', err);
     }
-  }
+
+    // Dynamic tools are only relevant for developer/creator/coder agents
+    const needsDynamicTools = ['developer_agent', 'coder', 'tool_creator_agent', 'agent_creator_agent', 'supervisor'].includes(targetAgent);
+    if (db && needsDynamicTools) {
+      try {
+        const caps = await db.all('SELECT tool_name, description, parameters FROM agent_capabilities WHERE agent_name = ?', [targetAgent]);
+        if (caps && caps.length > 0) {
+          systemPrompt += `\n\n### Dynamically Installed Custom Tools Available to You:`;
+          for (const cap of caps) {
+            systemPrompt += `\n- **${cap.tool_name}**: ${cap.description}\n  Tool declaration schema: ${cap.parameters}`;
+          }
+          systemPrompt += `\n\nTo use any of these dynamic tools, specify the tool name in the "tool" parameter and the action/params as required.`;
+        }
+      } catch (err) {
+        console.error('Failed to load agent capabilities in runWorkerAgent:', err);
+      }
+    }
 
   const history = [];
   const toolOutputs = [];
@@ -463,9 +478,36 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     }
 
     // Rule 1 & 8: Intercept write actions or tool generation cycles
-    const isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) || 
-                             (decision.tool === 'dev_pipeline' && decision.action === 'create_tool') ||
-                             (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command', 'update_node'].includes(decision.action));
+    let isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) || 
+                           (decision.tool === 'dev_pipeline' && decision.action === 'create_tool');
+
+    if (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command', 'update_node'].includes(decision.action)) {
+      let isTargetMainHost = false;
+      const targetNodeId = decision.params?.nodeId;
+      if (db && targetNodeId) {
+        try {
+          const nodeRow = await db.get('SELECT is_main_host FROM network_nodes WHERE id = ?', [targetNodeId]);
+          if (nodeRow && nodeRow.is_main_host === 1) {
+            isTargetMainHost = true;
+          }
+        } catch (dbErr) {
+          console.error('Failed to query node for main host status in agents.js:', dbErr);
+        }
+      }
+
+      if (isTargetMainHost) {
+        // Actions targeting the Main Host must always go through human approval
+        isMutationAction = true;
+      } else {
+        // Actions targeting remote nodes do not need approval unless they are breaking/destructive changes
+        const cmd = decision.params?.actionParams?.command || '';
+        const breakingPatterns = [/rm\s+-rf/i, /mkfs/i, /fdisk/i, /dd\s+/i, /reboot/i, /shutdown/i, /format\s+/i];
+        const isBreaking = breakingPatterns.some(pat => pat.test(cmd));
+        if (isBreaking) {
+          isMutationAction = true;
+        }
+      }
+    }
 
     if (isMutationAction && settings.onCommandApprovalRequired) {
       const approved = await settings.onCommandApprovalRequired({
@@ -526,7 +568,8 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       const { handleNetworkNodeTool } = require('../tools/network_node_tool');
       output = await handleNetworkNodeTool(decision.tool, decision.params, {
         userId,
-        onCommandApprovalRequired: settings.onCommandApprovalRequired
+        onCommandApprovalRequired: settings.onCommandApprovalRequired,
+        settings
       });
     } else if (decision.tool === 'tool_manager') {
       const { handleToolManagerTool } = require('../tools/tool_manager_tool');

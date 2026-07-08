@@ -16,6 +16,18 @@ jest.mock('../utils/commandApproval', () => ({
   registerPendingCommand: (...args) => mockRegisterPendingCommand(...args)
 }));
 
+// Mock coder_tools
+let mockHandleCoderTool = jest.fn();
+jest.mock('../tools/coder_tools', () => ({
+  handleCoderTool: (...args) => mockHandleCoderTool(...args)
+}));
+
+// Mock host_machine_tool
+let mockHandleHostMachineTool = jest.fn();
+jest.mock('../tools/host_machine_tool', () => ({
+  handleHostMachineTool: (...args) => mockHandleHostMachineTool(...args)
+}));
+
 describe('network_node_tool.js Tests', () => {
   let originalFetch;
   let mockFetch;
@@ -63,10 +75,17 @@ describe('network_node_tool.js Tests', () => {
     expect(res).toContain('Error: Node with ID 1 not found');
   });
 
-  test('remote_node_bridge: blocks parent node execution completely', async () => {
+  test('remote_node_bridge: routes main host actions locally via coder tools', async () => {
     mockDb.get.mockResolvedValueOnce({ id: 1, node_name: 'Parent', is_main_host: 1 });
-    const res = await handleNetworkNodeTool('remote_node_bridge', { nodeId: 1, action: 'system_info' }, { userId: 1 });
-    expect(res).toContain('Error: Access denied. Commands cannot be routed to the Parent Node');
+    mockHandleCoderTool.mockResolvedValueOnce('Local command execution output');
+
+    const res = await handleNetworkNodeTool(
+      'remote_node_bridge', 
+      { nodeId: 1, action: 'run_command', actionParams: { command: 'echo "hello"' } }, 
+      { userId: 1 }
+    );
+    expect(mockHandleCoderTool).toHaveBeenCalledWith('execute_command', { command: 'echo "hello"' }, expect.any(Object));
+    expect(res).toBe('Local command execution output');
   });
 
   test('remote_node_bridge: runs sudo command and handles approval success', async () => {

@@ -457,11 +457,11 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected1 = await selectBestModel(settingsBlockedDefault, 'test query', []);
-    expect(selected1).toBe('google/gemma-4-e4b');
+    expect(selected1).toBe('google/gemma-4-e2b');
 
     const settingsNormalDefault = {
       provider: 'local',
-      modelName: 'google/gemma-2-9b-it',
+      modelName: 'google/gemma-4-e2b',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -474,14 +474,14 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected2 = await selectBestModel(settingsNormalDefault, 'test query', []);
-    expect(selected2).toBe('google/gemma-2-9b-it');
+    expect(selected2).toBe('google/gemma-4-e2b');
   });
 
   test('selectBestModel does not use qwen and falls back to gemma when qwen is not preferred in settings', async () => {
     const { selectBestModel } = require('../utils/model_selector');
     const settings = {
       provider: 'local',
-      modelName: 'google/gemma-4-e4b',
+      modelName: 'google/gemma-4-e2b',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -494,7 +494,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('google/gemma-4-e4b');
+    expect(selected).toBe('google/gemma-4-e2b');
   });
 
   test('POST /api/lmstudio/clear-logs returns 403 when user is not main host', async () => {

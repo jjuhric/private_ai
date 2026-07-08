@@ -33,10 +33,28 @@ async function handleRemoteNodeBridge(params, options = {}) {
       return `Error: Node with ID ${nodeId} not found in database.`;
     }
 
-    // Check if the target node is the Parent/Main Host
-    // In our security model, nothing can route commands to the Parent Node.
+    // Check if the target node is the Parent/Main Host.
+    // If it is, allow and route locally using Main Host local tools.
     if (node.is_main_host === 1 || node.node_name.toLowerCase() === 'parent') {
-      return 'Error: Access denied. Commands cannot be routed to the Parent Node (machine running the LLM).';
+      const { handleCoderTool } = require('./coder_tools');
+      if (action === 'run_command') {
+        return await handleCoderTool('execute_command', { command: actionParams.command }, options);
+      } else if (action === 'write_file') {
+        return await handleCoderTool('write_file', { filePath: actionParams.filePath, content: actionParams.content }, options);
+      } else if (action === 'read_file') {
+        return await handleCoderTool('read_file', { filePath: actionParams.filePath }, options);
+      } else if (action === 'system_info') {
+        const { handleHostMachineTool } = require('./host_machine_tool');
+        const os = require('os');
+        const tempReport = await handleHostMachineTool('get_temperature');
+        const powerReport = await handleHostMachineTool('get_power');
+        const netReport = await handleHostMachineTool('get_network_info');
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        return `### Main Host System Telemetry:\n- OS: ${os.type()} ${os.release()} (${os.arch()})\n- Memory Total: ${(totalMem / 1024 / 1024).toFixed(0)} MB\n- Memory Free: ${(freeMem / 1024 / 1024).toFixed(0)} MB\n- Temperature: ${tempReport}\n- Power: ${powerReport}\n- Network: ${netReport}`;
+      } else {
+        return `Error: Action "${action}" is not supported on the Main Host node.`;
+      }
     }
 
     const cmdParams = { ...actionParams };

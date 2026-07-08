@@ -91,7 +91,7 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
       db,
       userId,
       provider: activeSettings.provider || 'local',
-      modelName: activeSettings.model_name || 'google/gemma-4-e4b',
+      modelName: activeSettings.model_name || 'google/gemma-4-e2b',
       onlineProvider: activeSettings.online_provider || 'gemini',
       onlineKey: decrypt(activeSettings.online_key),
       geminiKey: decrypt(activeSettings.gemini_key),
