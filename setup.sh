@@ -445,6 +445,26 @@ else
     log "Skipping frontend compilation (backend-only deployment)."
 fi
 
+# 8.5. Configure Tailscale HTTPS (Optional)
+if command -v tailscale &> /dev/null; then
+    if tailscale status &> /dev/null; then
+        TS_DNS_NAME=$(tailscale status --json | grep -o '"DNSName": "[^"]*"' | head -n1 | cut -d'"' -f4 | sed 's/\.$//' || true)
+        if [ -n "$TS_DNS_NAME" ]; then
+            log "Tailscale connection detected. MagicDNS name: $TS_DNS_NAME"
+            log "Attempting to retrieve SSL/TLS certificate from Tailscale..."
+            mkdir -p backend/certs
+            if tailscale cert --cert-file backend/certs/tailscale.crt --key-file backend/certs/tailscale.key "$TS_DNS_NAME" &> /dev/null || \
+               sudo tailscale cert --cert-file backend/certs/tailscale.crt --key-file backend/certs/tailscale.key "$TS_DNS_NAME" &> /dev/null; then
+                log_success "Successfully retrieved and configured Tailscale HTTPS certificates!"
+                sudo chmod 600 backend/certs/tailscale.key &>/dev/null || chmod 600 backend/certs/tailscale.key &>/dev/null || true
+                sudo chmod 644 backend/certs/tailscale.crt &>/dev/null || chmod 644 backend/certs/tailscale.crt &>/dev/null || true
+            else
+                log_warn "Could not retrieve Tailscale certificate. Ensure 'Enable HTTPS' is toggled in Tailscale Admin DNS settings."
+            fi
+        fi
+    fi
+fi
+
 # 9. Setup systemd Service (if not Windows/ESP32 choice)
 if [ "$DEVICE_TYPE" != "windows" ] && [ "$DEVICE_TYPE" != "esp32" ]; then
     if command -v systemctl &> /dev/null && [ "$(id -u)" -eq 0 -o -n "$(command -v sudo)" ]; then

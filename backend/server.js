@@ -137,9 +137,12 @@ app.get('*', (req, res, next) => {
 });
 
 // Start Server
-const server = app.listen(PORT, () => {
-  logger.info(`Express Backend running securely on port ${PORT}`);
-  
+let server;
+const https = require('https');
+const certPath = path.join(__dirname, 'certs/tailscale.crt');
+const keyPath = path.join(__dirname, 'certs/tailscale.key');
+
+const startScheduler = () => {
   // Initialize briefing scheduler background loop if not running unit tests
   if (process.env.NODE_ENV !== 'test') {
     const { getDb } = require('./db');
@@ -151,7 +154,31 @@ const server = app.listen(PORT, () => {
       logger.error('Failed to start briefing scheduler:', err);
     });
   }
-});
+};
+
+if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+  try {
+    const credentials = {
+      key: fs.readFileSync(keyPath, 'utf8'),
+      cert: fs.readFileSync(certPath, 'utf8')
+    };
+    server = https.createServer(credentials, app).listen(PORT, () => {
+      logger.info(`Express Backend running securely over HTTPS on port ${PORT}`);
+      startScheduler();
+    });
+  } catch (err) {
+    logger.error('Failed to start HTTPS server, falling back to HTTP:', err);
+    server = app.listen(PORT, () => {
+      logger.info(`Express Backend running securely on port ${PORT}`);
+      startScheduler();
+    });
+  }
+} else {
+  server = app.listen(PORT, () => {
+    logger.info(`Express Backend running securely on port ${PORT}`);
+    startScheduler();
+  });
+}
 
 // Handle graceful shutdown
 const gracefulShutdown = () => {

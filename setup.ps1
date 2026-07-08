@@ -410,6 +410,23 @@ if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
     Write-Log "Skipped frontend compilation (backend-only deployment mode)."
 }
 
+# 9.5. Configure Tailscale HTTPS (Optional)
+if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+    $tsStatus = tailscale status --json | ConvertFrom-Json -ErrorAction SilentlyContinue
+    if ($tsStatus -and $tsStatus.Self -and $tsStatus.Self.DNSName) {
+        $dnsName = $tsStatus.Self.DNSName.TrimEnd('.')
+        Write-Log "Tailscale connection detected. MagicDNS name: $dnsName" "Green"
+        Write-Log "Attempting to retrieve SSL/TLS certificate from Tailscale..." "Yellow"
+        New-Item -ItemType Directory -Path "backend/certs" -Force | Out-Null
+        & tailscale cert --cert-file backend/certs/tailscale.crt --key-file backend/certs/tailscale.key $dnsName 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Successfully retrieved and configured Tailscale HTTPS certificates!" "Green"
+        } else {
+            Write-Log "Could not retrieve Tailscale certificate. Ensure 'Enable HTTPS' is toggled in Tailscale Admin DNS settings." "Yellow"
+        }
+    }
+}
+
 # 10. Register Startup Task
 Write-Log "Configuring Windows background service..."
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
