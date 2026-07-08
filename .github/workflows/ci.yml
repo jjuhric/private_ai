@@ -63,6 +63,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
+      - name: Connect to Tailscale Network
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
       - name: Trigger Pi Auto-Update Webhook
         run: |
           if [ -z "${{ secrets.PI_WEBHOOK_URL }}" ]; then
