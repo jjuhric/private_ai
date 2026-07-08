@@ -265,7 +265,7 @@ export default function ProfileModal({
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="e.g. qwen3-8b"
+                      placeholder="e.g. qwen2.5-coder-3b-instruct"
                       value={formSettings.preferred_local_model}
                       onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
                     />

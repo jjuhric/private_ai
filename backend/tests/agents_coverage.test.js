@@ -368,7 +368,7 @@ describe('Agents Coverage Extender Tests', () => {
     };
 
     const res = await runWorkerAgent('weather_expert', settings, 'Test abort', {}, 1, 'token');
-    expect(res).toBe('');
+    expect(res).toBe('{"status":"success","summary":"","data":{}}');
 
     const badSettings = {
       provider: 'local',
@@ -491,7 +491,7 @@ describe('Agents Coverage Extender Tests', () => {
       });
 
     const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
-    expect(result).toBe('This is the final response summary');
+    expect(result).toBe('{"status":"success","summary":"This is the final response summary","data":{}}');
     expect(mockAgentsGenerateContent).toHaveBeenCalledTimes(2);
   });
 });

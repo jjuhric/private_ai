@@ -30,11 +30,12 @@ describe('LM Studio Integration Tests', () => {
       expect(axios.post).toHaveBeenCalledWith(
         'http://localhost:1234/v1/chat/completions',
         {
-          model: 'qwen/qwen3-8b',
+          model: 'qwen/qwen2.5-coder-3b-instruct',
           messages: messages,
           temperature: 0.6,
           top_p: 0.95,
-          max_tokens: 4096,
+          max_tokens: 1024,
+          num_ctx: 4096,
           response_format: { type: 'json_object' }
         },
         {

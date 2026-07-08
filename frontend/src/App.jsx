@@ -44,7 +44,7 @@ function App() {
   const [sudoPrompt, setSudoPrompt] = useState(null); // { commandId, approved, editedCmd, commandText }
   const [settings, setSettings] = useState({
     provider: 'local',
-    model_name: 'qwen3-8b',
+    model_name: 'qwen2.5-coder-3b-instruct',
     github_token: '',
     local_key: '',
     local_url: 'http://192.168.1.42:1234/v1',
@@ -369,7 +369,7 @@ function App() {
         const data = await res.json();
         const loadedSettings = {
           provider: data.provider || 'local',
-          model_name: data.model_name || 'qwen3-8b',
+          model_name: data.model_name || 'qwen2.5-coder-3b-instruct',
           github_token: data.github_token || '',
           gemini_key: data.gemini_key || '',
           local_key: data.local_key || '',
@@ -629,7 +629,14 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Streaming connection failed.');
+        let errMsg = 'Streaming connection failed.';
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
       const reader = response.body.getReader();

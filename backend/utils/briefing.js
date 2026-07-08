@@ -91,7 +91,7 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
       db,
       userId,
       provider: activeSettings.provider || 'local',
-      modelName: activeSettings.model_name || 'qwen3-8b',
+      modelName: activeSettings.model_name || 'qwen2.5-coder-3b-instruct',
       onlineProvider: activeSettings.online_provider || 'gemini',
       onlineKey: decrypt(activeSettings.online_key),
       geminiKey: decrypt(activeSettings.gemini_key),
@@ -112,12 +112,19 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
 
     const aiResponse = await runWorkerAgent(
       'daily_briefing',
-      systemPrompt,
       llmSettings,
-      userPrompt
+      userPrompt,
+      db,
+      userId
     );
 
-    const briefingContent = aiResponse.thought || aiResponse.response || String(aiResponse);
+    let briefingContent = '';
+    try {
+      const parsed = JSON.parse(aiResponse);
+      briefingContent = parsed.data?.briefing || parsed.summary || String(aiResponse);
+    } catch (e) {
+      briefingContent = aiResponse.thought || aiResponse.response || String(aiResponse);
+    }
 
     // 7. Find or create "Daily Briefings" chat
     let chat = await db.get('SELECT * FROM chats WHERE user_id = ? AND title = ?', [userId, 'Daily Briefings']);

@@ -312,9 +312,9 @@ Write-EnvVar "LOCAL_LLM_KEY" $localKey
 Write-EnvVar "GEMINI_API_KEY" $onlineKey
 Write-EnvVar "WEATHER_API_KEY" $weatherKey
 Write-EnvVar "GITHUB_TOKEN" $githubToken
-Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen3-8b"
-Write-EnvVar "PREFERRED_ONLINE_MODEL" "qwen3-8b"
-Write-EnvVar "SUPERVISOR_MODEL" "qwen3-8b"
+Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen2.5-coder-3b-instruct"
+Write-EnvVar "PREFERRED_ONLINE_MODEL" "qwen2.5-coder-3b-instruct"
+Write-EnvVar "SUPERVISOR_MODEL" "qwen2.5-coder-3b-instruct"
 if ($isMainHost -eq "0") {
     $mqttBrokerUrl = "mqtt://${mainHostIp}:1883"
     $mqttNodeId = $env:COMPUTERNAME.ToLower()

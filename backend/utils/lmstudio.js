@@ -127,13 +127,14 @@ async function callLMStudio(messages) {
   try {
     const response = await axios.post('http://localhost:1234/v1/chat/completions', {
       // Explicitly use the exact string registered by LM Studio header
-      model: process.env.OPENAI_API_MODEL || "qwen/qwen3-8b",
+      model: process.env.OPENAI_API_MODEL || "qwen/qwen2.5-coder-3b-instruct",
       messages: messages,
       
-      // Qwen3 Optimized Sampling Parameters
+      // Qwen sampling parameters
       temperature: 0.6, 
       top_p: 0.95,
-      max_tokens: 4096, // Safe upper boundary allowance for complex script generation
+      max_tokens: 1024,
+      num_ctx: 4096,
       
       // Ensure structured outputs are strictly maintained for agent handlers
       response_format: { type: "json_object" } 

@@ -462,7 +462,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         });
 
       const result = await runWorkerAgent('system_specialist', { provider: 'openai', modelName: 'gpt-4' }, 'Check specs', null, 1);
-      expect(result).toBe('Worker agent response summary.');
+      expect(result).toBe('{"status":"success","summary":"Worker agent response summary.","data":{}}');
 
       global.fetch = globalFetch;
     });
@@ -729,7 +729,7 @@ describe('Multi-Agent System & Tools Tests', () => {
 
       const { runWorkerAgent } = require('../utils/agents');
       const result = await runWorkerAgent('system_specialist', { provider: 'gemini', geminiKey: 'key' }, 'hello', null, 1);
-      expect(result).toBe('gemini report summary');
+      expect(result).toBe('{"status":"success","summary":"gemini report summary","data":{}}');
     });
 
     test('runAgentResponse with local lm-studio provider', async () => {
@@ -754,7 +754,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       });
 
       const result = await runWorkerAgent('system_specialist', { provider: 'local', localApiStyle: 'lm-studio', localBaseUrl: 'http://localhost' }, 'hello', null, 1);
-      expect(result).toBe('lm-studio report summary');
+      expect(result).toBe('{"status":"success","summary":"lm-studio report summary","data":{}}');
       global.fetch = globalFetch;
     });
 
@@ -780,7 +780,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       });
 
       const result = await runWorkerAgent('system_specialist', { provider: 'local', localApiStyle: 'anthropic', localBaseUrl: 'http://localhost' }, 'hello', null, 1);
-      expect(result).toBe('anthropic report summary');
+      expect(result).toBe('{"status":"success","summary":"anthropic report summary","data":{}}');
       global.fetch = globalFetch;
     });
 
