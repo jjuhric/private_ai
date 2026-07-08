@@ -164,7 +164,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
         temperature: 0.1,
         max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
         response_format: { type: "json_object" },
-        ...(targetStyle === 'lm-studio' ? { num_ctx: 16392 } : {})
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 8192 } : {})
       };
     }
 
@@ -346,7 +346,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
         temperature: 0.2,
         max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
         response_format: { type: "json_object" },
-        ...(targetStyle === 'lm-studio' ? { num_ctx: 16392 } : {})
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 8192 } : {})
       };
     }
 
@@ -674,7 +674,7 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
 
     let safeResult = typeof output === 'string' ? output : JSON.stringify(output);
     if (safeResult.length > 3000) {
-      safeResult = safeResult.substring(0, 3000) + "\n... [TRUNCATED: Tool response too large for context window.]";
+      safeResult = safeResult.substring(0, 3000) + "\n... [TRUNCATED: Response too large for context]";
     }
     output = safeResult;
 

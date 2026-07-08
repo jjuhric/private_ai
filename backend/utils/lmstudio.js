@@ -134,7 +134,7 @@ async function callLMStudio(messages) {
       temperature: 0.6, 
       top_p: 0.95,
       max_tokens: 1024,
-      num_ctx: 16392,
+      num_ctx: 8192,
       
       // Ensure structured outputs are strictly maintained for agent handlers
       response_format: { type: "json_object" } 

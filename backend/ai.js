@@ -91,7 +91,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       presence_penalty: 0.1,
       max_tokens: localStyle === 'lm-studio' ? 1024 : 4096,
       stream: true,
-      ...(localStyle === 'lm-studio' ? { num_ctx: 16392 } : {})
+      ...(localStyle === 'lm-studio' ? { num_ctx: 8192 } : {})
     };
   }
 
@@ -726,7 +726,7 @@ If no changes are required and you can proceed without executing the code, then 
 
     let safeResult = typeof toolOutput === 'string' ? toolOutput : JSON.stringify(toolOutput);
     if (safeResult.length > 3000) {
-      safeResult = safeResult.substring(0, 3000) + "\n... [TRUNCATED: Tool response too large for context window.]";
+      safeResult = safeResult.substring(0, 3000) + "\n... [TRUNCATED: Response too large for context]";
     }
     toolOutput = safeResult;
 

@@ -153,9 +153,10 @@ describe('Multi-Agent System & Tools Tests', () => {
       const os = require('os');
       const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('win32');
       const result = await handleHostMachineTool('get_specifications');
-      expect(result).toHaveProperty('OS_Name');
+      expect(result).toHaveProperty('OS');
+      expect(result).toHaveProperty('Release');
       expect(result).toHaveProperty('Processor');
-      expect(result.Total_RAM_GB).toBeDefined();
+      expect(result.RAM_GB).toBeDefined();
       platformSpy.mockRestore();
     });
 
@@ -163,9 +164,10 @@ describe('Multi-Agent System & Tools Tests', () => {
       const os = require('os');
       const platformSpy = jest.spyOn(os, 'platform').mockReturnValue('linux');
       const result = await handleHostMachineTool('get_specifications');
-      expect(result).toHaveProperty('OS_Name');
+      expect(result).toHaveProperty('OS');
+      expect(result).toHaveProperty('Release');
       expect(result).toHaveProperty('Processor');
-      expect(result.Total_RAM_GB).toBeDefined();
+      expect(result.RAM_GB).toBeDefined();
       platformSpy.mockRestore();
     });
 

@@ -173,14 +173,14 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
           if (match) osName = match[1].trim();
         }
       } catch(e) {
-        console.error("Failed to fetch friendly OS name");
+        console.error("Friendly OS fetch failed");
       }
       const cpuInfo = os.cpus().length > 0 ? os.cpus()[0].model + ' (' + os.cpus().length + ' cores)' : 'Unknown';
       return { 
-        OS_Name: osName, 
-        OS_Release: os.release(), 
+        OS: osName, 
+        Release: os.release(), 
         Processor: cpuInfo, 
-        Total_RAM_GB: (os.totalmem() / (1024 ** 3)).toFixed(2) 
+        RAM_GB: (os.totalmem() / (1024 ** 3)).toFixed(2) 
       };
     } catch (err) {
       return `Error retrieving host machine specifications: ${err.message}`;
@@ -192,9 +192,9 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     const temp = await getTemperatureInfo();
     const net = await handleHostMachineTool('get_network_info', params, userId);
     const specsStr = `### 🖥️ Host Machine Specifications
-- **Operating System**: ${specs.OS_Name} (${specs.OS_Release})
-- **Processor**: ${specs.Processor}
-- **Memory**: ${specs.Total_RAM_GB} GB total`;
+- **Operating System**: ${specs.OS || 'Unknown'} (${specs.Release || 'Unknown'})
+- **Processor**: ${specs.Processor || 'Unknown'}
+- **Memory**: ${specs.RAM_GB || 'Unknown'} GB total`;
     return `${specsStr}\n\n${temp}\n\n${net}`;
   }
 
