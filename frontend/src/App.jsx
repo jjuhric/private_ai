@@ -925,6 +925,8 @@ function App() {
         showGithubToken={showGithubToken}
         setShowGithubToken={setShowGithubToken}
         onFetchLocalModels={fetchLocalModels}
+        currentUser={user}
+        token={token}
       />
 
       {/* Profile Modal */}

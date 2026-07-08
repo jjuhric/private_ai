@@ -312,4 +312,62 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
   }
 });
 
+// Admin endpoint: list users and their token quota/usage
+router.get('/admin/users', authenticateToken, async (req, res) => {
+  if (req.user.username !== 'admin') {
+    return res.status(403).json({ error: 'Access denied: Admin permissions required.' });
+  }
+
+  try {
+    const db = await getDb();
+    const users = await db.all(`
+      SELECT 
+        u.id, 
+        u.username, 
+        u.name, 
+        COALESCE(s.token_quota, 100000) as token_quota,
+        (
+          SELECT COALESCE(SUM(token_count), 0) 
+          FROM token_usage 
+          WHERE user_id = u.id 
+            AND created_at >= datetime('now', '-24 hours')
+        ) as total_used_24h
+      FROM users u
+      LEFT JOIN user_settings s ON u.id = s.user_id
+    `);
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin endpoint: update a specific user's token quota
+router.put('/admin/users/:userId/quota', authenticateToken, async (req, res) => {
+  if (req.user.username !== 'admin') {
+    return res.status(403).json({ error: 'Access denied: Admin permissions required.' });
+  }
+
+  const { userId } = req.params;
+  const { token_quota } = req.body;
+
+  if (token_quota === undefined || isNaN(token_quota) || token_quota < 0) {
+    return res.status(400).json({ error: 'Invalid token quota. Must be a non-negative number.' });
+  }
+
+  try {
+    const db = await getDb();
+    
+    // Upsert quota limit
+    await db.run(`
+      INSERT INTO user_settings (user_id, token_quota)
+      VALUES (?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET token_quota = excluded.token_quota
+    `, [userId, token_quota]);
+
+    res.json({ success: true, message: `Token quota updated successfully for user ${userId}.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

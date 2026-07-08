@@ -9,6 +9,7 @@ jest.mock('../db', () => ({
 
 const { checkQuota } = require('../middleware/quotaMiddleware');
 const alertsRouter = require('../routes/alerts');
+const settingsRouter = require('../routes/settings');
 const { JWT_SECRET } = require('../middleware/auth');
 
 const app = express();
@@ -23,18 +24,26 @@ app.get('/test-quota', (req, res, next) => {
 });
 
 app.use('/api/alerts', alertsRouter);
+app.use('/api/settings', settingsRouter);
 
 describe('Quota Enforcement and Alerts Stream Tests', () => {
   let token;
+  let adminToken;
   const userId = 1;
 
   beforeAll(() => {
     token = jwt.sign({ id: userId, username: 'quotauser' }, JWT_SECRET);
+    adminToken = jwt.sign({ id: 2, username: 'admin' }, JWT_SECRET);
   });
 
   beforeEach(() => {
     mockDb = {
-      get: jest.fn(),
+      get: jest.fn().mockImplementation(async (query, params) => {
+        if (query.includes('SELECT id FROM users')) {
+          return { id: params ? params[0] : 1 };
+        }
+        return null;
+      }),
       all: jest.fn(),
       run: jest.fn()
     };
@@ -43,6 +52,9 @@ describe('Quota Enforcement and Alerts Stream Tests', () => {
   test('checkQuota allows requests when usage is below quota', async () => {
     // Mock user settings showing quota is 100,000
     mockDb.get.mockImplementation(async (query, params) => {
+      if (query.includes('SELECT id FROM users')) {
+        return { id: params ? params[0] : 1 };
+      }
       if (query.includes('token_quota')) {
         return { token_quota: 100000 };
       }
@@ -63,6 +75,9 @@ describe('Quota Enforcement and Alerts Stream Tests', () => {
   test('checkQuota blocks requests and returns 429 when usage exceeds quota', async () => {
     // Mock user settings showing quota is 10,000
     mockDb.get.mockImplementation(async (query, params) => {
+      if (query.includes('SELECT id FROM users')) {
+        return { id: params ? params[0] : 1 };
+      }
       if (query.includes('token_quota')) {
         return { token_quota: 10000 };
       }
@@ -115,5 +130,44 @@ describe('Quota Enforcement and Alerts Stream Tests', () => {
   test('broadcastAlert handles empty active client pool and string message', () => {
     const { broadcastAlert } = require('../routes/alerts');
     expect(() => broadcastAlert('hello world')).not.toThrow();
+  });
+
+  test('admin endpoints block non-admin users', async () => {
+    const resGet = await request(app)
+      .get('/api/settings/admin/users')
+      .set('Authorization', `Bearer ${token}`);
+    expect(resGet.statusCode).toBe(403);
+
+    const resPut = await request(app)
+      .put('/api/settings/admin/users/1/quota')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ token_quota: 50000 });
+    expect(resPut.statusCode).toBe(403);
+  });
+
+  test('admin endpoints allow admin to get and update quotas', async () => {
+    mockDb.all = jest.fn().mockResolvedValue([
+      { id: 1, username: 'quotauser', name: 'Quota User', token_quota: 100000, total_used_24h: 5000 }
+    ]);
+    mockDb.run = jest.fn().mockResolvedValue({ changes: 1 });
+
+    const resGet = await request(app)
+      .get('/api/settings/admin/users')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(resGet.statusCode).toBe(200);
+    expect(resGet.body[0].username).toBe('quotauser');
+
+    const resPut = await request(app)
+      .put('/api/settings/admin/users/1/quota')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ token_quota: 50000 });
+    expect(resPut.statusCode).toBe(200);
+    expect(resPut.body.success).toBe(true);
+
+    const resPutInvalid = await request(app)
+      .put('/api/settings/admin/users/1/quota')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ token_quota: -10 });
+    expect(resPutInvalid.statusCode).toBe(400);
   });
 });
