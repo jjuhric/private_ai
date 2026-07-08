@@ -211,6 +211,25 @@ describe('network_node_tool.js Tests', () => {
     expect(res).toContain('Error routing command to remote node: Connection timed out');
   });
 
+  test('remote_node_bridge: resolves node by name if nodeId is a string name', async () => {
+    mockDb.get.mockResolvedValueOnce({ id: 2, node_name: 'RPi5', is_main_host: 0, ip_address: '192.168.1.101', port: 3000, bridge_secret: 'secret123' });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ output: 'System info from RPi5' })
+    });
+
+    const res = await handleNetworkNodeTool(
+      'remote_node_bridge', 
+      { nodeId: 'RPi5', action: 'system_info' }, 
+      { userId: 1 }
+    );
+    expect(mockDb.get).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE LOWER(node_name) = ?'),
+      ['rpi5', 1]
+    );
+    expect(res).toContain('System info from RPi5');
+  });
+
   test('handleNetworkNodeTool: error on unknown tool action', async () => {
     const res = await handleNetworkNodeTool('invalid_tool_action', {}, { userId: 1 });
     expect(res).toContain('Error: Unknown network node tool action');
