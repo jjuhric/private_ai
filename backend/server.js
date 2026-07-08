@@ -189,6 +189,13 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
 const gracefulShutdown = () => {
   logger.info('SIGTERM/SIGINT received. Shutting down gracefully...');
   mqttService.disconnect();
+  
+  // Force exit after 3 seconds if connections don't close cleanly
+  setTimeout(() => {
+    logger.warn('Forcing exit after timeout during graceful shutdown.');
+    process.exit(0);
+  }, 3000);
+
   server.close(() => {
     logger.info('HTTP server closed.');
     process.exit(0);
