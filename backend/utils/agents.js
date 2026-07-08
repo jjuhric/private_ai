@@ -61,9 +61,7 @@ async function runAgentTurn(agentName, systemPrompt, settings, userMessage, hist
   const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
   let respText = '';
 
-  const fullPrompt = `${systemPrompt}
-
-You MUST output your decision in this exact JSON format:
+  const instructions = `You MUST output your decision in this exact JSON format:
 {
   "thought": "your step-by-step reasoning",
   "tool": "tool_name_or_none",
@@ -74,7 +72,9 @@ You MUST output your decision in this exact JSON format:
 If you are done, set "tool" to "none". Do NOT output anything else but valid JSON.
 
 User Message: ${userMessage}
-History Context: ${JSON.stringify(history.slice(-10))}`;
+History Context: ${JSON.stringify(history.slice(-5))}`;
+
+  const fullPrompt = `${systemPrompt}\n\n${instructions}`;
 
   if (isGemini) {
     const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
@@ -145,21 +145,21 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       body = {
         model: finalModel,
         system: systemPrompt,
-        messages: [{ role: 'user', content: fullPrompt }],
+        messages: [{ role: 'user', content: instructions }],
         max_tokens: 1024
       };
     } else if (targetStyle === 'local-gemini') {
       body = {
         model: finalModel,
         system_prompt: systemPrompt,
-        input: fullPrompt
+        input: instructions
       };
     } else {
       body = {
         model: finalModel,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: fullPrompt }
+          { role: 'user', content: instructions }
         ],
         temperature: 0.1,
         max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
