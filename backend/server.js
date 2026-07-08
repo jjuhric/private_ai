@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { getDb } = require('./db');
 
 // Global tracker to handle Rule 8 busy checking across the system
