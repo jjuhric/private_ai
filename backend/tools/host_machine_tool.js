@@ -1,6 +1,6 @@
 const os = require('os');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { exec, execSync } = require('child_process');
 const util = require('util');
 const path = require('path');
 const execPromise = util.promisify(exec);
@@ -162,11 +162,40 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     };
   }
 
+  if (action === 'get_specifications') {
+    try {
+      let osName = os.type();
+      try {
+        if (os.platform() === 'win32') {
+          // Fetches friendly name like "Microsoft Windows 11 Home"
+          const wmicOut = execSync('wmic os get Caption /value', { encoding: 'utf8' });
+          const match = wmicOut.match(/Caption=(.*)/);
+          if (match) osName = match[1].trim();
+        }
+      } catch(e) {
+        console.error("Failed to fetch friendly OS name");
+      }
+      const cpuInfo = os.cpus().length > 0 ? os.cpus()[0].model + ' (' + os.cpus().length + ' cores)' : 'Unknown';
+      return { 
+        OS_Name: osName, 
+        OS_Release: os.release(), 
+        Processor: cpuInfo, 
+        Total_RAM_GB: (os.totalmem() / (1024 ** 3)).toFixed(2) 
+      };
+    } catch (err) {
+      return `Error retrieving host machine specifications: ${err.message}`;
+    }
+  }
+
   if (action === 'get_system_report') {
     const specs = await handleHostMachineTool('get_specifications', params, userId);
     const temp = await getTemperatureInfo();
     const net = await handleHostMachineTool('get_network_info', params, userId);
-    return `${specs}\n\n${temp}\n\n${net}`;
+    const specsStr = `### 🖥️ Host Machine Specifications
+- **Operating System**: ${specs.OS_Name} (${specs.OS_Release})
+- **Processor**: ${specs.Processor}
+- **Memory**: ${specs.Total_RAM_GB} GB total`;
+    return `${specsStr}\n\n${temp}\n\n${net}`;
   }
 
   if (action === 'get_power') {
@@ -379,71 +408,7 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
   }
 
   try {
-    const platform = os.platform();
-    const release = os.release();
-    const type = os.type();
-    const arch = os.arch();
-    const uptime = os.uptime();
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const cpu_summary = os.cpus().length > 0 ? os.cpus()[0].model + ' (' + os.cpus().length + ' cores)' : 'Unknown';
-    const loadAvg = os.loadavg();
-
-    // Formatted uptime
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = Math.floor(uptime % 60);
-    const uptimeStr = `${hours}h ${minutes}m ${seconds}s`;
-
-    // Formatted memory
-    const totalGB = (totalMem / (1024 ** 3)).toFixed(2);
-    const freeGB = (freeMem / (1024 ** 3)).toFixed(2);
-    const usedGB = (Number(totalGB) - Number(freeGB)).toFixed(2);
-    const memPercent = ((totalMem - freeMem) / totalMem * 100).toFixed(1);
-
-    let diskInfo = 'Disk space check not supported on this platform';
-    try {
-      if (platform === 'win32') {
-        // Execute powershell script to retrieve drive specs
-        const { stdout } = await execPromise('powershell -Command "Get-PSDrive -PSProvider FileSystem | Select-Object Name, Used, Free | ConvertTo-Json"');
-        if (stdout.trim()) {
-          const drives = JSON.parse(stdout);
-          const driveList = Array.isArray(drives) ? drives : [drives];
-          diskInfo = driveList
-            .filter(d => d.Name)
-            .map(d => {
-              const used = d.Used ? (Number(d.Used) / (1024 ** 3)).toFixed(1) : '0.0';
-              const free = d.Free ? (Number(d.Free) / (1024 ** 3)).toFixed(1) : '0.0';
-              const total = (Number(used) + Number(free)).toFixed(1);
-              const percent = Number(total) > 0 ? (Number(used) / Number(total) * 100).toFixed(1) : '0.0';
-              return `- Drive ${d.Name}: ${used} GB / ${total} GB used (${percent}%) - ${free} GB free`;
-            })
-            .join('\n');
-        } else {
-          diskInfo = 'No file systems detected.';
-        }
-      } else {
-        const { stdout } = await execPromise('df -h /');
-        diskInfo = stdout.trim();
-      }
-    } catch (e) {
-      diskInfo = `Failed to retrieve disk info: ${e.message}`;
-    }
-
-    const powerInfo = await getPowerInfo();
-
-    return `### 🖥️ Host Machine Specifications
-- **Operating System**: ${type} (${platform} ${release}) - ${arch} Architecture
-- **Uptime**: ${uptimeStr}
-- **CPU**: ${cpu_summary}
-- **Memory**: ${usedGB} GB / ${totalGB} GB used (${memPercent}%) - ${freeGB} GB free
-- **Load Average (1/5/15 min)**: ${platform === 'win32' ? 'N/A' : loadAvg.map(l => l.toFixed(2)).join(', ')}
-
-### 💾 Disk Volumes
-${diskInfo}
-
-${powerInfo}
-`;
+    return await handleHostMachineTool('get_specifications', params, userId);
   } catch (err) {
     return `Error retrieving host machine specifications: ${err.message}`;
   }

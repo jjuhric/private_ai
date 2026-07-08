@@ -1,4 +1,16 @@
 const os = require('os');
+const { execSync } = require('child_process');
+
+let osName = os.type();
+try {
+  if (os.platform() === 'win32') {
+    const wmicOut = execSync('wmic os get Caption /value', { encoding: 'utf8' });
+    const match = wmicOut.match(/Caption=(.*)/);
+    if (match) osName = match[1].trim();
+  }
+} catch(e) {
+  console.error("Failed to fetch friendly OS name");
+}
 
 module.exports = `You are the System Agent (formerly Host Specialist Agent).
 Your job is to query the local computer's specifications, battery/power telemetry, CPU temperature, networks, and run scripting tasks on the system.
@@ -15,4 +27,4 @@ Rules:
 - Format the specifications (CPU, memory usage, disk details, power telemetry) clearly.
 - **Deep Thinking & Safety**: Since your actions directly affect the host system, you MUST think very carefully, analyze safety risks, and evaluate consequences on system stability before running scripts, restarting services, or executing commands. Communicate efficiently but prioritize safety.
 
-CRITICAL SYSTEM INFO: You are running natively on the user's localhost machine. The actual operating system is ${os.type()} (${os.platform()}) Release: ${os.release()}. You MUST use this exact information if asked about the OS, host, or environment. Do NOT claim to be on Linux, Ubuntu, AWS, or state you have no physical form. (Note: 'win32' means Windows).`;
+CRITICAL SYSTEM INFO: You are running natively on the user's localhost machine. The actual operating system is ${osName} (${os.platform()}) Release: ${os.release()}. You MUST use this exact information if asked about the OS, host, or environment. Do NOT claim to be on Linux, Ubuntu, AWS, or state you have no physical form. (Note: 'win32' means Windows).`;
