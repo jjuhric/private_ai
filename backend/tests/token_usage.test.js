@@ -85,11 +85,11 @@ describe('Token Usage API Router Tests', () => {
     // Seed database
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-2 hours'))",
-      [userId, 'gemini-2.0-flash', 'online', 500]
+      [userId, 'qwen3-8b', 'online', 500]
     );
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
-      [userId, 'gemma-2', 'local', 120]
+      [userId, 'qwen3-8b', 'local', 120]
     );
 
     const res = await request(app)
@@ -99,7 +99,7 @@ describe('Token Usage API Router Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.totalTokens).toBe(120);
     expect(res.body.tableData.length).toBe(1);
-    expect(res.body.tableData[0].model_name).toBe('gemma-2');
+    expect(res.body.tableData[0].model_name).toBe('qwen3-8b');
     expect(res.body.tableData[0].provider_type).toBe('local');
     expect(res.body.graphData.length).toBe(1);
   });
@@ -120,32 +120,32 @@ describe('Token Usage API Router Tests', () => {
     // Record 1: 5 hours ago
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-5 hours'))",
-      [userId, 'gemini-2.0-flash', 'online', 1000]
+      [userId, 'qwen3-8b', 'online', 1000]
     );
     // Record 2: 30 minutes ago
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-30 minutes'))",
-      [userId, 'gemma-2', 'local', 200]
+      [userId, 'qwen3-8b', 'local', 200]
     );
     // Record 3: 2 days ago
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-2 days'))",
-      [userId, 'gemini-2.0-flash', 'online', 5000]
+      [userId, 'qwen3-8b', 'online', 5000]
     );
     // Record 4: 10 hours ago (for 12h check)
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-10 hours'))",
-      [userId, 'gemma-2', 'local', 300]
+      [userId, 'qwen3-8b', 'local', 300]
     );
     // Record 5: 15 days ago (for 30d check)
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-15 days'))",
-      [userId, 'gemini-2.0-flash', 'online', 4000]
+      [userId, 'qwen3-8b', 'online', 4000]
     );
     // Record 6: 100 days ago (for 365d check)
     await mockTestDb.run(
       "INSERT INTO token_usage (user_id, model_name, provider_type, token_count, created_at) VALUES (?, ?, ?, ?, datetime('now', '-100 days'))",
-      [userId, 'gemma-2', 'local', 600]
+      [userId, 'qwen3-8b', 'local', 600]
     );
 
     // Query 1h (should only contain the 30-min ago record, total = 200)

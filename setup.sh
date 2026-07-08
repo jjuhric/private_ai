@@ -359,9 +359,9 @@ write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
 write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
 write_env_var "WEATHER_API_KEY" "${WEATHER_KEY}"
 write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
-write_env_var "PREFERRED_LOCAL_MODEL" "google/gemma-4-e4b"
-write_env_var "PREFERRED_ONLINE_MODEL" "gemini-2.0-flash"
-write_env_var "SUPERVISOR_MODEL" "gemini-1.5-pro"
+write_env_var "PREFERRED_LOCAL_MODEL" "qwen3-8b"
+write_env_var "PREFERRED_ONLINE_MODEL" "qwen3-8b"
+write_env_var "SUPERVISOR_MODEL" "qwen3-8b"
 if [ "$IS_MAIN_HOST" = "0" ]; then
     MQTT_BROKER_URL="mqtt://${MAIN_HOST_IP:-localhost}:1883"
     MQTT_NODE_ID=$(hostname 2>/dev/null || echo "field-node")

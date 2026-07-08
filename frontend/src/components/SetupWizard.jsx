@@ -46,7 +46,7 @@ export default function SetupWizard({ token, onComplete }) {
     if (llmForm.provider === 'local') {
       setLlmForm(prev => ({
         ...prev,
-        model_name: localModels[0] || 'google/gemma-4-e4b'
+        model_name: localModels[0] || 'qwen3-8b'
       }));
     } else {
       const currentProvider = llmForm.online_provider;
@@ -155,8 +155,8 @@ export default function SetupWizard({ token, onComplete }) {
             online_key: llmForm.online_key,
             device_type: deviceForm.device_type,
             is_main_host: deviceForm.is_main_host,
-            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'google/gemma-4-e4b',
-            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'gemini-2.0-flash'
+            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'qwen3-8b',
+            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'qwen3-8b'
           })
         });
       if (!settingsRes.ok) {
@@ -531,7 +531,7 @@ export default function SetupWizard({ token, onComplete }) {
                         className="form-control"
                         value={llmForm.model_name || ''}
                         onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
-                        placeholder="e.g. google/gemma-4-e4b"
+                        placeholder="e.g. qwen3-8b"
                       />
                     )}
                   </div>

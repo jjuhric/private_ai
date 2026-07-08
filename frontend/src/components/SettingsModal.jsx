@@ -100,7 +100,7 @@ export default function SettingsModal({
               setSettings(prev => ({
                 ...prev,
                 provider: 'local',
-                model_name: isAlreadyLocal ? prev.model_name : (localModels.length > 0 ? localModels[0] : 'google/gemma-4-e4b')
+                model_name: isAlreadyLocal ? prev.model_name : (localModels.length > 0 ? localModels[0] : 'qwen3-8b')
               }));
             }}
           >
@@ -191,7 +191,7 @@ export default function SettingsModal({
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. google/gemma-4-e4b"
+                    placeholder="e.g. qwen3-8b"
                     value={settings.model_name}
                     onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
                   />

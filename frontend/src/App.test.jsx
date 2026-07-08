@@ -29,7 +29,7 @@ global.fetch = vi.fn().mockImplementation((url, options) => {
   if (urlStr.includes('/api/settings/local-models')) {
     return Promise.resolve({
       ok: true,
-      json: async () => ['local-gemma']
+      json: async () => ['qwen3-8b']
     });
   }
 
@@ -46,7 +46,7 @@ global.fetch = vi.fn().mockImplementation((url, options) => {
       json: async () => ({
         user_id: 1,
         provider: 'local',
-        model_name: 'local-gemma',
+        model_name: 'qwen3-8b',
         github_token: '',
         local_key: '',
         local_url: 'http://localhost:1234/v1',

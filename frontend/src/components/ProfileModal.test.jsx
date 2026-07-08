@@ -141,7 +141,7 @@ describe('ProfileModal Component Tests', () => {
     const mockSettings = {
       local_url: 'http://localhost:1234/v1',
       online_key: 'test_online_key',
-      preferred_local_model: 'local-gemma-old',
+      preferred_local_model: 'qwen3-8b-old',
       preferred_online_model: 'gemini-1.5-pro'
     };
 
@@ -153,7 +153,7 @@ describe('ProfileModal Component Tests', () => {
         saveProfile={mockSaveProfile} 
         settings={mockSettings}
         saveSettings={mockSaveSettings}
-        localModels={['local-gemma-old', 'local-gemma-new']}
+        localModels={['qwen3-8b-old', 'qwen3-8b-new']}
         onlineModels={['gemini-1.5-pro', 'gemini-2.5-flash']}
       />
     );
@@ -164,8 +164,8 @@ describe('ProfileModal Component Tests', () => {
     expect(screen.getByText('Preferred Online Model')).toBeInTheDocument();
 
     const selects = screen.getAllByRole('combobox');
-    const localSelect = selects.find(s => s.value === 'local-gemma-old');
-    fireEvent.change(localSelect, { target: { value: 'local-gemma-new' } });
+    const localSelect = selects.find(s => s.value === 'qwen3-8b-old');
+    fireEvent.change(localSelect, { target: { value: 'qwen3-8b-new' } });
 
     const saveBtn = screen.getByText('Save Profile');
     fireEvent.click(saveBtn);
@@ -173,7 +173,7 @@ describe('ProfileModal Component Tests', () => {
     expect(mockSaveProfile).toHaveBeenCalled();
     expect(mockSaveSettings).toHaveBeenCalledWith({
       ...mockSettings,
-      preferred_local_model: 'local-gemma-new',
+      preferred_local_model: 'qwen3-8b-new',
       preferred_online_model: 'gemini-1.5-pro'
     });
   });
@@ -215,7 +215,7 @@ describe('ProfileModal Component Tests', () => {
 
     fireEvent.click(screen.getByText('AI Models'));
 
-    const input = screen.getByPlaceholderText('e.g. google/gemma-4-e4b');
+    const input = screen.getByPlaceholderText('e.g. qwen3-8b');
     expect(input.value).toBe('local-old');
     fireEvent.change(input, { target: { value: 'local-new' } });
 

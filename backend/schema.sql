@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id INTEGER PRIMARY KEY,
   provider TEXT DEFAULT 'local', -- 'local' or 'gemini' (or 'openai', 'anthropic')
-  model_name TEXT DEFAULT 'qwen3.5-9b-deepseek-v4-flash',
+  model_name TEXT DEFAULT 'qwen3-8b',
   github_token TEXT,
   gemini_key TEXT, -- legacy, replaced by online_key
   local_key TEXT,
