@@ -25,7 +25,19 @@ router.post('/', express.raw({ type: 'application/json' }), (req, res) => {
     return res.status(500).json({ error: 'Webhook secret not configured on host.' });
   }
 
-  if (!sig || !verifySignature(req.body, sig, secret)) {
+  // If express.json() already parsed the body into an object, express.raw() will have been bypassed
+  // and req.body will be an object. In that case, we must use req.rawBody (populated by our custom verify helper in server.js)
+  // or fall back to stringification.
+  let verifyPayload = req.body;
+  if (req.rawBody) {
+    verifyPayload = req.rawBody;
+  }
+
+  const payloadToVerify = Buffer.isBuffer(verifyPayload) || typeof verifyPayload === 'string'
+    ? verifyPayload
+    : JSON.stringify(verifyPayload);
+
+  if (!sig || !verifySignature(payloadToVerify, sig, secret)) {
     return res.status(401).json({ error: 'Invalid webhook signature.' });
   }
 

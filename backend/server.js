@@ -58,7 +58,11 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 // Initialize database connection and schedule daily memory maintenance
 const logger = require('./utils/logger');
