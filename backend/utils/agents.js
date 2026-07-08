@@ -139,7 +139,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       }
     }
 
-    const finalModel = (modelName === 'qwen3-8b') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen3-8b') : modelName;
+    const finalModel = (modelName === 'qwen3-8b' || modelName === 'qwen2.5-coder-3b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen2.5-coder-3b-instruct') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
@@ -162,8 +162,9 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
           { role: 'user', content: fullPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 2048,
-        response_format: { type: "json_object" }
+        max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
+        response_format: { type: "json_object" },
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 4096 } : {})
       };
     }
 
@@ -260,21 +261,32 @@ Based on the task: "${userMessage}"
 And these tool outputs:
 ${JSON.stringify(toolOutputs)}
 
-Generate a detailed final report summarizing your actions and findings. Make it clear and production-ready.`;
+Generate a response. You MUST return your response as a strict JSON object with this exact schema:
+{
+  "status": "success" | "error",
+  "summary": "a brief single-sentence summary of the action/result",
+  "data": {} // key-value data of your findings and results
+}
+Do NOT include any other text, markdown wrapper, or conversational filler outside the JSON object.`;
+
+  let rawRespText = '';
 
   if (isGemini) {
     const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
     const genAI = new GoogleGenerativeAI(activeKey);
-    const model = genAI.getGenerativeModel({ model: modelName || 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ 
+      model: modelName || 'gemini-2.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
     const result = await model.generateContent(responderInstruction, { signal: settings.abortSignal });
-    const respText = result.response.text();
+    rawRespText = result.response.text();
 
     // Log token usage
     let tokenCount = 0;
     if (result.response.usageMetadata && result.response.usageMetadata.totalTokenCount) {
       tokenCount = result.response.usageMetadata.totalTokenCount;
     } else {
-      tokenCount = Math.ceil((responderInstruction.length + respText.length) / 4);
+      tokenCount = Math.ceil((responderInstruction.length + rawRespText.length) / 4);
     }
     if (db && typeof db.run === 'function' && userId) {
       const providerType = provider === 'local' ? 'local' : 'online';
@@ -283,7 +295,6 @@ Generate a detailed final report summarizing your actions and findings. Make it 
         [userId, modelName || 'gemini-2.5-flash', providerType, tokenCount]
       ).catch(err => console.error('Failed to log Gemini response tokens:', err));
     }
-    return respText;
   } else {
     let targetUrl = provider === 'local' 
       ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
@@ -316,7 +327,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
       endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
     }
 
-    const finalModel = (modelName === 'qwen3-8b') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen3-8b') : modelName;
+    const finalModel = (modelName === 'qwen3-8b' || modelName === 'qwen2.5-coder-3b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen2.5-coder-3b-instruct') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
@@ -330,10 +341,12 @@ Generate a detailed final report summarizing your actions and findings. Make it 
         model: finalModel,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Based on the task: "${userMessage}"\nAnd these tool outputs:\n${JSON.stringify(toolOutputs)}\n\nGenerate a detailed final report summarizing your actions and findings. Make it clear and production-ready.` }
+          { role: 'user', content: responderInstruction }
         ],
         temperature: 0.2,
-        max_tokens: 2048
+        max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
+        response_format: { type: "json_object" },
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 4096 } : {})
       };
     }
 
@@ -349,7 +362,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
     }
 
     const data = await res.json();
-    const respText = targetStyle === 'anthropic' ? (data.content?.[0]?.text || '') : (data.choices?.[0]?.message?.content || '');
+    rawRespText = targetStyle === 'anthropic' ? (data.content?.[0]?.text || '') : (data.choices?.[0]?.message?.content || '');
 
     // Log token usage
     let tokenCount = 0;
@@ -359,7 +372,7 @@ Generate a detailed final report summarizing your actions and findings. Make it 
       tokenCount = data.usage.input_tokens + data.usage.output_tokens;
     } else {
       const promptText = targetStyle === 'anthropic' ? systemPrompt + responderInstruction : JSON.stringify(body);
-      tokenCount = Math.ceil((promptText.length + respText.length) / 4);
+      tokenCount = Math.ceil((promptText.length + rawRespText.length) / 4);
     }
     if (db && typeof db.run === 'function' && userId) {
       const providerType = provider === 'local' ? 'local' : 'online';
@@ -368,7 +381,28 @@ Generate a detailed final report summarizing your actions and findings. Make it 
         [userId, modelName || 'unknown', providerType, tokenCount]
       ).catch(err => console.error('Failed to log non-gemini response tokens:', err));
     }
-    return respText;
+  }
+
+  // Robustly ensure output is a valid JSON string
+  let cleanResp = rawRespText.trim();
+  try {
+    JSON.parse(cleanResp);
+    return cleanResp;
+  } catch (err) {
+    const firstBrace = cleanResp.indexOf('{');
+    const lastBrace = cleanResp.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const substring = cleanResp.substring(firstBrace, lastBrace + 1);
+        JSON.parse(substring);
+        return substring;
+      } catch (e) {}
+    }
+    return JSON.stringify({
+      status: "success",
+      summary: rawRespText,
+      data: {}
+    });
   }
 }
 

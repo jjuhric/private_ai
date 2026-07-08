@@ -89,17 +89,33 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       temperature: 0.7,
       frequency_penalty: 0.3,
       presence_penalty: 0.1,
-      max_tokens: 4096,
-      stream: true
+      max_tokens: localStyle === 'lm-studio' ? 1024 : 4096,
+      stream: true,
+      ...(localStyle === 'lm-studio' ? { num_ctx: 4096 } : {})
     };
   }
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-    signal: abortSignal
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+  
+  if (abortSignal) {
+    abortSignal.addEventListener('abort', () => controller.abort());
+  }
+
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (fetchErr) {
+    clearTimeout(timeoutId);
+    console.error('LM Studio connection error:', fetchErr);
+    throw new Error("Local LLM Connection Lost. The model may have run out of memory. Please lower context length.");
+  }
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errText = await response.text();
@@ -141,34 +157,39 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
 
-  while (true) {
-    if (abortSignal?.aborted) {
-      await reader.cancel();
-      break;
-    }
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
+  try {
+    while (true) {
+      if (abortSignal?.aborted) {
+        await reader.cancel();
+        break;
+      }
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
 
-    for (const line of lines) {
-      const cleaned = line.trim();
-      if (!cleaned || cleaned === 'data: [DONE]') continue;
-      if (cleaned.startsWith('data: ')) {
-        try {
-          const parsed = JSON.parse(cleaned.substring(6));
-          // Support both OpenAI format and Anthropic format chunk parsing
-          const text = parsed.choices?.[0]?.delta?.content || parsed.delta?.text || parsed.response || parsed.content;
-          if (text) {
-            onChunk(text);
-            fullResponseText += text;
+      for (const line of lines) {
+        const cleaned = line.trim();
+        if (!cleaned || cleaned === 'data: [DONE]') continue;
+        if (cleaned.startsWith('data: ')) {
+          try {
+            const parsed = JSON.parse(cleaned.substring(6));
+            // Support both OpenAI format and Anthropic format chunk parsing
+            const text = parsed.choices?.[0]?.delta?.content || parsed.delta?.text || parsed.response || parsed.content;
+            if (text) {
+              onChunk(text);
+              fullResponseText += text;
+            }
+          } catch (e) {
+            // ignore malformed lines
           }
-        } catch (e) {
-          // ignore malformed lines
         }
       }
     }
+  } catch (streamErr) {
+    console.error('LM Studio stream interrupted:', streamErr);
+    throw new Error("Local LLM Connection Lost. The model may have run out of memory. Please lower context length.");
   }
 
   // Estimate and log streaming tokens
@@ -608,36 +629,22 @@ If no changes are required and you can proceed without executing the code, then 
     // Check for delegation
     if (decision.tool.startsWith('delegate_to_') && decision.tool !== 'delegate_to_remote_node') {
       const agentName = decision.tool.replace('delegate_to_', '');
-      let subTask = '';
-      if (agentName === 'web_searcher') {
-        subTask = decision.params?.query || userMessage;
-      } else if (agentName === 'calendar_handler') {
-        subTask = decision.params?.task || JSON.stringify(decision.params);
-      } else if (agentName === 'coder') {
-        subTask = decision.params?.task || userMessage;
-      } else if (agentName === 'qa_engineer') {
-        subTask = decision.params?.task || userMessage;
-      } else if (agentName === 'weather_expert') {
-        subTask = decision.params?.task || JSON.stringify(decision.params);
-      } else if (agentName === 'system_specialist') {
-        subTask = decision.params?.query || decision.params?.task || userMessage;
-      } else if (agentName === 'memory_agent') {
-        subTask = decision.params?.task || userMessage;
-      } else if (agentName === 'document_vault') {
-        subTask = decision.params?.query || decision.params?.task || userMessage;
-      } else if (agentName === 'developer' || agentName === 'developer_agent') {
-        subTask = decision.params?.task || userMessage;
-      } else if (agentName === 'node_agent') {
-        subTask = decision.params?.query || decision.params?.task || userMessage;
-      } else if (agentName === 'github_agent') {
-        subTask = decision.params?.query || decision.params?.task || userMessage;
-      } else if (agentName === 'tool_creator_agent') {
-        subTask = decision.params?.query || decision.params?.task || userMessage;
-      } else if (agentName === 'agent_creator_agent') {
-        subTask = decision.params?.query || decision.params?.task || userMessage;
+      
+      let subTaskObj = {};
+      if (decision.params && typeof decision.params === 'object') {
+        subTaskObj = { ...decision.params };
+      } else if (typeof decision.params === 'string') {
+        subTaskObj = { task: decision.params };
       } else {
-        subTask = userMessage;
+        subTaskObj = { task: userMessage };
       }
+
+      // Ensure there's a task or query defined
+      if (!subTaskObj.task && !subTaskObj.query) {
+        subTaskObj.task = userMessage;
+      }
+      
+      const subTask = JSON.stringify(subTaskObj);
 
       onThought(`Delegating sub-task to Agent "${agentName}": "${subTask}"...\n`);
       if (onAgentStatus) onAgentStatus({ agent: agentName, status: 'active' });

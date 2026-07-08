@@ -46,7 +46,7 @@ export default function SetupWizard({ token, onComplete }) {
     if (llmForm.provider === 'local') {
       setLlmForm(prev => ({
         ...prev,
-        model_name: localModels[0] || 'qwen3-8b'
+        model_name: localModels[0] || 'qwen2.5-coder-3b-instruct'
       }));
     } else {
       const currentProvider = llmForm.online_provider;
@@ -155,8 +155,8 @@ export default function SetupWizard({ token, onComplete }) {
             online_key: llmForm.online_key,
             device_type: deviceForm.device_type,
             is_main_host: deviceForm.is_main_host,
-            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'qwen3-8b',
-            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'qwen3-8b'
+            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'qwen2.5-coder-3b-instruct',
+            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'qwen2.5-coder-3b-instruct'
           })
         });
       if (!settingsRes.ok) {
@@ -462,7 +462,7 @@ export default function SetupWizard({ token, onComplete }) {
                 type="button"
                 className={`settings-tab-btn ${llmForm.provider === 'gemini' ? 'active' : ''}`}
                 onClick={() => setLlmForm(prev => ({ ...prev, provider: 'gemini' }))}
-                style={{ flex: 1, padding: '10px 0' }}
+                style={{ flex: 1, padding: '10px 0', display: 'none' }}
               >
                 Online API
               </button>
@@ -531,7 +531,7 @@ export default function SetupWizard({ token, onComplete }) {
                         className="form-control"
                         value={llmForm.model_name || ''}
                         onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
-                        placeholder="e.g. qwen3-8b"
+                        placeholder="e.g. qwen2.5-coder-3b-instruct"
                       />
                     )}
                   </div>

@@ -185,7 +185,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'write a react component', []);
-    expect(selected).toBe('qwen3-8b');
+    expect(selected).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('selectBestModel offline strict isolation check (does not contact Google/online APIs)', async () => {
@@ -214,7 +214,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen3-8b');
+    expect(selected).toBe('qwen2.5-coder-3b-instruct');
 
     // Confirm that no googleapis.com or online endpoints were contacted
     const calls = global.fetch.mock.calls.map(c => c[0]);
@@ -239,7 +239,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'design a database schema', []);
-    expect(selected).toBe('qwen3-8b');
+    expect(selected).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('selectBestModel online path falls back to default when key is missing or call throws', async () => {
@@ -252,7 +252,7 @@ describe('LM Studio and Model Selection Tests', () => {
       modelName: 'gemini-2.5-flash'
     };
     const selected1 = await selectBestModel(settingsNoKey, 'hello', []);
-    expect(selected1).toBe('qwen3-8b');
+    expect(selected1).toBe('qwen2.5-coder-3b-instruct');
 
     // Case 2: API Throws
     mockGenerateContent.mockRejectedValue(new Error('API quota exceeded'));
@@ -263,7 +263,7 @@ describe('LM Studio and Model Selection Tests', () => {
       onlineKey: 'test-api-key'
     };
     const selected2 = await selectBestModel(settingsError, 'hello', []);
-    expect(selected2).toBe('qwen3-8b');
+    expect(selected2).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('LM Studio url formatting helpers handle custom host urls', async () => {
@@ -314,7 +314,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen3-8b');
+    expect(selected).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('listLocalModels returns empty list when both native and compat endpoints fail', async () => {
@@ -355,7 +355,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen3-8b');
+    expect(selected).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('GET /api/lmstudio/log-stream returns 403 when user is not main host', async () => {
@@ -449,11 +449,11 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected1 = await selectBestModel(settingsBlockedDefault, 'test query', []);
-    expect(selected1).toBe('qwen3-8b');
+    expect(selected1).toBe('qwen2.5-coder-3b-instruct');
 
     const settingsNormalDefault = {
       provider: 'local',
-      modelName: 'qwen3-8b',
+      modelName: 'qwen2.5-coder-3b-instruct',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -466,14 +466,14 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected2 = await selectBestModel(settingsNormalDefault, 'test query', []);
-    expect(selected2).toBe('qwen3-8b');
+    expect(selected2).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('selectBestModel always returns qwen3-8b', async () => {
     const { selectBestModel } = require('../utils/model_selector');
     const settings = {
       provider: 'local',
-      modelName: 'qwen3-8b',
+      modelName: 'qwen2.5-coder-3b-instruct',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -486,7 +486,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen3-8b');
+    expect(selected).toBe('qwen2.5-coder-3b-instruct');
   });
 
   test('POST /api/lmstudio/clear-logs returns 403 when user is not main host', async () => {
