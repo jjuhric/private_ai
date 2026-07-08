@@ -639,6 +639,11 @@ If no changes are required and you can proceed without executing the code, then 
         subTaskObj = { task: userMessage };
       }
 
+      // Merge action parameter if it exists on the top-level decision
+      if (decision.action && !subTaskObj.action) {
+        subTaskObj.action = decision.action;
+      }
+
       // Ensure there's a task or query defined
       if (!subTaskObj.task && !subTaskObj.query) {
         subTaskObj.task = userMessage;
