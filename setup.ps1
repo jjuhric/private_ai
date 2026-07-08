@@ -455,9 +455,21 @@ if ($isAdmin) {
         Write-Host "[WARNING] Failed to register background task or daily autoupdate in Task Scheduler: $_" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "`n[NOTICE] To automatically launch Private AI on system boot and enable daily autoupdates:" -ForegroundColor Yellow
-    Write-Host "Please re-run this setup script in an Administrator PowerShell window." -ForegroundColor Yellow
-    Write-Host "Otherwise, you can start the application manually at any time by running 'npm start'." -ForegroundColor Yellow
+    Write-Log "Non-Administrator shell detected. Starting application in background via wscript fallback..." "Yellow"
+    $scriptRoot = Resolve-Path "."
+    
+    # Stop any existing process running on the port
+    $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
+    if ($portProcess) {
+        $procId = $portProcess.OwningProcess
+        Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+
+    # Start the background task via wscript
+    Start-Process "wscript.exe" -ArgumentList "`"$scriptRoot\run-background.vbs`""
+    Write-Log "Successfully started the background application process on port $appPort." "Green"
 }
 
 Write-Host "`n====================================================" -ForegroundColor Green
