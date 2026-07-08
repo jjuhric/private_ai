@@ -36,6 +36,25 @@ async function handleRemoteNodeBridge(params, options = {}) {
       if (!node) {
         node = await db.get('SELECT * FROM network_nodes WHERE LOWER(node_name) = ? AND user_id = ?', [String(nodeId).toLowerCase(), options.userId]);
       }
+      if (!node) {
+        // Flexible fallback: strip non-alphanumeric characters and check name or device type
+        const cleanNodeId = String(nodeId).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanNodeId) {
+          const allNodes = await db.all('SELECT * FROM network_nodes WHERE user_id = ?', [options.userId]);
+          if (allNodes && Array.isArray(allNodes)) {
+            node = allNodes.find(n => {
+              const cleanName = n.node_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const cleanType = (n.device_type || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              return (
+                cleanName === cleanNodeId ||
+                cleanType === cleanNodeId ||
+                cleanNodeId.includes(cleanName) ||
+                cleanName.includes(cleanNodeId)
+              );
+            });
+          }
+        }
+      }
     }
     if (!node) {
       return `Error: Node with ID ${nodeId} not found in database.`;

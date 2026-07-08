@@ -613,7 +613,11 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
       output = await handleVaultTool(db, userId, 'query', decision.params);
     } else if (['list_network_nodes', 'remote_node_bridge'].includes(decision.tool)) {
       const { handleNetworkNodeTool } = require('../tools/network_node_tool');
-      output = await handleNetworkNodeTool(decision.tool, decision.params, {
+      const mergedParams = { ...decision.params };
+      if (!mergedParams.action && decision.action && decision.action !== 'execute' && decision.action !== 'default') {
+        mergedParams.action = decision.action;
+      }
+      output = await handleNetworkNodeTool(decision.tool, mergedParams, {
         userId,
         onCommandApprovalRequired: settings.onCommandApprovalRequired,
         settings
