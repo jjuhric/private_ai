@@ -9,7 +9,11 @@
         "statements": 85,
         "lines": 85
       }
-    }
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "test.js"
+    ]
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
