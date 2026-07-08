@@ -467,9 +467,24 @@ if ($isAdmin) {
         Start-Sleep -Seconds 2
     }
 
-    # Start the background task via wscript
-    Start-Process "wscript.exe" -ArgumentList "`"$scriptRoot\run-background.vbs`""
-    Write-Log "Successfully started the background application process on port $appPort." "Green"
+    # Try starting the scheduled task first
+    $taskStarted = $false
+    try {
+        $task = Get-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
+        if ($task) {
+            Start-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
+            Write-Log "Successfully started the background scheduled task 'PrivateAI-Assistant'." "Green"
+            $taskStarted = $true
+        }
+    } catch {
+        # Ignored, fallback to direct node process
+    }
+
+    if (-not $taskStarted) {
+        # Fallback to direct hidden node process
+        Start-Process "node" -ArgumentList "backend/server.js" -WindowStyle Hidden -WorkingDirectory $scriptRoot
+        Write-Log "Successfully started the background application process directly on port $appPort." "Green"
+    }
 }
 
 Write-Host "`n====================================================" -ForegroundColor Green
