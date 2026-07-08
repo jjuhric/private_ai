@@ -164,7 +164,7 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
         temperature: 0.1,
         max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
         response_format: { type: "json_object" },
-        ...(targetStyle === 'lm-studio' ? { num_ctx: 8192 } : {})
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 16392 } : {})
       };
     }
 
@@ -346,7 +346,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
         temperature: 0.2,
         max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
         response_format: { type: "json_object" },
-        ...(targetStyle === 'lm-studio' ? { num_ctx: 8192 } : {})
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 16392 } : {})
       };
     }
 
