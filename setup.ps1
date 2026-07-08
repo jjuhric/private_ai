@@ -467,14 +467,19 @@ if ($isAdmin) {
         Start-Sleep -Seconds 2
     }
 
-    # Try starting the scheduled task first
+    # Try starting the scheduled task first (only if it points to the current workspace)
     $taskStarted = $false
     try {
         $task = Get-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
-        if ($task) {
-            Start-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
-            Write-Log "Successfully started the background scheduled task 'PrivateAI-Assistant'." "Green"
-            $taskStarted = $true
+        if ($task -and $task.Actions -and $task.Actions.Count -gt 0) {
+            $taskArg = $task.Actions[0].Arguments
+            if ($taskArg -like "*$scriptRoot*") {
+                Start-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
+                Write-Log "Successfully started the background scheduled task 'PrivateAI-Assistant'." "Green"
+                $taskStarted = $true
+            } else {
+                Write-Log "Scheduled task 'PrivateAI-Assistant' points to a different directory. Skipping task execution." "Yellow"
+            }
         }
     } catch {
         # Ignored, fallback to direct node process
