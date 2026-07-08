@@ -87,7 +87,7 @@ describe('Settings Router Tests', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('user_id', userId);
     expect(res.body.provider).toBe('local');
-    expect(res.body.model_name).toBe('qwen/qwen2.5-coder-14b');
+    expect(res.body.model_name).toBe('qwen3.5-9b-deepseek-v4-flash');
   });
 
   test('PUT /api/settings - updates user settings configurations', async () => {
@@ -139,7 +139,7 @@ describe('Settings Router Tests', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('qwen/qwen2.5-coder-14b');
+    expect(res.body).toContain('qwen3.5-9b-deepseek-v4-flash');
   });
 
   test('GET /api/settings/local-models - lm-studio style and invalid URL', async () => {

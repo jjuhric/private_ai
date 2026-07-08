@@ -51,7 +51,7 @@ describe('SetupWizard Component Tests', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ['qwen/qwen3.5-9b', 'meta/llama3']
+        json: async () => ['qwen3.5-9b-deepseek-v4-flash']
       });
 
     const testBtn = screen.getByText('⚡ Test Connection');
@@ -65,7 +65,7 @@ describe('SetupWizard Component Tests', () => {
     await waitFor(() => {
       const select = screen.getAllByRole('combobox')[1];
       expect(select).toBeInTheDocument();
-      fireEvent.change(select, { target: { value: 'meta/llama3' } });
+      fireEvent.change(select, { target: { value: 'qwen3.5-9b-deepseek-v4-flash' } });
     });
   });
 

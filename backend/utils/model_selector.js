@@ -3,7 +3,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const BLOCKED_MODEL_PATTERNS = ['embed', 'embedding', 'nomic-embed'];
 
 function checkAndFallbackModel(candidate, preferredModel) {
-  return 'qwen/qwen2.5-coder-14b';
+  return 'qwen3.5-9b-deepseek-v4-flash';
 }
 
 /**

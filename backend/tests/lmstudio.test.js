@@ -185,7 +185,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'write a react component', []);
-    expect(selected).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected).toBe('qwen3.5-9b-deepseek-v4-flash');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/chat/completions'),
       expect.objectContaining({
@@ -221,7 +221,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected).toBe('qwen3.5-9b-deepseek-v4-flash');
 
     // Confirm that no googleapis.com or online endpoints were contacted
     const calls = global.fetch.mock.calls.map(c => c[0]);
@@ -246,7 +246,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'design a database schema', []);
-    expect(selected).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected).toBe('qwen3.5-9b-deepseek-v4-flash');
     expect(mockGenerateContent).toHaveBeenCalled();
   });
 
@@ -260,7 +260,7 @@ describe('LM Studio and Model Selection Tests', () => {
       modelName: 'gemini-2.5-flash'
     };
     const selected1 = await selectBestModel(settingsNoKey, 'hello', []);
-    expect(selected1).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected1).toBe('qwen3.5-9b-deepseek-v4-flash');
 
     // Case 2: API Throws
     mockGenerateContent.mockRejectedValue(new Error('API quota exceeded'));
@@ -271,7 +271,7 @@ describe('LM Studio and Model Selection Tests', () => {
       onlineKey: 'test-api-key'
     };
     const selected2 = await selectBestModel(settingsError, 'hello', []);
-    expect(selected2).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected2).toBe('qwen3.5-9b-deepseek-v4-flash');
   });
 
   test('LM Studio url formatting helpers handle custom host urls', async () => {
@@ -322,7 +322,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected).toBe('qwen3.5-9b-deepseek-v4-flash');
   });
 
   test('listLocalModels returns empty list when both native and compat endpoints fail', async () => {
@@ -363,7 +363,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected).toBe('qwen3.5-9b-deepseek-v4-flash');
   });
 
   test('GET /api/lmstudio/log-stream returns 403 when user is not main host', async () => {
@@ -457,11 +457,11 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected1 = await selectBestModel(settingsBlockedDefault, 'test query', []);
-    expect(selected1).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected1).toBe('qwen3.5-9b-deepseek-v4-flash');
 
     const settingsNormalDefault = {
       provider: 'local',
-      modelName: 'qwen/qwen2.5-coder-14b',
+      modelName: 'qwen3.5-9b-deepseek-v4-flash',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -474,14 +474,14 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected2 = await selectBestModel(settingsNormalDefault, 'test query', []);
-    expect(selected2).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected2).toBe('qwen3.5-9b-deepseek-v4-flash');
   });
 
-  test('selectBestModel always returns qwen/qwen2.5-coder-14b', async () => {
+  test('selectBestModel always returns qwen3.5-9b-deepseek-v4-flash', async () => {
     const { selectBestModel } = require('../utils/model_selector');
     const settings = {
       provider: 'local',
-      modelName: 'qwen/qwen2.5-coder-14b',
+      modelName: 'qwen3.5-9b-deepseek-v4-flash',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -494,7 +494,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('qwen/qwen2.5-coder-14b');
+    expect(selected).toBe('qwen3.5-9b-deepseek-v4-flash');
   });
 
   test('POST /api/lmstudio/clear-logs returns 403 when user is not main host', async () => {
