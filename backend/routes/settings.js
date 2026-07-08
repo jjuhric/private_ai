@@ -324,7 +324,7 @@ router.get('/admin/users', authenticateToken, async (req, res) => {
         u.id, 
         u.username, 
         u.name, 
-        COALESCE(s.token_quota, 100000) as token_quota,
+        COALESCE(s.token_quota, 1000000) as token_quota,
         (
           SELECT COALESCE(SUM(token_count), 0) 
           FROM token_usage 

@@ -115,7 +115,7 @@ async function getDb() {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN working_directory TEXT");
     }
     if (!settingsColumns.some(col => col.name === 'token_quota')) {
-      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN token_quota INTEGER DEFAULT 100000");
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN token_quota INTEGER DEFAULT 1000000");
     }
 
     // Migrate memories to add embedding column if missing

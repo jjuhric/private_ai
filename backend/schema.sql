@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   device_type TEXT DEFAULT 'windows',
   is_main_host INTEGER DEFAULT 0,
   working_directory TEXT,
-  token_quota INTEGER DEFAULT 100000,
+  token_quota INTEGER DEFAULT 1000000,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

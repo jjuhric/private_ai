@@ -13,7 +13,7 @@ async function checkQuota(req, res, next) {
       'SELECT token_quota FROM user_settings WHERE user_id = ?',
       [userId]
     );
-    const quotaLimit = settings?.token_quota !== undefined ? settings.token_quota : 100000;
+    const quotaLimit = settings?.token_quota !== undefined ? settings.token_quota : 1000000;
 
     // Get current usage in the last 24 hours
     const usageRow = await db.get(
