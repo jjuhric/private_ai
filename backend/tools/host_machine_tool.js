@@ -386,7 +386,7 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     const uptime = os.uptime();
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
-    const cpus = os.cpus();
+    const cpu_summary = os.cpus().length > 0 ? os.cpus()[0].model + ' (' + os.cpus().length + ' cores)' : 'Unknown';
     const loadAvg = os.loadavg();
 
     // Formatted uptime
@@ -400,11 +400,6 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     const freeGB = (freeMem / (1024 ** 3)).toFixed(2);
     const usedGB = (Number(totalGB) - Number(freeGB)).toFixed(2);
     const memPercent = ((totalMem - freeMem) / totalMem * 100).toFixed(1);
-
-    // CPU details
-    const cpuModel = cpus[0]?.model || 'Unknown';
-    const cpuCount = cpus.length;
-    const cpuSpeed = cpus[0]?.speed || 'Unknown';
 
     let diskInfo = 'Disk space check not supported on this platform';
     try {
@@ -440,7 +435,7 @@ async function handleHostMachineTool(action, params = {}, userId = 1) {
     return `### 🖥️ Host Machine Specifications
 - **Operating System**: ${type} (${platform} ${release}) - ${arch} Architecture
 - **Uptime**: ${uptimeStr}
-- **CPU**: ${cpuModel} (${cpuCount} Cores @ ${cpuSpeed} MHz)
+- **CPU**: ${cpu_summary}
 - **Memory**: ${usedGB} GB / ${totalGB} GB used (${memPercent}%) - ${freeGB} GB free
 - **Load Average (1/5/15 min)**: ${platform === 'win32' ? 'N/A' : loadAvg.map(l => l.toFixed(2)).join(', ')}
 
