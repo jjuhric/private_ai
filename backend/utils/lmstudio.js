@@ -1,4 +1,5 @@
 const http = require('http');
+const axios = require('axios');
 
 /**
  * Normalizes the local base URL to point to native /api/v1 or compat /v1
@@ -122,8 +123,35 @@ async function unloadLocalModel(localBaseUrl, localApiKey, instanceId) {
   }
 }
 
+async function callLMStudio(messages) {
+  try {
+    const response = await axios.post('http://localhost:1234/v1/chat/completions', {
+      // Explicitly use the exact string registered by LM Studio header
+      model: process.env.OPENAI_API_MODEL || "qwen/qwen3-8b",
+      messages: messages,
+      
+      // Qwen3 Optimized Sampling Parameters
+      temperature: 0.6, 
+      top_p: 0.95,
+      max_tokens: 4096, // Safe upper boundary allowance for complex script generation
+      
+      // Ensure structured outputs are strictly maintained for agent handlers
+      response_format: { type: "json_object" } 
+    }, {
+      // CRUCIAL: Allow up to 2 full minutes for internal reasoning loops
+      timeout: 120000 
+    });
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error("LM Studio API Call Failed:", error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   listLocalModels,
   loadLocalModel,
-  unloadLocalModel
+  unloadLocalModel,
+  callLMStudio
 };

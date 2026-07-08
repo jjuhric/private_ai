@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { callLMStudio } = require('./utils/lmstudio');
 const { handleCalendarTool } = require('./tools/calendar_tool');
 const { handleGitHubTool } = require('./tools/github_tool');
 const { handleWebSearchTool } = require('./tools/web_search_tool');
@@ -806,4 +807,45 @@ async function generateGreetingAndSave(db, userId, chatId) {
   }
 }
 
-module.exports = { runAgentLoop, handleGoogleNewsTool, generateGreetingAndSave };
+/**
+ * Sanitizes incoming text by stripping off any embedded 
+ * <think> reasoning tokens before processing JSON payloads.
+ */
+function cleanAgentResponse(rawText) {
+  if (!rawText) return '';
+  let cleanText = rawText.trim();
+  
+  // Safely discard the internal trace block if it bypasses the parser
+  if (cleanText.includes('</think>')) {
+    const parts = cleanText.split('</think>');
+    cleanText = parts[parts.length - 1].trim();
+  }
+  
+  return cleanText;
+}
+
+// Example integration within your multi-agent execution thread:
+async function processAgentTurn(promptContext) {
+  // 1. Dispatch formatted prompt context to the local server array
+  const rawLLMOutput = await callLMStudio(promptContext);
+  
+  // 2. Clean out any loose markdown logic or lingering thought blocks
+  const sanitizedJSON = cleanAgentResponse(rawLLMOutput);
+  
+  try {
+    // 3. Hand the raw action instructions directly to tool registries safely
+    return JSON.parse(sanitizedJSON);
+  } catch (parseError) {
+    console.error("Failed to parse clean model output into structural JSON object:", parseError);
+    console.error("Attempted Content String was:", sanitizedJSON);
+    throw new Error("Model emitted an invalid tool orchestration structure.");
+  }
+}
+
+module.exports = { 
+  runAgentLoop, 
+  handleGoogleNewsTool, 
+  generateGreetingAndSave,
+  cleanAgentResponse,
+  processAgentTurn 
+};
