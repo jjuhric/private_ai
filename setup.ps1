@@ -412,51 +412,53 @@ if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
 
 # 10. Register Startup Task
 Write-Log "Configuring Windows background service..."
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+$scriptRoot = Resolve-Path "."
+$taskName = "PrivateAI-Assistant"
+$updateTaskName = "PrivateAI-Updater"
+$taskStarted = $false
 
-if ($isAdmin) {
-    try {
-        $taskName = "PrivateAI-Assistant"
-        $scriptRoot = Resolve-Path "."
-        
-        # Stop any existing process running on the port before registering/starting
-        $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
-        if ($portProcess) {
-            $procId = $portProcess.OwningProcess
-            Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
-            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-        }
-
-        # Stop existing scheduled task if running
-        Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-
-        $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-background.vbs`""
-        $trigger = New-ScheduledTaskTrigger -AtLogon
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-        
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Private AI Assistant Background Web Server" -Force | Out-Null
-        Write-Log "Successfully registered background scheduled task 'PrivateAI-Assistant' to run on Logon." "Green"
-
-        # Start the task now so the service is running
-        Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-        Write-Log "Started the background service task." "Green"
-
-        # 11. Register Daily Autoupdate Task
-        Write-Log "Configuring daily autoupdate task..."
-        $updateTaskName = "PrivateAI-Updater"
-        $updateAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-updater.vbs`""
-        $updateTrigger = New-ScheduledTaskTrigger -Daily -At "3:00AM"
-        $updateSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-        
-        Register-ScheduledTask -TaskName $updateTaskName -Action $updateAction -Trigger $updateTrigger -Settings $updateSettings -Description "Private AI Assistant Daily Autoupdate" -Force | Out-Null
-        Write-Log "Successfully registered background scheduled task '$updateTaskName' to run daily at 3:00 AM." "Green"
-    } catch {
-        Write-Host "[WARNING] Failed to register background task or daily autoupdate in Task Scheduler: $_" -ForegroundColor Yellow
+try {
+    # Stop any existing process running on the port before registering/starting
+    $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
+    if ($portProcess) {
+        $procId = $portProcess.OwningProcess
+        Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
     }
-} else {
-    Write-Log "Non-Administrator shell detected. Starting application in background via wscript fallback..." "Yellow"
-    $scriptRoot = Resolve-Path "."
+
+    # Stop existing scheduled tasks if running
+    Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    Stop-ScheduledTask -TaskName $updateTaskName -ErrorAction SilentlyContinue
+
+    # Register Web Server Task
+    $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-background.vbs`""
+    $trigger = New-ScheduledTaskTrigger -AtLogon
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Private AI Assistant Background Web Server" -Force | Out-Null
+    Write-Log "Successfully registered/updated background scheduled task '$taskName' to run on Logon." "Green"
+
+    # Start Web Server Task
+    Start-ScheduledTask -TaskName $taskName -ErrorAction Stop
+    Write-Log "Successfully started the background scheduled task '$taskName'." "Green"
+    $taskStarted = $true
+
+    # Register Daily Autoupdate Task
+    Write-Log "Configuring daily autoupdate task..."
+    $updateAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-updater.vbs`""
+    $updateTrigger = New-ScheduledTaskTrigger -Daily -At "3:00AM"
+    $updateSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    
+    Register-ScheduledTask -TaskName $updateTaskName -Action $updateAction -Trigger $updateTrigger -Settings $updateSettings -Description "Private AI Assistant Daily Autoupdate" -Force | Out-Null
+    Write-Log "Successfully registered/updated background scheduled task '$updateTaskName' to run daily at 3:00 AM." "Green"
+
+} catch {
+    Write-Log "Failed to register or start Scheduled Tasks: $_" "Yellow"
+}
+
+if (-not $taskStarted) {
+    Write-Log "Falling back to starting application directly in background..." "Yellow"
     
     # Stop any existing process running on the port
     $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
@@ -467,29 +469,9 @@ if ($isAdmin) {
         Start-Sleep -Seconds 2
     }
 
-    # Try starting the scheduled task first (only if it points to the current workspace)
-    $taskStarted = $false
-    try {
-        $task = Get-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
-        if ($task -and $task.Actions -and $task.Actions.Count -gt 0) {
-            $taskArg = $task.Actions[0].Arguments
-            if ($taskArg -like "*$scriptRoot*") {
-                Start-ScheduledTask -TaskName "PrivateAI-Assistant" -ErrorAction Stop
-                Write-Log "Successfully started the background scheduled task 'PrivateAI-Assistant'." "Green"
-                $taskStarted = $true
-            } else {
-                Write-Log "Scheduled task 'PrivateAI-Assistant' points to a different directory. Skipping task execution." "Yellow"
-            }
-        }
-    } catch {
-        # Ignored, fallback to direct node process
-    }
-
-    if (-not $taskStarted) {
-        # Fallback to direct hidden node process
-        Start-Process "node" -ArgumentList "backend/server.js" -WindowStyle Hidden -WorkingDirectory $scriptRoot
-        Write-Log "Successfully started the background application process directly on port $appPort." "Green"
-    }
+    # Fallback to direct hidden node process
+    Start-Process "node" -ArgumentList "backend/server.js" -WindowStyle Hidden -WorkingDirectory $scriptRoot
+    Write-Log "Successfully started the background application process directly on port $appPort." "Green"
 }
 
 Write-Host "`n====================================================" -ForegroundColor Green
