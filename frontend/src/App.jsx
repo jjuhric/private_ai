@@ -56,7 +56,7 @@ function App() {
   });
   const [localModels, setLocalModels] = useState([]);
   const [onlineModels, setOnlineModels] = useState([]);
-  const [appVersion, setAppVersion] = useState('4.7.0');
+  const [appVersion, setAppVersion] = useState('4.8.0');
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
