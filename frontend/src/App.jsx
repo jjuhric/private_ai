@@ -107,6 +107,10 @@ function App() {
     let timeoutId;
     
     const connectAlertStream = () => {
+      if (typeof EventSource === 'undefined') {
+        console.warn('[Alert Stream] EventSource is not defined in this environment.');
+        return;
+      }
       const url = `/api/alerts/stream?token=${encodeURIComponent(token)}`;
       eventSource = new EventSource(url);
 
