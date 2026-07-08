@@ -91,7 +91,7 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
       db,
       userId,
       provider: activeSettings.provider || 'local',
-      modelName: activeSettings.model_name || 'qwen3.5-9b-deepseek-v4-flash',
+      modelName: activeSettings.model_name || 'qwen3-8b',
       onlineProvider: activeSettings.online_provider || 'gemini',
       onlineKey: decrypt(activeSettings.online_key),
       geminiKey: decrypt(activeSettings.gemini_key),

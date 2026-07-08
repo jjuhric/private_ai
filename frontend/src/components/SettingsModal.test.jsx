@@ -6,7 +6,7 @@ import SettingsModal from './SettingsModal';
 describe('SettingsModal Component Tests', () => {
   const defaultSettings = {
     provider: 'local',
-    model_name: 'qwen3.5-9b-deepseek-v4-flash',
+    model_name: 'qwen3-8b',
     github_token: 'git_token',
     local_key: 'local_pwd',
     local_url: 'http://localhost:1234/v1',
@@ -25,7 +25,7 @@ describe('SettingsModal Component Tests', () => {
         updater(defaultSettings);
       }
     }),
-    localModels: ['qwen3.5-9b-deepseek-v4-flash'],
+    localModels: ['qwen3-8b'],
     onlineModels: ['gemini-2.5-flash', 'gpt-4o', 'claude-3-5-sonnet-latest'],
     saveSettings: vi.fn(),
     showLocalKey: false,
@@ -114,7 +114,7 @@ describe('SettingsModal Component Tests', () => {
 
     // Local model select dropdown
     const modelSelect = container.querySelectorAll('select')[1];
-    fireEvent.change(modelSelect, { target: { value: 'qwen3.5-9b-deepseek-v4-flash' } });
+    fireEvent.change(modelSelect, { target: { value: 'qwen3-8b' } });
     expect(mockSetSettings).toHaveBeenCalled();
 
     // Local Base URL text input
@@ -149,7 +149,7 @@ describe('SettingsModal Component Tests', () => {
     );
 
     // Should render local model text input instead of select
-    const modelTextInput = screen.getByPlaceholderText('e.g. google/gemma-4-e4b');
+    const modelTextInput = screen.getByPlaceholderText('e.g. qwen3-8b');
     fireEvent.change(modelTextInput, { target: { value: 'llama3-local' } });
     expect(mockSetSettings).toHaveBeenCalled();
   });
