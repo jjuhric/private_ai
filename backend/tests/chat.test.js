@@ -40,6 +40,23 @@ jest.mock('../ai', () => ({
   generateGreetingAndSave: (...args) => mockGenerateGreetingAndSave(...args)
 }));
 
+// Mock embeddings utility to avoid external network requests
+jest.mock('../utils/embeddings', () => ({
+  getEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3])
+}));
+
+// Mock lmstudio utility to avoid local service network queries
+jest.mock('../utils/lmstudio', () => ({
+  listLocalModels: jest.fn().mockResolvedValue([]),
+  loadLocalModel: jest.fn().mockResolvedValue(true),
+  unloadLocalModel: jest.fn().mockResolvedValue(true)
+}));
+
+// Mock model selector agent to avoid LLM agent execution overhead
+jest.mock('../utils/model_selector', () => ({
+  selectBestModel: jest.fn().mockImplementation(async (settings) => settings.modelName)
+}));
+
 const chatRouter = require('../routes/chat');
 const { JWT_SECRET } = require('../middleware/auth');
 const app = express();
