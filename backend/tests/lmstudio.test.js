@@ -185,7 +185,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'write a react component', []);
-    expect(selected).toBe('model-2');
+    expect(selected).toBe('qwen/qwen2.5-coder-14b');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/chat/completions'),
       expect.objectContaining({
@@ -221,7 +221,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('model-1');
+    expect(selected).toBe('qwen/qwen2.5-coder-14b');
 
     // Confirm that no googleapis.com or online endpoints were contacted
     const calls = global.fetch.mock.calls.map(c => c[0]);
@@ -246,7 +246,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'design a database schema', []);
-    expect(selected).toBe('gemini-2.5-pro');
+    expect(selected).toBe('qwen/qwen2.5-coder-14b');
     expect(mockGenerateContent).toHaveBeenCalled();
   });
 
@@ -260,7 +260,7 @@ describe('LM Studio and Model Selection Tests', () => {
       modelName: 'gemini-2.5-flash'
     };
     const selected1 = await selectBestModel(settingsNoKey, 'hello', []);
-    expect(selected1).toBe('gemini-2.5-flash');
+    expect(selected1).toBe('qwen/qwen2.5-coder-14b');
 
     // Case 2: API Throws
     mockGenerateContent.mockRejectedValue(new Error('API quota exceeded'));
@@ -271,7 +271,7 @@ describe('LM Studio and Model Selection Tests', () => {
       onlineKey: 'test-api-key'
     };
     const selected2 = await selectBestModel(settingsError, 'hello', []);
-    expect(selected2).toBe('gemini-2.5-flash');
+    expect(selected2).toBe('qwen/qwen2.5-coder-14b');
   });
 
   test('LM Studio url formatting helpers handle custom host urls', async () => {
@@ -322,7 +322,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('model-1');
+    expect(selected).toBe('qwen/qwen2.5-coder-14b');
   });
 
   test('listLocalModels returns empty list when both native and compat endpoints fail', async () => {
@@ -363,7 +363,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('model-2');
+    expect(selected).toBe('qwen/qwen2.5-coder-14b');
   });
 
   test('GET /api/lmstudio/log-stream returns 403 when user is not main host', async () => {
@@ -457,11 +457,11 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected1 = await selectBestModel(settingsBlockedDefault, 'test query', []);
-    expect(selected1).toBe('google/gemma-4-e2b');
+    expect(selected1).toBe('qwen/qwen2.5-coder-14b');
 
     const settingsNormalDefault = {
       provider: 'local',
-      modelName: 'google/gemma-4-e2b',
+      modelName: 'qwen/qwen2.5-coder-14b',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -474,14 +474,14 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected2 = await selectBestModel(settingsNormalDefault, 'test query', []);
-    expect(selected2).toBe('google/gemma-4-e2b');
+    expect(selected2).toBe('qwen/qwen2.5-coder-14b');
   });
 
-  test('selectBestModel does not use qwen and falls back to gemma when qwen is not preferred in settings', async () => {
+  test('selectBestModel always returns qwen/qwen2.5-coder-14b', async () => {
     const { selectBestModel } = require('../utils/model_selector');
     const settings = {
       provider: 'local',
-      modelName: 'google/gemma-4-e2b',
+      modelName: 'qwen/qwen2.5-coder-14b',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key'
     };
@@ -494,7 +494,7 @@ describe('LM Studio and Model Selection Tests', () => {
     };
 
     const selected = await selectBestModel(settings, 'test query', []);
-    expect(selected).toBe('google/gemma-4-e2b');
+    expect(selected).toBe('qwen/qwen2.5-coder-14b');
   });
 
   test('POST /api/lmstudio/clear-logs returns 403 when user is not main host', async () => {

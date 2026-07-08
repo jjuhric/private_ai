@@ -52,7 +52,7 @@ router.get('/', authenticateToken, async (req, res) => {
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
-      preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e2b',
+      preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen2.5-coder-14b',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
       supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'gemini-1.5-pro',
       working_directory: settings.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir,
@@ -112,7 +112,7 @@ router.put('/', authenticateToken, async (req, res) => {
          is_main_host = COALESCE(excluded.is_main_host, is_main_host),
          working_directory = COALESCE(excluded.working_directory, working_directory)`,
       [
-        req.user.id, provider || 'local', model_name || 'google/gemma-4-e2b', finalGithub, finalGemini, finalLocal,
+        req.user.id, provider || 'local', model_name || 'qwen/qwen2.5-coder-14b', finalGithub, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
         device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir
@@ -165,8 +165,8 @@ router.get('/local-models', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch local models:', err.message);
     const fallbackModels = [
-      process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e2b',
-      'google/gemma-4-e2b',
+      process.env.PREFERRED_LOCAL_MODEL || 'qwen/qwen2.5-coder-14b',
+      'qwen/qwen2.5-coder-14b',
       'google/gemma-4-12b-qat'
     ];
     res.json([...new Set(fallbackModels)]);

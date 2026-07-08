@@ -3,21 +3,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const BLOCKED_MODEL_PATTERNS = ['embed', 'embedding', 'nomic-embed'];
 
 function checkAndFallbackModel(candidate, preferredModel) {
-  const fallback = 'google/gemma-4-e2b';
-  let selected = candidate || preferredModel || fallback;
-
-  if (BLOCKED_MODEL_PATTERNS.some(p => selected.toLowerCase().includes(p))) {
-    selected = fallback;
-  }
-
-  const selectedLower = selected.toLowerCase();
-  const isLocalModel = selectedLower.includes('gemma') || selectedLower.includes('qwen') || selectedLower.includes('e4b') || selectedLower.includes('e2b');
-  if (isLocalModel && !selectedLower.includes('e2b')) {
-    console.log(`[Model Selector] Overriding selected local model "${selected}" to "${fallback}" due to disk size constraints.`);
-    selected = fallback;
-  }
-
-  return selected;
+  return 'qwen/qwen2.5-coder-14b';
 }
 
 /**
@@ -45,12 +31,6 @@ async function selectBestModel(settings, userMessage, history) {
     
     let loadedModelObj = availableModels.find(m => m.isLoaded);
     let loadedModel = loadedModelObj ? loadedModelObj.id : null;
-
-    // Ignore loaded model if it exceeds 2B size constraint (i.e. contains qwen or e4b)
-    if (loadedModel && (loadedModel.toLowerCase().includes('qwen') || loadedModel.toLowerCase().includes('e4b'))) {
-      console.log(`[Model Selector] Ignoring loaded model "${loadedModel}" because it exceeds the 2B size constraint.`);
-      loadedModel = null;
-    }
 
     // If no model is currently loaded, bypass routing and return configured default model to avoid cold-start load
     if (!loadedModel) {
