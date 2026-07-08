@@ -27,6 +27,7 @@ const agentBridgeRouter = require('./routes/agent_bridge');
 const nodesRouter = require('./routes/nodes');
 const tokenUsageRouter = require('./routes/token_usage');
 const lmstudioRouter = require('./routes/lmstudio');
+const alertsRouter = require('./routes/alerts');
 const mqttService = require('./services/mqtt_service');
 
 const app = express();
@@ -105,6 +106,7 @@ app.use('/api/bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
+app.use('/api/alerts', alertsRouter);
 app.use('/api', chatRouter); // Routes handle their own prefixing (e.g. /chats, /chat/stream)
 
 // Version info helper

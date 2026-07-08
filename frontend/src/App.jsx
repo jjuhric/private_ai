@@ -56,7 +56,7 @@ function App() {
   });
   const [localModels, setLocalModels] = useState([]);
   const [onlineModels, setOnlineModels] = useState([]);
-  const [appVersion, setAppVersion] = useState('4.6.0');
+  const [appVersion, setAppVersion] = useState('4.7.0');
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
@@ -97,6 +97,41 @@ function App() {
       localStorage.removeItem('token');
       setUser(null);
     }
+  }, [token]);
+
+  // Connect to Alert Broadcast SSE stream
+  useEffect(() => {
+    if (!token) return;
+
+    let eventSource;
+    let timeoutId;
+    
+    const connectAlertStream = () => {
+      const url = `/api/alerts/stream?token=${encodeURIComponent(token)}`;
+      eventSource = new EventSource(url);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const alert = JSON.parse(event.data);
+          showToast(alert.message, alert.type || 'info');
+        } catch (err) {
+          console.error('[Alert Stream] Failed to parse message:', err);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.warn('[Alert Stream] Connection lost. Reconnecting in 5s...');
+        eventSource.close();
+        timeoutId = setTimeout(connectAlertStream, 5000);
+      };
+    };
+
+    connectAlertStream();
+
+    return () => {
+      if (eventSource) eventSource.close();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [token]);
 
   useEffect(() => {

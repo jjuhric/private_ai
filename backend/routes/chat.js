@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb } = require('../db');
 const { runAgentLoop, generateGreetingAndSave } = require('../ai');
 const { authenticateToken } = require('../middleware/auth');
+const { checkQuota } = require('../middleware/quotaMiddleware');
 const { getEmbedding } = require('../utils/embeddings');
 
 router.get('/chats', authenticateToken, async (req, res) => {
@@ -67,7 +68,7 @@ router.get('/chats/:id/messages', authenticateToken, async (req, res) => {
 });
 
 // Agent SSE Stream endpoint
-router.post('/chat/stream', authenticateToken, async (req, res) => {
+router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
   const { chatId, message } = req.body;
   if (!chatId || !message) return res.status(400).json({ error: 'chatId and message are required.' });
 

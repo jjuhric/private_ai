@@ -43,6 +43,16 @@ class MqttService {
       this.connected = true;
       logger.info(`[MQTT] Connected to broker successfully.`);
       
+      // Subscribe to alerts topic
+      this.subscribe('private_ai/alerts', (payload) => {
+        try {
+          const { broadcastAlert } = require('../routes/alerts');
+          broadcastAlert(payload);
+        } catch (err) {
+          logger.error('[MQTT] Failed to broadcast alert from MQTT payload:', err);
+        }
+      });
+      
       // Resubscribe to all active subscriptions on reconnect
       for (const topic of this.subscriptions.keys()) {
         this.client.subscribe(topic, (err) => {

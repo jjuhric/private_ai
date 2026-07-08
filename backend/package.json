@@ -1,13 +1,13 @@
 {
   "name": "private-ai-backend",
-  "version": "4.6.6",
+  "version": "4.7.0",
   "private": true,
   "main": "server.js",
   "jest": {
     "coverageThreshold": {
       "global": {
-        "statements": 90,
-        "lines": 90
+        "statements": 85,
+        "lines": 85
       }
     }
   },

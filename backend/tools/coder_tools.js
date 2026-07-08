@@ -175,6 +175,7 @@ This command could cause disruptions. Do you want to run this? Please reply with
     command = result.command; // Proceed with potentially edited command
   }
 
+  const logger = require('../utils/logger');
   try {
     const workspaceRoot = path.resolve(process.cwd());
     let execCmd = command;
@@ -184,11 +185,13 @@ This command could cause disruptions. Do you want to run this? Please reply with
       execCmd = `echo "${sudoPassword.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
     }
     const { stdout, stderr } = await execPromise(execCmd, { cwd: workspaceRoot });
+    logger.info(`[Command Execution] Success - Command: "${command}"`);
     let output = '';
     if (stdout) output += `### Stdout:\n${stdout}\n`;
     if (stderr) output += `### Stderr:\n${stderr}\n`;
     return output || 'Command executed successfully with no output.';
   } catch (err) {
+    logger.error(`[Command Execution] Failure - Command: "${command}", Exit Code: ${err.code || 'unknown'}, Error: ${err.message}`);
     return `Command execution failed:\nExit Code: ${err.code}\nError: ${err.message}\n${err.stdout ? `Stdout:\n${err.stdout}\n` : ''}${err.stderr ? `Stderr:\n${err.stderr}\n` : ''}`;
   }
 }
