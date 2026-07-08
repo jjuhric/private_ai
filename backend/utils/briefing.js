@@ -103,8 +103,8 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
 
     // Use supervisor model if override is present
     let actualModel = activeSettings.model_name;
-    if (activeSettings.provider === 'local' && activeSettings.preferred_local_model) {
-      actualModel = activeSettings.preferred_local_model;
+    if (activeSettings.provider === 'local') {
+      actualModel = 'qwen2.5-coder-3b-instruct';
     } else if (activeSettings.provider !== 'local' && activeSettings.preferred_online_model) {
       actualModel = activeSettings.preferred_online_model;
     }

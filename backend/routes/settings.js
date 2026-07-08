@@ -52,9 +52,9 @@ router.get('/', authenticateToken, async (req, res) => {
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
-      preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen3-8b',
-      preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'qwen3-8b',
-      supervisor_model: settings.supervisor_model || process.env.SUPERVISOR_MODEL || 'qwen3-8b',
+      preferred_local_model: 'qwen2.5-coder-3b-instruct',
+      preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
+      supervisor_model: 'qwen2.5-coder-3b-instruct',
       working_directory: settings.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir,
       is_setup_complete: isSetupComplete
     };

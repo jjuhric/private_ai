@@ -155,8 +155,8 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
 
     // Resolve preferred model names dynamically
     let actualModel = settings.model_name;
-    if (settings.provider === 'local' && settings.preferred_local_model) {
-      actualModel = settings.preferred_local_model;
+    if (settings.provider === 'local') {
+      actualModel = 'qwen2.5-coder-3b-instruct';
     } else if (settings.provider !== 'local' && settings.preferred_online_model) {
       actualModel = settings.preferred_online_model;
     }
