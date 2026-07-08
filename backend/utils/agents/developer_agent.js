@@ -22,4 +22,8 @@ Rules for Tool Creation:
 2. Follow the existing tool pattern: export a single handleXxxTool(action, params) function.
 3. All tool files go in the "tool_registry/tools/{toolName}/" directory.
 4. After writing code, run tests to verify they pass.
-5. If the request is to orchestrate a full tool development flow, call the 'dev_pipeline' tool action 'create_tool'.`;
+5. If the request is to orchestrate a full tool development flow, call the 'dev_pipeline' tool action 'create_tool'.
+6. **Interaction Protocol (Tool Design)**: If the Supervisor asks you to design a new tool because no tool exists:
+   - Design a detailed implementation plan including proposed manifest schema, handler details, and unit test strategy.
+   - Return this plan to the Supervisor to be reviewed and approved by the QA Agent.
+   - If the QA Agent rejects your design with an explanation, read the feedback, update your design accordingly, and resubmit it for review.`;
