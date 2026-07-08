@@ -27,12 +27,19 @@ jest.mock('../tools/google_news_tool', () => ({ handleGoogleNewsTool: jest.fn(()
 jest.mock('../tools/memory_tool', () => ({ handleMemoryTool: jest.fn(() => 'memory-ok') }));
 jest.mock('../tools/vault_tool', () => ({ handleVaultTool: jest.fn(() => 'vault-ok') }));
 
+const originalFetch = global.fetch;
+
 describe('Agents Coverage Extender Tests', () => {
   let mockRunAgentTurn;
 
   beforeEach(() => {
     // We mock runAgentTurn by temporarily overriding it in the module cache or matching the LLM call
     mockRunAgentTurn = jest.fn();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
   });
 
   test('runWorkerAgent should route tool actions correctly', async () => {
@@ -358,14 +365,26 @@ describe('Agents Coverage Extender Tests', () => {
   });
 
   test('runWorkerAgent abortSignal and non-ok LLM response handling', async () => {
+    const controller = new AbortController();
+    controller.abort();
     const settings = {
       provider: 'local',
       localBaseUrl: 'http://localhost:1234/v1',
       localApiKey: 'key',
       localApiStyle: 'openai',
       model_name: 'test-model',
-      abortSignal: { aborted: true }
+      abortSignal: controller.signal
     };
+
+    global.fetch = jest.fn().mockImplementation(async () => {
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          choices: [{ message: { content: '{"status":"success","summary":"","data":{}}' } }]
+        })
+      };
+    });
 
     const res = await runWorkerAgent('weather_expert', settings, 'Test abort', {}, 1, 'token');
     expect(res).toBe('{"status":"success","summary":"","data":{}}');

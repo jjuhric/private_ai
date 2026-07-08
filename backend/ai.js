@@ -665,6 +665,21 @@ If no changes are required and you can proceed without executing the code, then 
       }
       if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
 
+      // Programmatic short-circuit on delegation failure to prevent hallucinations
+      if (toolOutput && typeof toolOutput === 'string') {
+        if (toolOutput.includes('"status":"error"') || toolOutput.includes('delegation failed')) {
+          onThought(`Sub-agent delegation failure detected. Short-circuiting loop to prevent hallucinations.\n`);
+          let errMsg = toolOutput;
+          try {
+            const parsed = JSON.parse(toolOutput);
+            if (parsed.data?.error) errMsg = parsed.data.error;
+            else if (parsed.summary) errMsg = parsed.summary;
+          } catch (e) {}
+          onContent(`Error: The system specialist failed to execute the task. Details: ${errMsg}`);
+          return;
+        }
+      }
+
       // Check if sub-agent output requires user input/permission
       if (toolOutput && typeof toolOutput === 'string' && toolOutput.includes('INPUT_REQUIRED_FROM_USER')) {
         const cleanedOutput = toolOutput.replace('INPUT_REQUIRED_FROM_USER:', '').trim();
