@@ -168,35 +168,14 @@ export default function SettingsModal({
                 />
               </div>
               <div className="form-group" style={{ margin: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ margin: 0 }}>Local Model Name</label>
-                  <span
-                    role="button"
-                    onClick={() => onFetchLocalModels && onFetchLocalModels(settings)}
-                    style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 550 }}
-                  >
-                    ⚡ Scan Models
-                  </span>
-                </div>
-                {localModels.length > 0 ? (
-                  <select
-                    className="form-control"
-                    value={settings.model_name}
-                    onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
-                  >
-                    {localModels.map(model => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. qwen2.5-coder-3b-instruct"
-                    value={settings.model_name}
-                    onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
-                  />
-                )}
+                <label style={{ display: 'block', marginBottom: '6px' }}>Local Model Name</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value="qwen2.5-coder-3b-instruct"
+                  disabled
+                  readOnly
+                />
               </div>
               <div className="form-group" style={{ margin: 0 }}>
                 <label>Local LLM API Key (Token)</label>

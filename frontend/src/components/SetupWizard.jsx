@@ -515,25 +515,13 @@ export default function SetupWizard({ token, onComplete }) {
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local Model Name</label>
-                    {localModels.length > 0 ? (
-                      <select
-                        className="form-control"
-                        value={llmForm.model_name || ''}
-                        onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
-                      >
-                        {localModels.map(model => (
-                          <option key={model} value={model}>{model}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        value={llmForm.model_name || ''}
-                        onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
-                        placeholder="e.g. qwen2.5-coder-3b-instruct"
-                      />
-                    )}
+                    <input 
+                      type="text" 
+                      className="form-control"
+                      value="qwen2.5-coder-3b-instruct"
+                      disabled
+                      readOnly
+                    />
                   </div>
                 </>
               ) : (

@@ -61,11 +61,11 @@ describe('SetupWizard Component Tests', () => {
       expect(screen.getByText('Local connection successful')).toBeInTheDocument();
     });
 
-    // Verify local models dropdown rendered and is selectable
+    // Verify local model input is rendered as read-only qwen2.5-coder-3b-instruct
     await waitFor(() => {
-      const select = screen.getAllByRole('combobox')[1];
-      expect(select).toBeInTheDocument();
-      fireEvent.change(select, { target: { value: 'qwen3-8b' } });
+      const input = screen.getByDisplayValue('qwen2.5-coder-3b-instruct');
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveAttribute('readonly');
     });
   });
 

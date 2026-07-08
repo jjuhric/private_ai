@@ -250,26 +250,13 @@ export default function ProfileModal({
               {settings?.local_url && (
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>Preferred Local Model</label>
-                  {localModels.length > 0 ? (
-                    <select
-                      className="form-control"
-                      value={formSettings.preferred_local_model}
-                      onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
-                    >
-                      <option value="">(Default Active Model)</option>
-                      {localModels.map(model => (
-                        <option key={model} value={model}>{model}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. qwen2.5-coder-3b-instruct"
-                      value={formSettings.preferred_local_model}
-                      onChange={e => setFormSettings(prev => ({ ...prev, preferred_local_model: e.target.value }))}
-                    />
-                  )}
+                  <input
+                    type="text"
+                    className="form-control"
+                    value="qwen2.5-coder-3b-instruct"
+                    disabled
+                    readOnly
+                  />
                 </div>
               )}
 

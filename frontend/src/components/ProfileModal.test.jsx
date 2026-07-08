@@ -141,7 +141,7 @@ describe('ProfileModal Component Tests', () => {
     const mockSettings = {
       local_url: 'http://localhost:1234/v1',
       online_key: 'test_online_key',
-      preferred_local_model: 'qwen3-8b-old',
+      preferred_local_model: 'qwen2.5-coder-3b-instruct',
       preferred_online_model: 'gemini-1.5-pro'
     };
 
@@ -153,7 +153,7 @@ describe('ProfileModal Component Tests', () => {
         saveProfile={mockSaveProfile} 
         settings={mockSettings}
         saveSettings={mockSaveSettings}
-        localModels={['qwen3-8b-old', 'qwen3-8b-new']}
+        localModels={['qwen2.5-coder-3b-instruct']}
         onlineModels={['gemini-1.5-pro', 'gemini-2.5-flash']}
       />
     );
@@ -163,19 +163,14 @@ describe('ProfileModal Component Tests', () => {
     expect(screen.getByText('Preferred Local Model')).toBeInTheDocument();
     expect(screen.getByText('Preferred Online Model')).toBeInTheDocument();
 
-    const selects = screen.getAllByRole('combobox');
-    const localSelect = selects.find(s => s.value === 'qwen3-8b-old');
-    fireEvent.change(localSelect, { target: { value: 'qwen3-8b-new' } });
+    const localInput = screen.getByDisplayValue('qwen2.5-coder-3b-instruct');
+    expect(localInput).toBeInTheDocument();
+    expect(localInput).toHaveAttribute('readonly');
 
     const saveBtn = screen.getByText('Save Profile');
     fireEvent.click(saveBtn);
 
     expect(mockSaveProfile).toHaveBeenCalled();
-    expect(mockSaveSettings).toHaveBeenCalledWith({
-      ...mockSettings,
-      preferred_local_model: 'qwen3-8b-new',
-      preferred_online_model: 'gemini-1.5-pro'
-    });
   });
 
   test('handles escape keydown to close modal', () => {
@@ -193,11 +188,9 @@ describe('ProfileModal Component Tests', () => {
     expect(mockSetIsProfileOpen).toHaveBeenCalledWith(false);
   });
 
-  test('renders text input for local model preference when localModels is empty', () => {
-    const mockSaveSettings = vi.fn();
+  test('renders preferred local model as read-only qwen2.5-coder-3b-instruct', () => {
     const mockSettings = {
-      local_url: 'http://localhost:1234/v1',
-      preferred_local_model: 'local-old'
+      local_url: 'http://localhost:1234/v1'
     };
 
     render(
@@ -207,7 +200,7 @@ describe('ProfileModal Component Tests', () => {
         profile={defaultProfile} 
         saveProfile={vi.fn()} 
         settings={mockSettings}
-        saveSettings={mockSaveSettings}
+        saveSettings={vi.fn()}
         localModels={[]}
         onlineModels={[]}
       />
@@ -215,14 +208,9 @@ describe('ProfileModal Component Tests', () => {
 
     fireEvent.click(screen.getByText('AI Models'));
 
-    const input = screen.getByPlaceholderText('e.g. qwen3-8b');
-    expect(input.value).toBe('local-old');
-    fireEvent.change(input, { target: { value: 'local-new' } });
-
-    fireEvent.click(screen.getByText('Save Profile'));
-    expect(mockSaveSettings).toHaveBeenCalledWith(expect.objectContaining({
-      preferred_local_model: 'local-new'
-    }));
+    const input = screen.getByDisplayValue('qwen2.5-coder-3b-instruct');
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute('readonly');
   });
 
   test('handles online model preference changes', () => {

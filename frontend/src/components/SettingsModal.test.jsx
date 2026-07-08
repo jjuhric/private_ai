@@ -112,10 +112,7 @@ describe('SettingsModal Component Tests', () => {
     fireEvent.change(select, { target: { value: 'lm-studio' } });
     expect(mockSetSettings).toHaveBeenCalled();
 
-    // Local model select dropdown
-    const modelSelect = container.querySelectorAll('select')[1];
-    fireEvent.change(modelSelect, { target: { value: 'qwen3-8b' } });
-    expect(mockSetSettings).toHaveBeenCalled();
+
 
     // Local Base URL text input
     const urlInput = screen.getByPlaceholderText('e.g. http://192.168.1.42:1234/v1');
@@ -148,10 +145,10 @@ describe('SettingsModal Component Tests', () => {
       />
     );
 
-    // Should render local model text input instead of select
-    const modelTextInput = screen.getByPlaceholderText('e.g. qwen3-8b');
-    fireEvent.change(modelTextInput, { target: { value: 'llama3-local' } });
-    expect(mockSetSettings).toHaveBeenCalled();
+    // Should render local model input as read-only qwen2.5-coder-3b-instruct
+    const modelTextInput = screen.getByDisplayValue('qwen2.5-coder-3b-instruct');
+    expect(modelTextInput).toBeInTheDocument();
+    expect(modelTextInput).toHaveAttribute('readonly');
   });
 
   test('renders all online provider model selections', () => {
@@ -399,17 +396,13 @@ describe('SettingsModal Component Tests', () => {
     expect(mockSetIsSettingsOpen).toHaveBeenCalledWith(false);
   });
 
-  test('triggers onFetchLocalModels when Scan Models is clicked', () => {
-    const mockOnFetchLocalModels = vi.fn();
+  test('does not render Scan Models link', () => {
     const { container } = render(
       <SettingsModal 
         {...defaultProps} 
-        onFetchLocalModels={mockOnFetchLocalModels}
       />
     );
     const scanBtn = container.querySelector('span[role="button"]');
-    expect(scanBtn).toBeInTheDocument();
-    fireEvent.click(scanBtn);
-    expect(mockOnFetchLocalModels).toHaveBeenCalledWith(defaultSettings);
+    expect(scanBtn).toBeNull();
   });
 });
