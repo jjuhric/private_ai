@@ -447,11 +447,12 @@ fi
 
 # 9. Setup systemd Service (if not Windows/ESP32 choice)
 if [ "$DEVICE_TYPE" != "windows" ] && [ "$DEVICE_TYPE" != "esp32" ]; then
-    log "Configuring systemd background service..."
-    NPM_PATH=$(which npm || echo "/usr/bin/npm")
+    if command -v systemctl &> /dev/null && [ "$(id -u)" -eq 0 -o -n "$(command -v sudo)" ]; then
+        log "Configuring systemd background service..."
+        NPM_PATH=$(which npm || echo "/usr/bin/npm")
 
-    # Create or overwrite systemd service file
-    sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+        # Create or overwrite systemd service file
+        sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Private AI Assistant Service
 After=network.target
@@ -468,22 +469,39 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 
-    log "Reloading systemd daemon..."
-    sudo systemctl daemon-reload
+        log "Reloading systemd daemon..."
+        sudo systemctl daemon-reload
 
-    log "Enabling $SERVICE_NAME service to start on boot..."
-    sudo systemctl enable "$SERVICE_NAME".service
+        log "Enabling $SERVICE_NAME service to start on boot..."
+        sudo systemctl enable "$SERVICE_NAME".service
 
-    log "Restarting $SERVICE_NAME service..."
-    sudo systemctl restart "$SERVICE_NAME".service
+        log "Restarting $SERVICE_NAME service..."
+        sudo systemctl restart "$SERVICE_NAME".service
 
-    # Verify status
-    if sudo systemctl is-active --quiet "$SERVICE_NAME".service; then
-        log_success "Private AI Assistant is running in the background!"
-        log "Check status: sudo systemctl status $SERVICE_NAME"
-        log "Check logs: journalctl -u $SERVICE_NAME -f"
+        # Verify status
+        if sudo systemctl is-active --quiet "$SERVICE_NAME".service; then
+            log_success "Private AI Assistant is running in the background!"
+            log "Check status: sudo systemctl status $SERVICE_NAME"
+            log "Check logs: journalctl -u $SERVICE_NAME -f"
+        else
+            log_error "Failed to start $SERVICE_NAME service. Please check systemctl logs."
+        fi
     else
-        log_error "Failed to start $SERVICE_NAME service. Please check systemctl logs."
+        log_warn "systemd not available or sudo permissions missing. Starting backend in background via nohup fallback..."
+        
+        # Stop any existing process running on the port
+        if command -v lsof &> /dev/null; then
+            PORT_PID=$(lsof -t -i:"$APP_PORT" -sTCP:LISTEN || true)
+            if [ -n "$PORT_PID" ]; then
+                log "Stopping existing process $PORT_PID on port $APP_PORT..."
+                kill -9 "$PORT_PID"
+                sleep 2
+            fi
+        fi
+        
+        # Start in background using nohup
+        nohup npm start > /dev/null 2>&1 &
+        log_success "Successfully started the background application process on port $APP_PORT."
     fi
 
     # Setup daily cron job for autoupdate
