@@ -431,6 +431,20 @@ try {
     Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     Stop-ScheduledTask -TaskName $updateTaskName -ErrorAction SilentlyContinue
 
+    # Dynamically generate run-background.vbs with absolute node path to avoid path resolution issues
+    $nodePath = (Get-Command node).Source
+    $vbsContent = @"
+Set WshShell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+WshShell.CurrentDirectory = scriptDir
+Do
+  WshShell.Run """$nodePath"" backend/server.js", 0, true
+  WScript.Sleep 5000
+Loop
+"@
+    [System.IO.File]::WriteAllText("$scriptRoot\run-background.vbs", $vbsContent)
+
     # Register Web Server Task
     $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-background.vbs`""
     $trigger = New-ScheduledTaskTrigger -AtLogon
@@ -469,8 +483,22 @@ if (-not $taskStarted) {
         Start-Sleep -Seconds 2
     }
 
-    # Fallback to direct hidden node process
-    Start-Process "node" -ArgumentList "backend/server.js" -WindowStyle Hidden -WorkingDirectory $scriptRoot
+    # Dynamically generate run-background.vbs with absolute node path if not already done
+    $nodePath = (Get-Command node).Source
+    $vbsContent = @"
+Set WshShell = CreateObject("WScript.Shell")
+Set fso = CreateObject("Scripting.FileSystemObject")
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+WshShell.CurrentDirectory = scriptDir
+Do
+  WshShell.Run """$nodePath"" backend/server.js", 0, true
+  WScript.Sleep 5000
+Loop
+"@
+    [System.IO.File]::WriteAllText("$scriptRoot\run-background.vbs", $vbsContent)
+
+    # Fallback to direct hidden wscript process
+    Start-Process "wscript.exe" -ArgumentList "run-background.vbs" -WorkingDirectory $scriptRoot
     Write-Log "Successfully started the background application process directly on port $appPort." "Green"
 }
 
