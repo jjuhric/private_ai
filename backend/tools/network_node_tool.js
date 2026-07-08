@@ -27,8 +27,16 @@ async function handleRemoteNodeBridge(params, options = {}) {
   try {
     const db = await getDb();
     
-    // Check if target node exists
-    const node = await db.get('SELECT * FROM network_nodes WHERE id = ? AND user_id = ?', [nodeId, options.userId]);
+    // Check if target node exists (support both ID and name lookup)
+    let node = null;
+    if (nodeId !== undefined && nodeId !== null) {
+      if (!isNaN(nodeId) && Number.isInteger(Number(nodeId))) {
+        node = await db.get('SELECT * FROM network_nodes WHERE id = ? AND user_id = ?', [Number(nodeId), options.userId]);
+      }
+      if (!node) {
+        node = await db.get('SELECT * FROM network_nodes WHERE LOWER(node_name) = ? AND user_id = ?', [String(nodeId).toLowerCase(), options.userId]);
+      }
+    }
     if (!node) {
       return `Error: Node with ID ${nodeId} not found in database.`;
     }
