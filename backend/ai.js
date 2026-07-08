@@ -48,6 +48,8 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     }
   }
 
+  const finalModel = (modelName === 'qwen3-8b') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen3-8b') : modelName;
+
   if (localStyle === 'anthropic') {
     // Anthropic style formatting
     const systemMessage = messages.find(m => m.role === 'system')?.content || '';
@@ -59,7 +61,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       }));
 
     body = {
-      model: modelName,
+      model: finalModel,
       messages: anthropicMessages,
       max_tokens: 4096,
       stream: true
@@ -75,14 +77,14 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       .join('\n');
 
     body = {
-      model: modelName,
+      model: finalModel,
       system_prompt: systemMessage,
       input: conversation
     };
   } else {
     // OpenAI and LM Studio style formatting
     body = {
-      model: modelName,
+      model: finalModel,
       messages: messages,
       temperature: 0.7,
       frequency_penalty: 0.3,

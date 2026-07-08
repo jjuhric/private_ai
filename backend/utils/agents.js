@@ -139,23 +139,24 @@ History Context: ${JSON.stringify(history.slice(-10))}`;
       }
     }
 
+    const finalModel = (modelName === 'qwen3-8b') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen3-8b') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
-        model: modelName,
+        model: finalModel,
         system: systemPrompt,
         messages: [{ role: 'user', content: fullPrompt }],
         max_tokens: 1024
       };
     } else if (targetStyle === 'local-gemini') {
       body = {
-        model: modelName,
+        model: finalModel,
         system_prompt: systemPrompt,
         input: fullPrompt
       };
     } else {
       body = {
-        model: modelName,
+        model: finalModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: fullPrompt }
@@ -315,17 +316,18 @@ Generate a detailed final report summarizing your actions and findings. Make it 
       endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
     }
 
+    const finalModel = (modelName === 'qwen3-8b') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen3-8b') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
-        model: modelName,
+        model: finalModel,
         system: responderInstruction,
         messages: [{ role: 'user', content: 'Generate report.' }],
         max_tokens: 1024
       };
     } else {
       body = {
-        model: modelName,
+        model: finalModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Based on the task: "${userMessage}"\nAnd these tool outputs:\n${JSON.stringify(toolOutputs)}\n\nGenerate a detailed final report summarizing your actions and findings. Make it clear and production-ready.` }
