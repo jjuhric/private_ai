@@ -350,12 +350,23 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
       };
     }
 
-    const res = await fetch(endpoint, {
+    let res = await fetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
       signal: settings.abortSignal
     });
+
+    if (!res.ok && body.response_format) {
+      console.warn("Local/OpenAI LLM response failed with response_format, retrying without it...");
+      delete body.response_format;
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: settings.abortSignal
+      });
+    }
 
     if (!res.ok) {
       throw new Error(`LLM Error: ${res.status}`);
