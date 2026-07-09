@@ -411,6 +411,24 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
     // When streaming is explicitly finished (false), all agents return to Idle
     if (isStreaming === false) return 'Idle';
 
+    // Heuristics based on real-time SSE thoughts
+    const thought = (aiState.thought || '').toLowerCase();
+    if (aiState.isBusy && thought) {
+      if (agentType === 'supervisor' && (thought.includes('supervisor') || thought.includes('deciding strategy') || thought.includes('generating final response'))) return 'Active';
+      if (agentType === 'weather' && (thought.includes('weather_expert') || thought.includes('weather expert') || thought.includes('weather'))) return 'Active';
+      if (agentType === 'memory' && (thought.includes('memory_agent') || thought.includes('memory expert') || thought.includes('memory'))) return 'Active';
+      if (agentType === 'calendar' && (thought.includes('calendar_handler') || thought.includes('calendar expert') || thought.includes('calendar'))) return 'Active';
+      if (agentType === 'crawler' && (thought.includes('web_searcher') || thought.includes('search_web') || thought.includes('web searcher'))) return 'Active';
+      if (agentType === 'rag' && (thought.includes('document_vault') || thought.includes('document vault') || thought.includes('rag'))) return 'Active';
+      if (agentType === 'github' && (thought.includes('github_agent') || thought.includes('github expert') || thought.includes('github'))) return 'Active';
+      if (agentType === 'qa' && (thought.includes('qa_engineer') || thought.includes('qa engineer') || thought.includes('qa_agent'))) return 'Active';
+      if (agentType === 'tool_creator' && (thought.includes('tool_creator') || thought.includes('tool creation'))) return 'Active';
+      if (agentType === 'agent_creator' && (thought.includes('agent_creator') || thought.includes('agent creation'))) return 'Active';
+      if (agentType === 'developer' && (thought.includes('developer_agent') || thought.includes('developer expert') || thought.includes('developer'))) return 'Active';
+      if (agentType === 'system' && (thought.includes('system_specialist') || thought.includes('system expert') || thought.includes('system_agent') || thought.includes('system agent'))) return 'Active';
+      if (agentType === 'node' && (thought.includes('node_agent') || thought.includes('node expert') || thought.includes('node agent'))) return 'Active';
+    }
+
     let currentAgent = activeAgent || (toolLogs && toolLogs.length > 0 ? (toolLogs[toolLogs.length - 1].agent || toolLogs[toolLogs.length - 1].tool) : null) || (isStreaming ? 'supervisor' : null);
     if (!currentAgent) return 'Idle';
 
@@ -572,7 +590,17 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
                 const status = getAgentStatus(agent.type);
                 const IconComponent = agent.icon;
                 return (
-                  <div key={index} className="memory-card" style={{ padding: '16px', position: 'relative' }}>
+                  <div 
+                    key={index} 
+                    className={`memory-card ${status === 'Active' ? 'active-agent' : ''}`} 
+                    style={{ 
+                      padding: '16px', 
+                      position: 'relative',
+                      border: status === 'Active' ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.05)',
+                      boxShadow: status === 'Active' ? '0 0 15px rgba(100, 108, 255, 0.2)' : 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {IconComponent && <IconComponent size={16} className={status === 'Active' ? 'text-accent-primary' : 'text-secondary'} />}
