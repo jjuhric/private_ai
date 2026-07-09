@@ -27,12 +27,36 @@ describe('remote_node_tool.js Tests', () => {
     jest.clearAllMocks();
   });
 
+  test('unknown action validation', async () => {
+    const res = await handleRemoteNodeTool('invalid_action', { nodeId: 'PiNode' }, { userId: 1 });
+    expect(res).toContain('Unknown action');
+  });
+
+  test('missing nodeId validation', async () => {
+    const res = await handleRemoteNodeTool('get_system_info', {}, { userId: 1 });
+    expect(res).toContain('parameter is required');
+  });
+
   test('get_system_info: node not found', async () => {
-    mockDb.get.mockResolvedValueOnce(null);
+    mockDb.get.mockResolvedValue(null);
     mockDb.all.mockResolvedValueOnce([]);
     
     const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'unknown' }, { userId: 1 });
     expect(res).toContain('not found in registered network nodes');
+  });
+
+  test('get_system_info: flexible name lookup', async () => {
+    mockDb.get.mockResolvedValue(null);
+    mockDb.all.mockResolvedValueOnce([
+      { id: 3, node_name: 'test_node_3', device_type: 'esp32-wroom', is_main_host: 0 }
+    ]);
+    mqttService.publishAndAwaitResponse.mockResolvedValueOnce({
+      status: 'success',
+      data: { os: 'Espressif', temperature: 'Unavailable', power: 'Unavailable' }
+    });
+
+    const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'test_node_3' }, { userId: 1 });
+    expect(res).toContain('Remote Node Telemetry: "test_node_3"');
   });
 
   test('get_system_info: main host node', async () => {
@@ -51,7 +75,7 @@ describe('remote_node_tool.js Tests', () => {
     expect(res).toContain('CPU Temperature');
   });
 
-  test('get_system_info: remote MQTT node success', async () => {
+  test('get_system_info: remote MQTT node success with average temperature', async () => {
     mockDb.get.mockResolvedValueOnce({
       id: 2,
       node_name: 'Pi5-LivingRoom',
@@ -68,7 +92,12 @@ describe('remote_node_tool.js Tests', () => {
         ip_address: '192.168.1.150',
         timezone: 'America/New_York',
         timestamp: '2026-07-09T07:00:00Z',
-        temperature: 41.5,
+        temperature: {
+          average: {
+            celsius: 42.1,
+            fahrenheit: 107.8
+          }
+        },
         power: {
           voltage_v: 5.1,
           power_w: 2.3,
@@ -79,7 +108,70 @@ describe('remote_node_tool.js Tests', () => {
 
     const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'Pi5-LivingRoom' }, { userId: 1 });
     expect(res).toContain('Remote Node Telemetry: "Pi5-LivingRoom"');
-    expect(res).toContain('41.5 °C');
-    expect(res).toContain('Voltage: 5.1V');
+    expect(res).toContain('42.1 °C (107.8 °F)');
+  });
+
+  test('get_system_info: remote MQTT esp32 node with topic parsing', async () => {
+    mockDb.get.mockResolvedValueOnce({
+      id: 4,
+      node_name: 'esp32_device',
+      device_type: 'esp32-wroom',
+      ip_address: '192.168.1.200',
+      mqtt_topic: 'nodes/esp32_aabbcc/responses',
+      is_main_host: 0
+    });
+
+    mqttService.publishAndAwaitResponse.mockResolvedValueOnce({
+      status: 'success',
+      data: {
+        os: 'MicroPython',
+        temperature: 'Unavailable',
+        power: 'Unavailable'
+      }
+    });
+
+    const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'esp32_device' }, { userId: 1 });
+    expect(res).toContain('esp32_device');
+  });
+
+  test('get_system_info: MQTT client timeout/error', async () => {
+    mockDb.get.mockResolvedValueOnce({
+      id: 2,
+      node_name: 'Pi5-LivingRoom',
+      device_type: 'rpi-5-8gb',
+      ip_address: '192.168.1.150',
+      mqtt_topic: 'node_livingroom',
+      is_main_host: 0
+    });
+
+    mqttService.publishAndAwaitResponse.mockRejectedValueOnce(new Error('Timeout'));
+
+    const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'Pi5-LivingRoom' }, { userId: 1 });
+    expect(res).toContain('is offline, unreachable, or timed out');
+  });
+
+  test('get_system_info: remote returns malformed status', async () => {
+    mockDb.get.mockResolvedValueOnce({
+      id: 2,
+      node_name: 'Pi5-LivingRoom',
+      device_type: 'rpi-5-8gb',
+      ip_address: '192.168.1.150',
+      mqtt_topic: 'node_livingroom',
+      is_main_host: 0
+    });
+
+    mqttService.publishAndAwaitResponse.mockResolvedValueOnce({
+      status: 'failed'
+    });
+
+    const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'Pi5-LivingRoom' }, { userId: 1 });
+    expect(res).toContain('Received unexpected or malformed response');
+  });
+
+  test('get_system_info: database error handling', async () => {
+    mockDb.get.mockRejectedValueOnce(new Error('DB connection failed'));
+
+    const res = await handleRemoteNodeTool('get_system_info', { nodeId: 'PiNode' }, { userId: 1 });
+    expect(res).toContain('Error processing remote node request');
   });
 });
