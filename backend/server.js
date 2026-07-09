@@ -136,6 +136,9 @@ app.use(express.static(frontendBuildPath));
 
 // Serve standalone monitor dashboard from monitor_dashboard/dist if present
 const monitorBuildPath = path.join(__dirname, '../monitor_dashboard/dist');
+app.get('/monitor', (req, res) => {
+  res.redirect('/monitor/');
+});
 app.use('/monitor', express.static(monitorBuildPath));
 app.get('/monitor/*', (req, res) => {
   res.sendFile(path.join(monitorBuildPath, 'index.html'));
