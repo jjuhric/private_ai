@@ -89,6 +89,15 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
   const [documents, setDocuments] = useState([]);
   
+  const [aiState, setAiState] = useState({
+    isBusy: false,
+    activeTask: null,
+    queueLength: 0,
+    waitingQueue: [],
+    thought: 'Idle',
+    activeNode: null
+  });
+  
   // Nodes State
   const [nodes, setNodes] = useState([]);
   const [showAddNode, setShowAddNode] = useState(false);
@@ -208,6 +217,34 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
       return () => clearInterval(intervalId);
     }
   }, [activeSubTab, nodes]);
+
+  useEffect(() => {
+    if (!token) return;
+    let eventSource = null;
+    try {
+      eventSource = new EventSource(`/api/alerts/stream?token=${encodeURIComponent(token)}`);
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.type === 'ai_state') {
+            setAiState({
+              isBusy: data.isBusy,
+              activeTask: data.activeTask,
+              queueLength: data.queueLength,
+              waitingQueue: data.waitingQueue || [],
+              thought: data.thought || 'Idle',
+              activeNode: data.activeNode || null
+            });
+          }
+        } catch (e) {}
+      };
+    } catch (e) {
+      console.error('[AgentDashboard] Failed to initialize SSE EventSource:', e);
+    }
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, [token]);
 
 
 
@@ -462,6 +499,71 @@ export default function AgentDashboard({ token, toolLogs, activeAgent, isStreami
 
       {activeSubTab === 'network' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Real-time Concurrency Queue Status */}
+          <div className="memory-card" style={{ padding: '20px', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <RefreshCw className={aiState.isBusy ? 'spin text-accent-primary' : 'text-secondary'} size={20} />
+                <h3 style={{ fontSize: '1.1rem', margin: 0, color: '#fff' }}>AI Concurrency Queue & Pipeline Status</h3>
+              </div>
+              <span className={`badge ${aiState.isBusy ? 'badge-short-term' : 'badge-long-term'}`} style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
+                {aiState.isBusy ? 'BUSY / PROCESSING' : 'IDLE / READY'}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Current Thought / Activity:</div>
+                <div style={{ 
+                  background: 'rgba(0,0,0,0.3)', 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.85rem', 
+                  color: 'var(--accent-primary)',
+                  minHeight: '44px',
+                  maxHeight: '120px',
+                  overflowY: 'auto'
+                }}>
+                  {aiState.thought}
+                </div>
+                {aiState.activeNode && (
+                  <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Active Node Execution: <strong style={{ color: '#fff' }}>{aiState.activeNode}</strong>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Waiting Queue ({aiState.queueLength} tasks):</div>
+                <div style={{ 
+                  background: 'rgba(0,0,0,0.3)', 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  minHeight: '44px',
+                  maxHeight: '120px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  {aiState.waitingQueue.length > 0 ? (
+                    aiState.waitingQueue.map((t, idx) => (
+                      <div key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>#{idx + 1}: {t.metadata.name}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t.metadata.nodeId}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px' }}>
+                      No waiting requests. Queue is empty.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Agent Status Grid */}
           <div>
             <h3 style={{ fontSize: '1.1rem', marginBottom: '12px', color: 'var(--text-primary)' }}>Active Agent Registry</h3>
