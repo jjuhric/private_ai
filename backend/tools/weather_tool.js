@@ -1,5 +1,25 @@
 const sqlite3 = require('sqlite3');
 
+function formatUnixTime(dt, timezone = 'America/Chicago', formatOptions = {}) {
+  const date = new Date(dt * 1000);
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      ...formatOptions
+    }).format(date);
+  } catch (err) {
+    // Fallback to America/Chicago if timezone string is invalid
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        ...formatOptions
+      }).format(date);
+    } catch (e) {
+      return date.toUTCString();
+    }
+  }
+}
+
 async function handleWeatherTool(db, userId, action, params) {
   if (!db || !userId) {
     return 'Error: Database connection and User ID are required to run weather queries.';
@@ -8,7 +28,7 @@ async function handleWeatherTool(db, userId, action, params) {
   // 1. Fetch user profile configurations
   let profile;
   try {
-    profile = await db.get('SELECT zipcode, country, temp_unit, weather_api_key FROM users WHERE id = ?', [userId]);
+    profile = await db.get('SELECT zipcode, country, temp_unit, weather_api_key, timezone FROM users WHERE id = ?', [userId]);
   } catch (err) {
     console.error('Failed to query user profile for weather:', err.message);
     return `Error: Failed to query user profile details: ${err.message}`;
@@ -23,34 +43,52 @@ async function handleWeatherTool(db, userId, action, params) {
   const units = profile.temp_unit || 'imperial';
   const unitSymbol = units === 'imperial' ? '°F' : (units === 'metric' ? '°C' : 'K');
   const speedUnit = units === 'imperial' ? 'mph' : 'm/s';
+  const userTimezone = params?.timezone || profile?.timezone || 'America/Chicago';
 
   // Resolve target location parameters
+  let lat = params?.lat;
+  let lon = params?.lon;
+  let cityName = params?.cityName;
   const zipcode = params?.zipcode || profile.zipcode;
   const country = params?.country || profile.country || 'US';
 
-  if (!zipcode) {
-    return 'Error: Zipcode is not configured. Please set a zipcode in your profile or provide it in the tool parameters.';
-  }
-
-  // 2. Resolve Zipcode to Coordinates (lat/lon) via Geocoding API
-  let lat, lon, cityName;
-  try {
-    const geoUrl = `http://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(zipcode)},${encodeURIComponent(country)}&appid=${apiKey}`;
-    const geoRes = await fetch(geoUrl);
-    if (!geoRes.ok) {
-      throw new Error(`Geocoding failed with status ${geoRes.status}: ${geoRes.statusText}`);
+  // 2. Resolve Zipcode to Coordinates (lat/lon) via Geocoding API if not provided directly
+  if (!lat || !lon) {
+    if (!zipcode) {
+      return 'Error: Zipcode is not configured and coordinates (lat/lon) were not provided.';
     }
-    const geoData = await geoRes.json();
-    lat = geoData.lat;
-    lon = geoData.lon;
-    cityName = geoData.name;
-  } catch (err) {
-    console.error('Geocoding API failed:', err.message);
-    return `Error: Failed to resolve coordinates for Zipcode ${zipcode}, Country ${country}. Please verify your API Key and Location details. Error details: ${err.message}`;
+    try {
+      const geoUrl = `http://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(zipcode)},${encodeURIComponent(country)}&appid=${apiKey}`;
+      const geoRes = await fetch(geoUrl);
+      if (!geoRes.ok) {
+        throw new Error(`Geocoding failed with status ${geoRes.status}: ${geoRes.statusText}`);
+      }
+      const geoData = await geoRes.json();
+      lat = geoData.lat;
+      lon = geoData.lon;
+      cityName = geoData.name;
+    } catch (err) {
+      console.error('Geocoding API failed:', err.message);
+      return `Error: Failed to resolve coordinates for Zipcode ${zipcode}, Country ${country}. Please verify your API Key and Location details. Error details: ${err.message}`;
+    }
+  } else {
+    cityName = cityName || `Coordinates (${lat}, ${lon})`;
   }
 
   // 3. Handle Actions
-  if (action === 'current') {
+  if (action === 'geocode') {
+    return JSON.stringify({
+      success: true,
+      cityName,
+      zipcode,
+      country,
+      lat,
+      lon,
+      timezone: userTimezone
+    }, null, 2);
+  }
+
+  else if (action === 'current') {
     try {
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`;
       const res = await fetch(url);
@@ -71,7 +109,20 @@ async function handleWeatherTool(db, userId, action, params) {
       const grndLevel = data.main.grnd_level || 'N/A';
       const rain1h = data.rain ? data.rain['1h'] || '0' : '0';
 
-      return `### 🌦️ Current Weather Report for **${cityName}** (${zipcode}, ${country})
+      const formattedReportTime = formatUnixTime(data.dt, userTimezone, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      const formattedSunrise = data.sys?.sunrise ? formatUnixTime(data.sys.sunrise, userTimezone, { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
+      const formattedSunset = data.sys?.sunset ? formatUnixTime(data.sys.sunset, userTimezone, { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
+
+      return `### 🌦️ Current Weather Report for **${cityName}** (${zipcode || 'N/A'}, ${country})
+*Report Time: ${formattedReportTime} (Timezone: ${userTimezone})*
 
 | Parameter | Value |
 | --- | --- |
@@ -82,14 +133,56 @@ async function handleWeatherTool(db, userId, action, params) {
 | **Pressure** | ${pressure} hPa (Sea Level: ${seaLevel} / Ground Level: ${grndLevel}) |
 | **Wind Speed** | ${windSpeed} ${speedUnit} |
 | **Rain (last 1h)** | ${rain1h} mm |
+| **Sunrise** | ${formattedSunrise} |
+| **Sunset** | ${formattedSunset} |
 `;
     } catch (err) {
       return `Error: Failed to query current weather: ${err.message}`;
     }
-  } 
-  
+  }
+
+  else if (action === 'forecast_5day') {
+    try {
+      const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`5-day forecast API returned status ${res.status}`);
+      }
+      const data = await res.json();
+      const list = data.list || [];
+
+      let md = `### 📅 5-Day Forecast (3-Hour Increments) for **${cityName}**\n*Timezone: ${userTimezone}*\n\n`;
+      md += `| Date & Time | Temp | Feels Like | Conditions | Humidity | Rain/Snow (3h) | Wind | Cloud Cover |\n`;
+      md += `| --- | --- | --- | --- | --- | --- | --- | --- |\n`;
+
+      list.forEach(item => {
+        const formattedTime = formatUnixTime(item.dt, userTimezone, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        const temp = item.main.temp;
+        const feelsLike = item.main.feels_like;
+        const desc = item.weather[0].description;
+        const humidity = item.main.humidity;
+        const rain = item.rain ? `${item.rain['3h'] || 0} mm` : (item.snow ? `${item.snow['3h'] || 0} mm` : '0 mm');
+        const wind = item.wind.speed;
+        const clouds = item.clouds.all;
+
+        md += `| ${formattedTime} | ${temp}${unitSymbol} | ${feelsLike}${unitSymbol} | ${desc} | ${humidity}% | ${rain} | ${wind} ${speedUnit} | ${clouds}% |\n`;
+      });
+
+      return md;
+    } catch (err) {
+      return `Error: Failed to fetch 5-day forecast: ${err.message}`;
+    }
+  }
+
   else if (action === 'hourly') {
-    // 4-day hourly forecast
+    // 4-day hourly forecast or standard 5-day/3-hour fallback
     try {
       let url = `https://pro.openweathermap.org/data/2.5/forecast/hourly?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`;
       let res = await fetch(url);
@@ -108,14 +201,19 @@ async function handleWeatherTool(db, userId, action, params) {
       data = await res.json();
       const list = data.list || [];
       
-      let md = `### ⏰ Hourly Weather Forecast for **${cityName}** (Next 24 Hours)\n\n`;
+      let md = `### ⏰ Hourly Weather Forecast for **${cityName}** (Next 24 Hours)\n*Timezone: ${userTimezone}*\n\n`;
       md += `| Time | Temp | Feels Like | Weather | Rain % | Rain (1h) | Wind | Humidity |\n`;
       md += `| --- | --- | --- | --- | --- | --- | --- | --- |\n`;
 
       // Display up to 24 hourly entries
       const entries = list.slice(0, 24);
       entries.forEach(item => {
-        const time = item.dt_txt || new Date(item.dt * 1000).toLocaleString();
+        const formattedTime = formatUnixTime(item.dt, userTimezone, {
+          weekday: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
         const temp = item.main.temp;
         const feelsLike = item.main.feels_like;
         const desc = item.weather[0].description;
@@ -124,7 +222,7 @@ async function handleWeatherTool(db, userId, action, params) {
         const wind = item.wind.speed;
         const humidity = item.main.humidity;
 
-        md += `| ${time} | ${temp}${unitSymbol} | ${feelsLike}${unitSymbol} | ${desc} | ${pop} | ${rain} mm | ${wind} ${speedUnit} | ${humidity}% |\n`;
+        md += `| ${formattedTime} | ${temp}${unitSymbol} | ${feelsLike}${unitSymbol} | ${desc} | ${pop} | ${rain} mm | ${wind} ${speedUnit} | ${humidity}% |\n`;
       });
 
       let alertsMd = '';
@@ -161,11 +259,11 @@ async function handleWeatherTool(db, userId, action, params) {
     } catch (err) {
       return `Error: Failed to fetch hourly forecast: ${err.message}`;
     }
-  } 
-  
+  }
+
   else if (action === 'daily') {
-    // 16-day daily forecast
-    const cnt = params?.cnt || 7; // default to a 7-day view
+    // 16-day daily forecast or standard 5-day forecast averages
+    const cnt = params?.cnt || 7;
     try {
       const url = `https://api.openweathermap.org/data/2.5/forecast/daily?lat=${lat}&lon=${lon}&cnt=${cnt}&units=${units}&appid=${apiKey}`;
       const res = await fetch(url);
@@ -175,7 +273,6 @@ async function handleWeatherTool(db, userId, action, params) {
         const data = await res.json();
         list = data.list || [];
       } else {
-        // Fallback: If 16-day API is not accessible, calculate daily forecasts from the 5-day / 3-hour forecast API
         console.warn('Daily forecast API failed, calculating daily values from standard 5-day forecast...');
         const fallbackUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`;
         const fallbackRes = await fetch(fallbackUrl);
@@ -186,10 +283,10 @@ async function handleWeatherTool(db, userId, action, params) {
         const fallbackData = await fallbackRes.json();
         const rawList = fallbackData.list || [];
         
-        // Group by Day
+        // Group by Day in target timezone
         const days = {};
         rawList.forEach(item => {
-          const dateStr = new Date(item.dt * 1000).toLocaleDateString();
+          const dateStr = formatUnixTime(item.dt, userTimezone, { year: 'numeric', month: 'numeric', day: 'numeric' });
           if (!days[dateStr]) {
             days[dateStr] = [];
           }
@@ -204,8 +301,10 @@ async function handleWeatherTool(db, userId, action, params) {
           const max = Math.max(...temps);
           const avgDay = temps.reduce((a, b) => a + b, 0) / temps.length;
           
-          // Select midday point for description/icon if possible
-          const middayPoint = points.find(p => p.dt_txt && p.dt_txt.includes('12:00:00')) || points[0];
+          const middayPoint = points.find(p => {
+            const hour = parseInt(formatUnixTime(p.dt, userTimezone, { hour: '2-digit', hour12: false }));
+            return hour >= 11 && hour <= 14;
+          }) || points[0];
           
           list.push({
             dt: middayPoint.dt,
@@ -225,12 +324,12 @@ async function handleWeatherTool(db, userId, action, params) {
         });
       }
 
-      let md = `### 📅 Daily Weather Forecast for **${cityName}** (Next ${list.length} Days)\n\n`;
+      let md = `### 📅 Daily Weather Forecast for **${cityName}** (Next ${list.length} Days)\n*Timezone: ${userTimezone}*\n\n`;
       md += `| Date | Temp (Day/Night) | Range (Min/Max) | Weather | Humidity | Wind | Rain |\n`;
       md += `| --- | --- | --- | --- | --- | --- | --- |\n`;
 
       list.forEach(item => {
-        const date = new Date(item.dt * 1000).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        const formattedDate = formatUnixTime(item.dt, userTimezone, { weekday: 'short', month: 'short', day: 'numeric' });
         const dayTemp = item.temp.day;
         const nightTemp = item.temp.night;
         const minTemp = item.temp.min;
@@ -240,14 +339,16 @@ async function handleWeatherTool(db, userId, action, params) {
         const speed = item.speed;
         const rain = item.rain || '0';
 
-        md += `| ${date} | ${dayTemp}${unitSymbol} / ${nightTemp}${unitSymbol} | ${minTemp}${unitSymbol} - ${maxTemp}${unitSymbol} | ${desc} | ${humidity}% | ${speed} ${speedUnit} | ${rain} mm |\n`;
+        md += `| ${formattedDate} | ${dayTemp}${unitSymbol} / ${nightTemp}${unitSymbol} | ${minTemp}${unitSymbol} - ${maxTemp}${unitSymbol} | ${desc} | ${humidity}% | ${speed} ${speedUnit} | ${rain} mm |\n`;
       });
 
       return md;
     } catch (err) {
       return `Error: Failed to fetch daily forecast: ${err.message}`;
     }
-  } else if (action === 'onecall') {
+  }
+
+  else if (action === 'onecall') {
     try {
       const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`;
       const res = await fetch(url);
@@ -266,18 +367,19 @@ async function handleWeatherTool(db, userId, action, params) {
       const daily = data.daily || [];
       let dailyMd = `#### 📅 7-Day Forecast:\n`;
       daily.slice(0, 7).forEach(day => {
-        const date = new Date(day.dt * 1000).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        const formattedDate = formatUnixTime(day.dt, userTimezone, { weekday: 'short', month: 'short', day: 'numeric' });
         const tempDay = day.temp?.day;
         const tempNight = day.temp?.night;
         const desc = day.weather?.[0]?.description || 'N/A';
-        dailyMd += `- **${date}**: Day: ${tempDay}${unitSymbol}, Night: ${tempNight}${unitSymbol} - *${desc}*\n`;
+        dailyMd += `- **${formattedDate}**: Day: ${tempDay}${unitSymbol}, Night: ${tempNight}${unitSymbol} - *${desc}*\n`;
       });
 
-      return `### 🌦️ OpenWeatherMap One Call API Report for **${cityName}** (${zipcode}, ${country})
+      return `### 🌦️ OpenWeatherMap One Call API Report for **${cityName}** (${zipcode || 'N/A'}, ${country})
 - **Current Temperature**: ${currentTemp}${unitSymbol} (Feels like: ${feelsLike}${unitSymbol})
 - **Conditions**: ${weatherDesc.charAt(0).toUpperCase() + weatherDesc.slice(1)}
 - **Humidity**: ${humidity}%
 - **Wind Speed**: ${windSpeed} ${speedUnit}
+- **Timezone**: ${userTimezone}
 
 ${dailyMd}`;
     } catch (err) {

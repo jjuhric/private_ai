@@ -73,6 +73,9 @@ async function getDb() {
     if (!columns.some(col => col.name === 'interests')) {
       await dbConnection.run("ALTER TABLE users ADD COLUMN interests TEXT DEFAULT '[]'");
     }
+    if (!columns.some(col => col.name === 'timezone')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'America/Chicago'");
+    }
 
     // Migrate user_settings to add local_key column if missing
     const settingsColumns = await dbConnection.all('PRAGMA table_info(user_settings)');

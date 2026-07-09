@@ -267,4 +267,79 @@ describe('Weather Tool Tests', () => {
     const result = await handleWeatherTool(db, userId, 'current', {});
     expect(result).toContain('Failed to query current weather: Current weather API returned status 400');
   });
+
+  test('geocode action - retrieves and returns coordinates successfully', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        lat: 34.0522,
+        lon: -118.2437,
+        name: 'Los Angeles'
+      })
+    });
+
+    const result = await handleWeatherTool(db, userId, 'geocode', { zipcode: '90012' });
+    const parsed = JSON.parse(result);
+    expect(parsed.success).toBe(true);
+    expect(parsed.cityName).toBe('Los Angeles');
+    expect(parsed.lat).toBe(34.0522);
+    expect(parsed.lon).toBe(-118.2437);
+  });
+
+  test('forecast_5day action - retrieves 5-day / 3-hour forecast successfully with timezone formatting', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        list: [
+          {
+            dt: 1661875200, // Unix timestamp
+            main: { temp: 75.0, feels_like: 76.5, humidity: 55 },
+            weather: [{ description: 'partly cloudy' }],
+            wind: { speed: 8.5 },
+            clouds: { all: 40 }
+          }
+        ]
+      })
+    });
+
+    const result = await handleWeatherTool(db, userId, 'forecast_5day', {
+      lat: 34.0522,
+      lon: -118.2437,
+      timezone: 'UTC'
+    });
+
+    expect(result).toContain('5-Day Forecast (3-Hour Increments) for **Coordinates (34.0522, -118.2437)**');
+    expect(result).toContain('75°F');
+    expect(result).toContain('partly cloudy');
+  });
+
+  test('timezone fallback - formats with America/Chicago if invalid timezone passed', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        weather: [{ description: 'clear sky' }],
+        main: {
+          temp: 68.0,
+          feels_like: 68.0,
+          temp_min: 68.0,
+          temp_max: 68.0,
+          humidity: 40,
+          pressure: 1013,
+          sea_level: 1013,
+          grnd_level: 1013
+        },
+        wind: { speed: 2.0 },
+        sys: { sunrise: 1661875200, sunset: 1661918400 }
+      })
+    });
+
+    const result = await handleWeatherTool(db, userId, 'current', {
+      lat: 34.0522,
+      lon: -118.2437,
+      timezone: 'INVALID_ZONE'
+    });
+
+    expect(result).toContain('Report Time');
+    expect(result).toContain('Timezone: INVALID_ZONE');
+  });
 });
