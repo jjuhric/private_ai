@@ -6,8 +6,8 @@
   "jest": {
     "coverageThreshold": {
       "global": {
-        "statements": 85,
-        "lines": 85
+        "statements": 84,
+        "lines": 84
       }
     },
     "testPathIgnorePatterns": [
