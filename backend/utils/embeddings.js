@@ -305,11 +305,76 @@ async function searchMemory(query, limit = 3) {
   }
 }
 
+async function getLearnedBehaviorsTable() {
+  if (process.env.NODE_ENV === 'test' && global.__mockLearnedTable) {
+    return global.__mockLearnedTable;
+  }
+  const db = await getLanceDb();
+  if (process.env.NODE_ENV === 'test') {
+    return await db.openTable('learned_behaviors');
+  }
+  const tableNames = await db.tableNames();
+  if (tableNames.includes('learned_behaviors')) {
+    return await db.openTable('learned_behaviors');
+  } else {
+    const dummyVector = new Array(384).fill(0);
+    const table = await db.createTable('learned_behaviors', [
+      {
+        vector: dummyVector,
+        text: 'dummy_init',
+        metadata: JSON.stringify({ init: true })
+      }
+    ]);
+    await table.delete('text = "dummy_init"');
+    return table;
+  }
+}
+
+async function storeLearnedBehavior(text, metadata = {}) {
+  try {
+    const vector = await getXenovaEmbedding(text);
+    const table = await getLearnedBehaviorsTable();
+    await table.add([
+      {
+        vector,
+        text,
+        metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
+      }
+    ]);
+  } catch (err) {
+    console.error('storeLearnedBehavior error:', err);
+    throw err;
+  }
+}
+
+async function searchLearnedBehaviors(query, limit = 3) {
+  try {
+    const vector = await getXenovaEmbedding(query);
+    const table = await getLearnedBehaviorsTable();
+    const results = await table
+      .search(vector)
+      .metricType('cosine')
+      .limit(limit)
+      .execute();
+
+    return results.map(r => ({
+      text: r.text,
+      metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata,
+      score: 1 - r._distance
+    }));
+  } catch (err) {
+    console.error('searchLearnedBehaviors error:', err);
+    return [];
+  }
+}
+
 module.exports = {
   getEmbedding,
   cosineSimilarity,
   getKeywordSimilarity,
   getSemanticSimilarity,
   storeMemory,
-  searchMemory
+  searchMemory,
+  storeLearnedBehavior,
+  searchLearnedBehaviors
 };

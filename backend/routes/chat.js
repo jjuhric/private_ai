@@ -147,6 +147,14 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
   }, 15000);
 
   try {
+    // Process user feedback on previous turn (if any)
+    try {
+      const { handleUserFeedback } = require('../services/feedback_learning');
+      await handleUserFeedback(db, req.user.id, chatId, message);
+    } catch (fbErr) {
+      console.error('Feedback learning handler failed:', fbErr);
+    }
+
     // Save user message to database
     await db.run(
       'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',

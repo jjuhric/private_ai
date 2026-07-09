@@ -399,7 +399,15 @@ async function runAgentLoop({
 - Built-in Tools Directory: ${path.join(workingDirectory, 'backend/tools/')}
 - Dynamic Tools Registry: ${path.join(workingDirectory, 'tool_registry/tools/')}`;
 
-  let systemPrompt = AGENT_PROMPTS.supervisor + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
+  let feedbackContext = '';
+  try {
+    const { getInjectedContext } = require('./services/feedback_learning');
+    feedbackContext = await getInjectedContext(userMessage);
+  } catch (fbErr) {
+    console.error('Failed to get feedback context in runAgentLoop:', fbErr);
+  }
+
+  let systemPrompt = AGENT_PROMPTS.supervisor + feedbackContext + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
