@@ -135,6 +135,34 @@ async function handleListDir(params) {
   }
 }
 
+async function executeInSandbox(command, cwd, sudoPassword) {
+  if (process.env.NODE_ENV === 'test' || process.env.DISABLE_SANDBOX === 'true') {
+    let execCmd = command;
+    if (sudoPassword && command.includes('sudo')) {
+      const cleanCmd = command.replace(/sudo\s+/g, '');
+      execCmd = `echo "${sudoPassword.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
+    }
+    return await execPromise(execCmd, { cwd });
+  }
+
+  const cleanCmd = command.replace(/sudo\s+/g, '');
+  const containerWorkspace = '/workspace';
+  const hostPath = path.resolve(cwd).replace(/\\/g, '/');
+  const dockerCmd = `docker run --rm -w ${containerWorkspace} -v "${hostPath}:${containerWorkspace}" node:20-alpine sh -c "${cleanCmd.replace(/"/g, '\\"')}"`;
+
+  try {
+    return await execPromise(dockerCmd);
+  } catch (err) {
+    console.warn(`[Sandbox] Docker container execution failed: ${err.message}. Falling back to host execution...`);
+    let execCmd = command;
+    if (sudoPassword && command.includes('sudo')) {
+      const cleanCmd = command.replace(/sudo\s+/g, '');
+      execCmd = `echo "${sudoPassword.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
+    }
+    return await execPromise(execCmd, { cwd });
+  }
+}
+
 async function handleExecuteCommand(params, options = {}) {
   let { command } = params;
   if (!command) return 'Error: "command" parameter is required.';
@@ -189,13 +217,8 @@ This command could cause disruptions. Do you want to run this? Please reply with
   const logger = require('../utils/logger');
   try {
     const workspaceRoot = path.resolve(process.cwd());
-    let execCmd = command;
     const sudoPassword = params.sudo_password || (result && result.password);
-    if (sudoPassword && command.includes('sudo')) {
-      const cleanCmd = command.replace(/sudo\s+/g, '');
-      execCmd = `echo "${sudoPassword.replace(/"/g, '\\"')}" | sudo -S ${cleanCmd}`;
-    }
-    const { stdout, stderr } = await execPromise(execCmd, { cwd: workspaceRoot });
+    const { stdout, stderr } = await executeInSandbox(command, workspaceRoot, sudoPassword);
     logger.info(`[Command Execution] Success - Command: "${command}"`);
     let output = '';
     if (stdout) output += `### Stdout:\n${stdout}\n`;
