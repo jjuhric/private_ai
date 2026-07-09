@@ -35,7 +35,7 @@ router.post('/register', authLimiter, async (req, res) => {
     // Initialize default user settings
     await db.run(
       'INSERT INTO user_settings (user_id, provider, model_name) VALUES (?, ?, ?)',
-      [result.lastID, 'local', 'qwen3-8b']
+      [result.lastID, 'local', 'qwen2.5-coder-3b-instruct']
     );
 
     res.json({ success: true, userId: result.lastID });

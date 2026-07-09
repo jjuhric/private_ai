@@ -48,7 +48,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     }
   }
 
-  const finalModel = (modelName === 'qwen3-8b') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen3-8b') : modelName;
+  const finalModel = (modelName === 'qwen2.5-coder-3b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen2.5-coder-3b-instruct') : modelName;
 
   if (localStyle === 'anthropic') {
     // Anthropic style formatting

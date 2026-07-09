@@ -81,7 +81,7 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
   // Get user settings
   let settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
   if (!settings) {
-    settings = { provider: 'local', model_name: 'qwen3-8b' };
+    settings = { provider: 'local', model_name: 'qwen2.5-coder-3b-instruct' };
   }
 
   // Get chat history

@@ -112,7 +112,7 @@ router.put('/', authenticateToken, async (req, res) => {
          is_main_host = COALESCE(excluded.is_main_host, is_main_host),
          working_directory = COALESCE(excluded.working_directory, working_directory)`,
       [
-        req.user.id, provider || 'local', model_name || 'qwen3-8b', finalGithub, finalGemini, finalLocal,
+        req.user.id, provider || 'local', model_name || 'qwen2.5-coder-3b-instruct', finalGithub, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
         device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir
@@ -165,8 +165,8 @@ router.get('/local-models', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch local models:', err.message);
     const fallbackModels = [
-      process.env.PREFERRED_LOCAL_MODEL || 'qwen3-8b',
-      'qwen3-8b'
+      process.env.PREFERRED_LOCAL_MODEL || 'qwen2.5-coder-3b-instruct',
+      'qwen2.5-coder-3b-instruct'
     ];
     res.json([...new Set(fallbackModels)]);
   }
