@@ -134,9 +134,16 @@ app.get('/api/version', (req, res) => {
 const frontendBuildPath = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendBuildPath));
 
+// Serve standalone monitor dashboard from monitor_dashboard/dist if present
+const monitorBuildPath = path.join(__dirname, '../monitor_dashboard/dist');
+app.use('/monitor', express.static(monitorBuildPath));
+app.get('/monitor/*', (req, res) => {
+  res.sendFile(path.join(monitorBuildPath, 'index.html'));
+});
+
 // Fallback route to serve index.html for React/Vite single page app router
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/monitor')) {
     return next();
   }
   res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
