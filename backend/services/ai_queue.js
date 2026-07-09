@@ -6,6 +6,10 @@ class AiQueue {
     this.isProcessing = false;
     this.activeTask = null;
     this.taskIdCounter = 0;
+    this.enqueue = this.enqueue.bind(this);
+    this.getState = this.getState.bind(this);
+    this.broadcastState = this.broadcastState.bind(this);
+    this.processNext = this.processNext.bind(this);
   }
 
   enqueue(taskFn, metadata = {}) {
