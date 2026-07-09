@@ -2,7 +2,8 @@ import React from 'react';
 import { Network } from 'lucide-react';
 
 export default function AgentDashboard() {
-  const monitorDashboardUrl = `http://${window.location.hostname}:${window.location.port}/monitor`;
+  const token = localStorage.getItem('token') || '';
+  const monitorDashboardUrl = `http://${window.location.hostname}:${window.location.port}/monitor?token=${encodeURIComponent(token)}`;
 
   return (
     <div className="memory-pane" style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-primary)' }}>

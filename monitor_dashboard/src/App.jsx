@@ -97,6 +97,17 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   const [documents, setDocuments] = useState([]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    if (urlToken) {
+      localStorage.setItem('main_host_token', urlToken);
+      localStorage.setItem('main_host_url', window.location.origin);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.location.reload();
+    }
+  }, []);
+
+  useEffect(() => {
     if (!token || !hostUrl) return;
     fetch('/api/settings', {
       headers: { 'Authorization': `Bearer ${token}` }
