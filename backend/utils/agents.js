@@ -698,8 +698,186 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
   }
 }
 
+async function runSupervisorTurn(systemPrompt, settings, userMessage) {
+  const {
+    provider,
+    modelName,
+    onlineProvider,
+    onlineKey,
+    geminiKey,
+    localBaseUrl,
+    localApiKey,
+    localApiStyle,
+    onlineUrl,
+    db,
+    userId
+  } = settings;
+
+  const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
+  let respText = '';
+
+  const fullPrompt = `${systemPrompt}\n\nUser Request: ${userMessage}`;
+
+  if (isGemini) {
+    const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
+    if (!activeKey) throw new Error('Gemini API key is not configured.');
+    const genAI = new GoogleGenerativeAI(activeKey);
+    const model = genAI.getGenerativeModel({
+      model: modelName || 'gemini-2.0-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+    const result = await model.generateContent(fullPrompt, { signal: settings.abortSignal });
+    respText = result.response.text();
+
+    // Log token usage
+    let tokenCount = 0;
+    if (result.response.usageMetadata && result.response.usageMetadata.totalTokenCount) {
+      tokenCount = result.response.usageMetadata.totalTokenCount;
+    } else {
+      tokenCount = Math.ceil((fullPrompt.length + respText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'gemini-2.0-flash', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log Gemini supervisor tokens:', err));
+    }
+  } else {
+    let targetUrl = provider === 'local' 
+      ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
+      : (onlineUrl || 'https://api.openai.com/v1');
+    let targetKey = provider === 'local' ? localApiKey : onlineKey;
+    let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
+
+    let endpoint = '';
+    let headers = { 'Content-Type': 'application/json' };
+    if (targetKey && targetKey !== 'lm-studio') {
+      if (targetStyle === 'anthropic') {
+        headers['x-api-key'] = targetKey;
+        headers['anthropic-version'] = '2023-06-01';
+      } else {
+        headers['Authorization'] = `Bearer ${targetKey}`;
+      }
+    }
+
+    try {
+      const urlObj = new URL(targetUrl);
+      const origin = urlObj.origin;
+      if (targetStyle === 'lm-studio') {
+        endpoint = `${origin}/v1/chat/completions`;
+      } else if (targetStyle === 'anthropic') {
+        endpoint = `${origin}/v1/messages`;
+      } else {
+        endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+      }
+    } catch (e) {
+      endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
+    }
+
+    const finalModel = (modelName === 'qwen3-8b' || modelName === 'qwen2.5-coder-3b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen/qwen2.5-coder-3b-instruct') : modelName;
+    let body = {};
+    if (targetStyle === 'anthropic') {
+      body = {
+        model: finalModel,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `Parse this user request and return the JSON handoff output: ${userMessage}` }],
+        max_tokens: 1024
+      };
+    } else {
+      body = {
+        model: finalModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.1,
+        max_tokens: 1024,
+        response_format: { type: "json_object" },
+        ...(targetStyle === 'lm-studio' ? { num_ctx: 8192 } : {})
+      };
+    }
+
+    let res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: settings.abortSignal
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`LLM Error: ${res.status} - ${errText}`);
+    }
+
+    const data = await res.json();
+    respText = targetStyle === 'anthropic' 
+      ? (data.content?.[0]?.text || '') 
+      : (data.choices?.[0]?.message?.content || data.response || data.content || '');
+
+    // Log token usage
+    let tokenCount = 0;
+    if (data.usage && data.usage.total_tokens) {
+      tokenCount = data.usage.total_tokens;
+    } else if (data.usage && data.usage.input_tokens && data.usage.output_tokens) {
+      tokenCount = data.usage.input_tokens + data.usage.output_tokens;
+    } else {
+      tokenCount = Math.ceil((fullPrompt.length + respText.length) / 4);
+    }
+    if (db && typeof db.run === 'function' && userId) {
+      const providerType = provider === 'local' ? 'local' : 'online';
+      db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'unknown', providerType, tokenCount]
+      ).catch(err => console.error('Failed to log OpenAI/Local supervisor tokens:', err));
+    }
+  }
+
+  respText = respText
+    .replace(/<think>[\s\S]*?<\/think>/g, '')
+    .replace(/<\|channel>thought[\s\S]*?<channel\|>/g, '')
+    .trim();
+
+  // Use a local JSON regex parsing block
+  const firstBrace = respText.indexOf('{');
+  const lastBrace = respText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(respText.substring(firstBrace, lastBrace + 1));
+    } catch (e) {}
+  }
+  return JSON.parse(respText);
+}
+
+async function runSupervisorHandoff(userPrompt, settings = {}, db = null, userId = null, githubToken = null) {
+  const supervisorPrompt = AGENT_PROMPTS.supervisor;
+  if (!supervisorPrompt) throw new Error('Supervisor agent prompt not found.');
+
+  const decision = await runSupervisorTurn(supervisorPrompt, settings, userPrompt);
+
+  let workerName = decision.next_action || '';
+  if (workerName.startsWith('delegate_to_')) {
+    workerName = workerName.replace(/^delegate_to_/, '');
+  }
+
+  if (!workerName) {
+    throw new Error(`Supervisor routing failed. Next action: "${decision.next_action}"`);
+  }
+
+  const refinedContext = typeof decision.refined_data === 'string'
+    ? decision.refined_data
+    : JSON.stringify(decision.refined_data || {});
+
+  const output = await runWorkerAgent(workerName, settings, refinedContext, db, userId, githubToken);
+  return {
+    supervisor_decision: decision,
+    worker_output: output
+  };
+}
+
 module.exports = {
   AGENT_PROMPTS,
   runAgentTurn,
-  runWorkerAgent
+  runWorkerAgent,
+  runSupervisorHandoff
 };

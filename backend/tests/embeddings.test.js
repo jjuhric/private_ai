@@ -1,4 +1,49 @@
-const { getEmbedding, cosineSimilarity, getKeywordSimilarity, getSemanticSimilarity } = require('../utils/embeddings');
+// Mock @xenova/transformers
+jest.mock('@xenova/transformers', () => {
+  const mockExtractor = jest.fn().mockResolvedValue({
+    data: [0.1, 0.2, 0.3]
+  });
+  return {
+    pipeline: jest.fn().mockResolvedValue(mockExtractor)
+  };
+});
+
+// Mock vectordb
+const mockAdd = jest.fn();
+const mockDelete = jest.fn();
+const mockExecute = jest.fn().mockResolvedValue([
+  {
+    text: 'test memory text',
+    metadata: JSON.stringify({ userId: 1, level: 'long-term' }),
+    _distance: 0.1
+  }
+]);
+
+const mockSearch = jest.fn().mockReturnValue({
+  metricType: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
+  execute: mockExecute
+});
+
+const mockTable = {
+  add: mockAdd,
+  delete: mockDelete,
+  search: mockSearch
+};
+
+const mockDb = {
+  tableNames: jest.fn().mockResolvedValue(['memory']),
+  openTable: jest.fn().mockResolvedValue(mockTable),
+  createTable: jest.fn().mockResolvedValue(mockTable)
+};
+
+jest.mock('vectordb', () => {
+  return {
+    connect: jest.fn().mockResolvedValue(mockDb)
+  };
+});
+
+const { getEmbedding, cosineSimilarity, getKeywordSimilarity, getSemanticSimilarity, storeMemory, searchMemory } = require('../utils/embeddings');
 
 // Mock @google/generative-ai
 jest.mock('@google/generative-ai', () => {
@@ -28,10 +73,12 @@ describe('Embeddings Utility Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
+    global.__mockTable = mockTable;
   });
 
   afterEach(() => {
     delete global.fetch;
+    delete global.__mockTable;
   });
 
   describe('getEmbedding', () => {
@@ -168,6 +215,35 @@ describe('Embeddings Utility Tests', () => {
     test('uses cosine similarity if both vectors are valid', () => {
       expect(getSemanticSimilarity('Hiking', [1, 0], 'Hiking', [1, 0])).toBeCloseTo(1.0);
       expect(getSemanticSimilarity('Hiking', [1, 0], 'Hiking', [0, 1])).toBe(0);
+    });
+  });
+
+  describe('storeMemory', () => {
+    test('should vectorize text and store it in LanceDB memory table', async () => {
+      await storeMemory('test store memory content', { userId: 1, level: 'long-term' });
+      expect(mockAdd).toHaveBeenCalledWith([
+        expect.objectContaining({
+          vector: [0.1, 0.2, 0.3],
+          text: 'test store memory content',
+          metadata: JSON.stringify({ userId: 1, level: 'long-term' })
+        })
+      ]);
+    });
+  });
+
+  describe('searchMemory', () => {
+    test('should query LanceDB memory table and return minified JSON array of results', async () => {
+      const resultsStr = await searchMemory('test query text', 3);
+      const results = JSON.parse(resultsStr);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual(
+        expect.objectContaining({
+          text: 'test memory text',
+          metadata: expect.objectContaining({ userId: 1, level: 'long-term' }),
+          score: expect.any(Number)
+        })
+      );
+      expect(mockSearch).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
     });
   });
 });

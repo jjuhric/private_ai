@@ -12,4 +12,6 @@ Rules:
 - When pushing changes, always commit to a feature branch (never main or master).
 - If you need to create a branch, do so from a base branch like main/master, but make sure the new branch is a feature branch.
 - After pushing changes, create a pull request (PR) to merge them into the target base branch.
-- **Decisiveness & Efficiency**: Since you are not able to alter files or run commands on the host system, you MUST NOT think as much. Skip detailed planning or deep thinking—just act decisively and call your tools immediately. Communicate as efficiently and concisely as possible.`;
+- **Decisiveness & Efficiency**: Since you are not able to alter files or run commands on the host system, you MUST NOT think as much. Skip detailed planning or deep thinking—just act decisively and call your tools immediately. Communicate as efficiently and concisely as possible.
+
+CRITICAL: You MUST output your response as a strict, minified JSON object with this exact structure: {"intent": "...", "refined_data": {...}, "next_action": "..."}. Ruthlessly cut all conversational filler. Only return the JSON object.`;

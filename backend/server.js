@@ -90,6 +90,11 @@ getDb().then(async (db) => {
     setInterval(async () => {
       await runDailyMemoryCheck(db);
     }, 24 * 60 * 60 * 1000);
+    // Start automatic check daemon
+    if (process.env.NODE_ENV !== 'test') {
+      const safeUpdateService = require('./services/safe_update_service');
+      safeUpdateService.startDaemon();
+    }
   } catch (err) {
     logger.error('Error starting daily memory maintenance check:', err);
   }
@@ -108,6 +113,7 @@ app.use('/api/vault', vaultRouter);
 app.use('/api/update', updateRouter);
 app.use('/api/host', hostRouter);
 app.use('/api/bridge', agentBridgeRouter);
+app.use('/api/agent-bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);

@@ -202,6 +202,81 @@ class ToolManager {
       };
     }
   }
+
+  async createRegistryTool(toolName, manifest, codeContent, testContent = '') {
+    const toolDir = path.join(this.registryLocalPath, 'tools', toolName);
+    fs.mkdirSync(toolDir, { recursive: true });
+
+    const manifestObj = typeof manifest === 'string' ? JSON.parse(manifest) : manifest;
+    fs.writeFileSync(path.join(toolDir, 'manifest.json'), JSON.stringify(manifestObj, null, 2), 'utf8');
+
+    const entryFile = manifestObj.entry_point || 'handler.js';
+    fs.writeFileSync(path.join(toolDir, entryFile), codeContent, 'utf8');
+
+    const testFile = manifestObj.test_file || 'handler.test.js';
+    if (testContent) {
+      fs.writeFileSync(path.join(toolDir, testFile), testContent, 'utf8');
+    }
+
+    const registry = await this.getRegistry();
+    if (!registry.tools.some(t => t.name === toolName)) {
+      registry.tools.push({
+        name: toolName,
+        path: `tools/${toolName}`,
+        version: manifestObj.version || '1.0.0',
+        description: manifestObj.description || '',
+        target_agents: manifestObj.target_agents || [],
+        compatible_platforms: manifestObj.compatible_platforms || ['linux', 'darwin', 'win32']
+      });
+      fs.writeFileSync(path.join(this.registryLocalPath, 'registry.json'), JSON.stringify(registry, null, 2), 'utf8');
+    }
+
+    return { success: true, message: `Tool files created under registry path: tools/${toolName}` };
+  }
+
+  async validateRegistryTool(toolName) {
+    const toolDir = path.join(this.registryLocalPath, 'tools', toolName);
+    const manifestPath = path.join(toolDir, 'manifest.json');
+    if (!fs.existsSync(manifestPath)) {
+      throw new Error(`Validation failed: manifest.json not found in ${toolDir}`);
+    }
+
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (e) {
+      throw new Error(`Validation failed: manifest.json is not valid JSON: ${e.message}`);
+    }
+
+    if (!manifest.name || !manifest.version || !manifest.entry_point || !manifest.target_agents) {
+      throw new Error('Validation failed: manifest.json must contain name, version, entry_point, and target_agents.');
+    }
+
+    const entryFile = path.join(toolDir, manifest.entry_point);
+    if (!fs.existsSync(entryFile)) {
+      throw new Error(`Validation failed: entry point file "${manifest.entry_point}" not found.`);
+    }
+
+    const code = fs.readFileSync(entryFile, 'utf8');
+    try {
+      const vm = require('vm');
+      new vm.Script(code);
+    } catch (e) {
+      throw new Error(`Validation failed: syntax error in handler code: ${e.message}`);
+    }
+
+    return { success: true, manifest };
+  }
+
+  async mountRegistryTool(toolName) {
+    const val = await this.validateRegistryTool(toolName);
+    if (!val.success) {
+      throw new Error(`Validation failed before mounting: ${val.error}`);
+    }
+
+    const manifest = await this.installTool(toolName);
+    return { success: true, manifest, message: `Tool "${toolName}" validated and mounted successfully.` };
+  }
 }
 
 module.exports = new ToolManager();

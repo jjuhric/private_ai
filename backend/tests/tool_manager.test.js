@@ -135,4 +135,61 @@ describe('Tool Manager Service Tests', () => {
     const capabilitiesCleared = await db.all('SELECT * FROM agent_capabilities WHERE tool_name = ?', ['test_tool']);
     expect(capabilitiesCleared).toHaveLength(0);
   });
+
+  test('should create, validate, and mount dynamic tools at runtime', async () => {
+    const dynamicToolName = 'dynamic_test_tool';
+    const manifest = {
+      name: dynamicToolName,
+      version: '2.0.0',
+      description: 'A dynamically created tool',
+      target_agents: ['coder'],
+      compatible_platforms: ['linux'],
+      entry_point: 'handler.js',
+      test_file: 'handler.test.js',
+      exported_function: 'run',
+      tool_declaration: {
+        actions: ['run'],
+        parameters: {}
+      },
+      dependencies: []
+    };
+    const code = 'module.exports = { run: () => "dynamic output" };';
+    const testCode = 'describe("Dynamic", () => { test("pass", () => expect(1).toBe(1)) });';
+
+    // 1. Create registry tool
+    const createRes = await toolManager.createRegistryTool(dynamicToolName, manifest, code, testCode);
+    expect(createRes.success).toBe(true);
+
+    const toolDir = path.join(tempRegistryPath, 'tools', dynamicToolName);
+    expect(fs.existsSync(path.join(toolDir, 'manifest.json'))).toBe(true);
+    expect(fs.existsSync(path.join(toolDir, 'handler.js'))).toBe(true);
+
+    // 2. Validate registry tool
+    const valRes = await toolManager.validateRegistryTool(dynamicToolName);
+    expect(valRes.success).toBe(true);
+    expect(valRes.manifest.name).toBe(dynamicToolName);
+
+    // Test invalid manifest validation error
+    fs.writeFileSync(path.join(toolDir, 'manifest.json'), 'invalid json');
+    await expect(toolManager.validateRegistryTool(dynamicToolName)).rejects.toThrow();
+
+    // Restore manifest
+    fs.writeFileSync(path.join(toolDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+
+    // 3. Mount tool
+    const mountRes = await toolManager.mountRegistryTool(dynamicToolName);
+    expect(mountRes.success).toBe(true);
+    expect(mountRes.manifest.version).toBe('2.0.0');
+
+    // Check DB registration
+    const mountedRow = await db.get('SELECT * FROM installed_tools WHERE tool_name = ?', [dynamicToolName]);
+    expect(mountedRow).toBeDefined();
+
+    // Cleanup
+    await toolManager.uninstallTool(dynamicToolName);
+    const registryPath = path.join(tempRegistryPath, 'tools', dynamicToolName);
+    if (fs.existsSync(registryPath)) {
+      fs.rmSync(registryPath, { recursive: true, force: true });
+    }
+  });
 });

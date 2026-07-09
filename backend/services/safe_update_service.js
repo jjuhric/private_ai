@@ -10,6 +10,7 @@ class SafeUpdateService {
     this.activeDir = path.resolve(__dirname, '../..');
     this.stagingDir = path.resolve(this.activeDir, '../private_ai_staging');
     this.repoUrl = 'https://github.com/jjuhric/private_ai.git';
+    this.daemonInterval = null;
   }
 
   async checkForUpdates() {
@@ -59,7 +60,7 @@ class SafeUpdateService {
       // 3. Run validation tests in Staging
       logger.info('[Safe Update] Running validation tests in staging...');
       try {
-        await execPromise('npm run test:backend', { cwd: this.stagingDir });
+        await execPromise('npm test', { cwd: this.stagingDir });
       } catch (testErr) {
         logger.error(`[Safe Update] Tests failed in staging: ${testErr.stdout || testErr.message}`);
         throw new Error(`Validation tests failed in staging branch. Update aborted.`);
@@ -92,6 +93,38 @@ class SafeUpdateService {
       logger.info('[Safe Update] Process exiting for restart.');
       process.exit(0);
     }, 2000);
+  }
+
+  startDaemon(intervalMs = 5 * 60 * 1000) {
+    if (this.daemonInterval) {
+      clearInterval(this.daemonInterval);
+    }
+    
+    // Check immediately on startup
+    this.checkForUpdatesAndRun().catch(err => logger.error(`[Safe Update Daemon] Error checking for updates on startup: ${err.message}`));
+    
+    this.daemonInterval = setInterval(async () => {
+      await this.checkForUpdatesAndRun();
+    }, intervalMs);
+    
+    logger.info(`[Safe Update Daemon] Started polling every ${intervalMs / 1000 / 60} minutes.`);
+  }
+
+  stopDaemon() {
+    if (this.daemonInterval) {
+      clearInterval(this.daemonInterval);
+      this.daemonInterval = null;
+      logger.info('[Safe Update Daemon] Stopped polling.');
+    }
+  }
+
+  async checkForUpdatesAndRun() {
+    const { hasUpdate } = await this.checkForUpdates();
+    if (hasUpdate) {
+      logger.info('[Safe Update Daemon] New update detected! Triggering safe update pipeline...');
+      return await this.runUpdatePipeline();
+    }
+    return { success: false, reason: 'No updates found' };
   }
 }
 

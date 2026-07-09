@@ -32,4 +32,6 @@ Do you approve this agent creation/modification? (yes/no)"
 - write_file (params: { filePath, content })
 - list_dir (params: { dirPath })
 - execute_command (params: { command, safety_analysis })
-- tool_manager (action: 'list_available' | 'list_installed' | 'get_manifest')`;
+- tool_manager (action: 'list_available' | 'list_installed' | 'get_manifest')
+
+CRITICAL: You MUST output your response as a strict, minified JSON object with this exact structure: {"intent": "...", "refined_data": {...}, "next_action": "..."}. Ruthlessly cut all conversational filler. Only return the JSON object.`;

@@ -3,6 +3,29 @@ const router = express.Router();
 const { getDb } = require('../db');
 const jwt = require('jsonwebtoken');
 
+// Robust JSON Regex parser helper that handles optional markdown backticks
+function parseAgentJson(rawText) {
+  if (!rawText) return {};
+  const cleaned = rawText.trim();
+  try {
+    const match = cleaned.match(/(?:```(?:json)?\s*)?(\{[\s\S]*?\})(?:\s*```)?/);
+    if (match && match[1]) {
+      return JSON.parse(match[1].trim());
+    }
+    return JSON.parse(cleaned);
+  } catch (err) {
+    try {
+      const firstBrace = cleaned.indexOf('{');
+      const lastBrace = cleaned.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
+      }
+    } catch (innerErr) {}
+    throw new Error(`Failed to parse agent JSON: ${err.message}`);
+  }
+}
+
+
 // Middleware to authenticate either a standard JWT token OR matching bridge secret
 async function authenticateBridge(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -233,6 +256,23 @@ router.post('/execute', authenticateBridge, async (req, res) => {
     } else if (action === 'read_file') {
       const { handleCoderTool } = require('../tools/coder_tools');
       output = await handleCoderTool('read_file', { filePath: params.filePath });
+    } else if (action === 'agent_step') {
+      const { raw_output, next_agent, settings = {} } = params;
+      if (!raw_output) {
+        return res.status(400).json({ error: 'raw_output is required' });
+      }
+      if (!next_agent) {
+        return res.status(400).json({ error: 'next_agent is required' });
+      }
+
+      const parsed = parseAgentJson(raw_output);
+      const refinedData = parsed.refined_data || {};
+
+      const { runWorkerAgent } = require('../utils/agents');
+      const inputContext = typeof refinedData === 'string' ? refinedData : JSON.stringify(refinedData);
+
+      const result = await runWorkerAgent(next_agent, settings, inputContext, db, req.user.id);
+      output = typeof result === 'string' ? result : JSON.stringify(result);
     } else {
       return res.status(400).json({ error: `Unknown action "${action}"` });
     }
@@ -241,6 +281,47 @@ router.post('/execute', authenticateBridge, async (req, res) => {
       success: true,
       message: `Action "${action}" executed successfully`,
       output
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /supervisor-handoff
+router.post('/supervisor-handoff', authenticateBridge, async (req, res) => {
+  const { userPrompt, settings = {}, githubToken } = req.body;
+  if (!userPrompt) {
+    return res.status(400).json({ error: 'userPrompt is required' });
+  }
+
+  try {
+    const db = await getDb();
+    const { runSupervisorHandoff } = require('../utils/agents');
+
+    // Build user settings fallback
+    const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
+    const { decrypt } = require('../utils/crypto');
+    const fullSettings = {
+      db,
+      userId: req.user.id,
+      provider: userSettings.provider || 'local',
+      modelName: userSettings.model_name || 'qwen2.5-coder-3b-instruct',
+      onlineProvider: userSettings.online_provider || 'gemini',
+      onlineKey: decrypt(userSettings.online_key),
+      geminiKey: decrypt(userSettings.gemini_key),
+      localBaseUrl: userSettings.local_url || 'http://192.168.1.42:1234/v1',
+      localApiKey: decrypt(userSettings.local_key),
+      localApiStyle: userSettings.local_api_style || 'openai',
+      onlineUrl: userSettings.online_url,
+      ...settings
+    };
+
+    const result = await runSupervisorHandoff(userPrompt, fullSettings, db, req.user.id, githubToken);
+
+    res.json({
+      success: true,
+      supervisor_decision: result.supervisor_decision,
+      worker_output: result.worker_output
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

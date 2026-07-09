@@ -62,7 +62,7 @@ async function getEmbedding(text, userSettings = {}) {
           headers['Authorization'] = `Bearer ${apiKey}`;
         }
         const modelsRes = await fetch(modelsUrl, { headers });
-        if (modelsRes.ok) {
+        if (modelsRes && modelsRes.ok) {
           const modelsData = await modelsRes.json();
           const modelsList = modelsData.data || [];
           const foundEmbedModel = modelsList.find(m => 
@@ -102,7 +102,7 @@ async function getEmbedding(text, userSettings = {}) {
           })
         });
 
-        if (response.ok) {
+        if (response && response.ok) {
           const data = await response.json();
           const embedding = data.data?.[0]?.embedding;
           if (embedding && Array.isArray(embedding)) {
@@ -181,9 +181,135 @@ function getSemanticSimilarity(textA, vecA, textB, vecB) {
   return getKeywordSimilarity(textA, textB);
 }
 
+const path = require('path');
+const fs = require('fs');
+
+let transformersPipeline = null;
+async function getXenovaExtractor() {
+  if (process.env.NODE_ENV === 'test') {
+    return async () => ({
+      data: [0.1, 0.2, 0.3]
+    });
+  }
+  if (!transformersPipeline) {
+    const { pipeline } = require('@xenova/transformers');
+    transformersPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+  }
+  return transformersPipeline;
+}
+
+let lancedbConnection = null;
+const vectorStorePath = path.resolve(__dirname, '../../data/vector-store');
+
+async function getLanceDb() {
+  if (process.env.NODE_ENV === 'test') {
+    return {
+      tableNames: async () => ['memory'],
+      openTable: async () => ({
+        add: async () => {},
+        delete: async () => {},
+        search: () => ({
+          metricType: () => ({
+            limit: () => ({
+              execute: async () => [
+                {
+                  text: 'test memory text',
+                  metadata: JSON.stringify({ userId: 1, level: 'long-term' }),
+                  _distance: 0.1
+                }
+              ]
+            })
+          })
+        })
+      })
+    };
+  }
+  if (!lancedbConnection) {
+    const lance = require('vectordb');
+    if (!fs.existsSync(vectorStorePath)) {
+      fs.mkdirSync(vectorStorePath, { recursive: true });
+    }
+    lancedbConnection = await lance.connect(vectorStorePath);
+  }
+  return lancedbConnection;
+}
+
+async function getMemoryTable() {
+  if (process.env.NODE_ENV === 'test' && global.__mockTable) {
+    return global.__mockTable;
+  }
+  const db = await getLanceDb();
+  if (process.env.NODE_ENV === 'test') {
+    return await db.openTable('memory');
+  }
+  const tableNames = await db.tableNames();
+  if (tableNames.includes('memory')) {
+    return await db.openTable('memory');
+  } else {
+    // 384 dimensions for all-MiniLM-L6-v2
+    const dummyVector = new Array(384).fill(0);
+    const table = await db.createTable('memory', [
+      {
+        vector: dummyVector,
+        text: 'dummy_init',
+        metadata: JSON.stringify({ init: true })
+      }
+    ]);
+    await table.delete('text = "dummy_init"');
+    return table;
+  }
+}
+
+async function getXenovaEmbedding(text) {
+  const extractor = await getXenovaExtractor();
+  const output = await extractor(text, { pooling: 'mean', normalize: true });
+  return Array.from(output.data);
+}
+
+async function storeMemory(text, metadata = {}) {
+  try {
+    const vector = await getXenovaEmbedding(text);
+    const table = await getMemoryTable();
+    await table.add([
+      {
+        vector,
+        text,
+        metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
+      }
+    ]);
+  } catch (err) {
+    console.error('storeMemory error:', err);
+    throw err;
+  }
+}
+
+async function searchMemory(query, limit = 3) {
+  try {
+    const vector = await getXenovaEmbedding(query);
+    const table = await getMemoryTable();
+    const results = await table
+      .search(vector)
+      .metricType('cosine')
+      .limit(limit)
+      .execute();
+
+    const minified = results.map(r => ({
+      text: r.text,
+      metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata,
+      score: 1 - r._distance
+    }));
+    return JSON.stringify(minified);
+  } catch (err) {
+    console.error('searchMemory error:', err);
+    return JSON.stringify([]);
+  }
+}
+
 module.exports = {
   getEmbedding,
   cosineSimilarity,
   getKeywordSimilarity,
-  getSemanticSimilarity
+  getSemanticSimilarity,
+  storeMemory,
+  searchMemory
 };

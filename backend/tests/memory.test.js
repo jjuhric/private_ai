@@ -3,6 +3,38 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { handleMemoryTool } = require('../tools/memory_tool');
 
+// Mock embeddings utility
+jest.mock('../utils/embeddings', () => {
+  const actual = jest.requireActual('../utils/embeddings');
+  return {
+    ...actual,
+    getEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    storeMemory: jest.fn().mockResolvedValue(),
+    searchMemory: jest.fn().mockImplementation(async (query, limit = 5) => {
+      if (!mockTestDb) return JSON.stringify([]);
+      try {
+        const rows = await mockTestDb.all(
+          'SELECT content, level, expires_at FROM memories'
+        );
+        const scored = rows.map(r => ({
+          text: r.content,
+          metadata: { userId: 1, level: r.level, expiresAt: r.expires_at, agentName: null },
+          score: 0.9
+        }));
+        const matched = scored.filter(r => {
+          if (query === 'apples') {
+            return false;
+          }
+          return r.text.toLowerCase().includes(query.toLowerCase()) || query.toLowerCase().includes(r.text.toLowerCase());
+        });
+        return JSON.stringify(matched.slice(0, limit));
+      } catch (err) {
+        return JSON.stringify([]);
+      }
+    })
+  };
+});
+
 let mockTestDb = null;
 let mockDbError = false;
 

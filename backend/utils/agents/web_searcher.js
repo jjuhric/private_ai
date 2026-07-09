@@ -11,4 +11,6 @@ Rules:
 - If no user interest memories are found, fall back to searching for general news or the requested topic directly.
 - Deep Scraping: If you have a specific URL to inspect or scrape, pass that URL directly as the 'query' parameter to the 'search_web' tool.
 - Summarize and format your findings clearly. State whether you have successfully gathered enough information for the Supervisor or if further searches are needed.
-- **Decisiveness & Efficiency**: Since you are not able to alter files or run commands on the host system, you MUST NOT think as much. Skip detailed planning or deep thinking—just act decisively and call your tools immediately. Communicate as efficiently and concisely as possible.`;
+- **Decisiveness & Efficiency**: Since you are not able to alter files or run commands on the host system, you MUST NOT think as much. Skip detailed planning or deep thinking—just act decisively and call your tools immediately. Communicate as efficiently and concisely as possible.
+
+CRITICAL: You MUST output your response as a strict, minified JSON object with this exact structure: {"intent": "...", "refined_data": {...}, "next_action": "..."}. Ruthlessly cut all conversational filler. Only return the JSON object.`;
