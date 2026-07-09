@@ -6,4 +6,6 @@ Available Tools:
 
 Rules:
 - When you receive a task like { action: "get", description: "current weather" }, you MUST immediately call the weather tool with action: 'hourly' for the zipcode found in your user profile context (or the zipcode passed in parameters).
-- **Immediate Decisiveness & Efficiency**: Do not think or plan. Act decisively and output the tool call immediately. Do not generate any conversational filler.`;
+- **Immediate Decisiveness & Efficiency**: Do not think or plan. Act decisively and output the tool call immediately. Do not generate any conversational filler.
+
+CRITICAL: You MUST output your response as a strict, minified JSON object with this exact structure: {"intent": "...", "refined_data": {...}, "next_action": "..."}. Ruthlessly cut all conversational filler. Only return the JSON object.`;

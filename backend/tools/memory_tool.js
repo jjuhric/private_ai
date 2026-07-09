@@ -1,4 +1,4 @@
-const { getEmbedding, getSemanticSimilarity } = require('../utils/embeddings');
+const { getEmbedding, getSemanticSimilarity, storeMemory, searchMemory } = require('../utils/embeddings');
 
 /**
  * Handles operations for the Memory tool.
@@ -52,35 +52,49 @@ async function handleMemoryTool(db, userId, action, params = {}) {
         const userSettings = (db.get && typeof db.get === 'function') ? (await db.get('SELECT * FROM user_settings WHERE user_id = ?', [userId]) || {}) : {};
         const newEmbedding = await getEmbedding(cleanContent, userSettings);
 
-        // Fetch active memories to check for semantic duplicates
-        const activeMemories = await db.all(
-          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
-          [userId, agentName || null, agentName || null]
-        );
+        // Fetch active memories from vector DB to check for semantic duplicates
+        const searchResultJson = await searchMemory(cleanContent, 5);
+        const searchResults = JSON.parse(searchResultJson);
 
-        let semanticDuplicate = null;
-        if (activeMemories.length > 0) {
-          for (const mem of activeMemories) {
-            let memEmbedding = null;
-            if (mem.embedding) {
-              try {
-                memEmbedding = JSON.parse(mem.embedding);
-              } catch (e) {}
-            }
-            const sim = getSemanticSimilarity(cleanContent, newEmbedding, mem.content, memEmbedding);
-            if (sim > 0.85) {
-              semanticDuplicate = mem;
-              break;
-            }
-          }
+        let duplicate = null;
+        const now = new Date();
+        if (searchResults && searchResults.length > 0) {
+          duplicate = searchResults.find(r => {
+            const meta = r.metadata || {};
+            const isSameUser = meta.userId === userId;
+            const isSameAgent = (agentName ? meta.agentName === agentName : !meta.agentName);
+            const isNotExpired = (!meta.expiresAt || new Date(meta.expiresAt) > now);
+            return isSameUser && isSameAgent && isNotExpired && r.score > 0.85;
+          });
         }
 
-        if (semanticDuplicate) {
-          await db.run(
-            'UPDATE memories SET content = ?, level = ?, expires_at = ?, embedding = ?, created_at = datetime(\'now\') WHERE id = ?',
-            [cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null, semanticDuplicate.id]
+        if (duplicate) {
+          const sqliteDup = await db.get(
+            'SELECT id FROM memories WHERE user_id = ? AND content = ? AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
+            [userId, duplicate.text, agentName || null, agentName || null]
           );
-          return `Already remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${semanticDuplicate.id}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}). Updated existing memory.`;
+
+          if (sqliteDup) {
+            await db.run(
+              'UPDATE memories SET content = ?, level = ?, expires_at = ?, embedding = ?, created_at = datetime(\'now\') WHERE id = ?',
+              [cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null, sqliteDup.id]
+            );
+
+            // Update in LanceDB: delete old text and store new
+            try {
+              const lance = require('vectordb');
+              const path = require('path');
+              const dbPath = path.resolve(__dirname, '../../data/vector-store');
+              const lConnection = await lance.connect(dbPath);
+              const table = await lConnection.openTable('memory');
+              await table.delete(`text = ${JSON.stringify(duplicate.text)}`);
+            } catch (err) {
+              console.error('Failed to delete old duplicate from LanceDB:', err);
+            }
+            await storeMemory(cleanContent, { userId, level: memLevel, expiresAt: finalExpiresAt, agentName: agentName || null });
+
+            return `Already remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${sqliteDup.id}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}). Updated existing memory.`;
+          }
         }
 
         const result = await db.run(
@@ -88,39 +102,33 @@ async function handleMemoryTool(db, userId, action, params = {}) {
           [userId, cleanContent, memLevel, finalExpiresAt, newEmbedding ? JSON.stringify(newEmbedding) : null, agentName || null]
         );
 
+        await storeMemory(cleanContent, {
+          userId,
+          level: memLevel,
+          expiresAt: finalExpiresAt,
+          agentName: agentName || null
+        });
+
         return `Successfully remembered: "${cleanContent}" (Level: ${memLevel}, Memory ID: ${result.lastID}${finalExpiresAt ? `, Expires at: ${finalExpiresAt}` : ''}).`;
       }
 
       case 'recall':
       case 'query': {
         const { query, agentName } = params;
-        
-        const rows = await db.all(
-          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
-          [userId, agentName || null, agentName || null]
-        );
 
         if (query && typeof query === 'string' && query.trim() !== '') {
           const cleanQuery = query.trim();
-          const userSettings = (db.get && typeof db.get === 'function') ? (await db.get('SELECT * FROM user_settings WHERE user_id = ?', [userId]) || {}) : {};
-          const queryEmbedding = await getEmbedding(cleanQuery, userSettings);
+          const searchResultJson = await searchMemory(cleanQuery, 5);
+          const searchResults = JSON.parse(searchResultJson);
 
-          const scoredRows = rows.map(r => {
-            let rowEmbedding = null;
-            if (r.embedding) {
-              try {
-                rowEmbedding = JSON.parse(r.embedding);
-              } catch (e) {}
-            }
-            const similarity = getSemanticSimilarity(cleanQuery, queryEmbedding, r.content, rowEmbedding);
-            return { ...r, similarity };
+          const now = new Date();
+          const matchedRows = (searchResults || []).filter(r => {
+            const meta = r.metadata || {};
+            const isSameUser = meta.userId === userId;
+            const isSameAgent = (agentName ? meta.agentName === agentName : !meta.agentName);
+            const isNotExpired = (!meta.expiresAt || new Date(meta.expiresAt) > now);
+            return isSameUser && isSameAgent && isNotExpired && r.score >= 0.35;
           });
-
-          // Sort by similarity descending
-          scoredRows.sort((a, b) => b.similarity - a.similarity);
-
-          // Filter by threshold
-          const matchedRows = scoredRows.filter(r => r.similarity >= 0.35);
 
           if (matchedRows.length === 0) {
             // Fallback: search for any active memories if search query yielded nothing
@@ -133,13 +141,30 @@ async function handleMemoryTool(db, userId, action, params = {}) {
                 allActive.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
             }
           } else {
-            const limit = 5;
-            const topMatches = matchedRows.slice(0, limit);
+            // Look up SQLite IDs for retrieved records to match return formatting
+            const matchedRowsWithIds = await Promise.all(matchedRows.map(async r => {
+              const sqliteRow = await db.get(
+                'SELECT id FROM memories WHERE user_id = ? AND content = ? AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
+                [userId, r.text, agentName || null, agentName || null]
+              );
+              return {
+                id: sqliteRow ? sqliteRow.id : 'unknown',
+                content: r.text,
+                level: r.metadata?.level || 'long-term',
+                expires_at: r.metadata?.expiresAt || null
+              };
+            }));
+
             return `Retrieved memories:\n` +
-              topMatches.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
+              matchedRowsWithIds.map(r => `- [ID ${r.id}] ${r.content} (${r.level}${r.expires_at ? `, expires: ${r.expires_at}` : ''})`).join('\n');
           }
           return 'No active memories found.';
         }
+
+        const rows = await db.all(
+          'SELECT id, content, level, expires_at, embedding FROM memories WHERE user_id = ? AND (expires_at IS NULL OR expires_at > datetime(\'now\')) AND (agent_name = ? OR (? IS NULL AND agent_name IS NULL))',
+          [userId, agentName || null, agentName || null]
+        );
 
         if (rows.length === 0) {
           return 'No active memories found.';

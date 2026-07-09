@@ -131,8 +131,8 @@ async function callLMStudio(messages) {
       messages: messages,
       
       // Qwen sampling parameters
-      temperature: 0.6, 
-      top_p: 0.95,
+      temperature: 0.1, 
+      top_p: 0.9,
       max_tokens: 1024,
       num_ctx: 8192,
       

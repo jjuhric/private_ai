@@ -47,6 +47,13 @@ jest.mock('../services/tool_manager', () => ({
   uninstallTool: (...args) => mockUninstallTool(...args)
 }));
 
+// Mock agents
+const mockRunWorkerAgent = jest.fn();
+jest.mock('../utils/agents', () => ({
+  runWorkerAgent: (...args) => mockRunWorkerAgent(...args),
+  AGENT_PROMPTS: {}
+}));
+
 const JWT_SECRET = 'dev_secret_key_private_ai_assistant_2026';
 const testToken = jwt.sign({ id: 1 }, JWT_SECRET);
 
@@ -366,6 +373,33 @@ describe('agent_bridge.js API Endpoint Tests', () => {
 
       expect(res.status).toBe(403);
       expect(res.body.error).toContain('Access denied: Commands cannot be routed to the Parent Node');
+    });
+
+    test('POST /execute: successfully routes agent_step action, parsing raw_output and calling runWorkerAgent', async () => {
+      mockDb.get.mockResolvedValueOnce({ is_main_host: 0 }); // Settings check (not main host)
+      mockRunWorkerAgent.mockResolvedValueOnce('mocked worker agent response');
+
+      const res = await request(app)
+        .post('/api/bridge/execute')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({
+          action: 'agent_step',
+          params: {
+            raw_output: '```json\n{"intent": "search", "refined_data": {"query": "weather"}, "next_action": "delegate"}\n```',
+            next_agent: 'web_searcher',
+            settings: { modelName: 'qwen3-8b' }
+          }
+        });
+
+      expect(res.status).toBe(200);
+      expect(mockRunWorkerAgent).toHaveBeenCalledWith(
+        'web_searcher',
+        expect.objectContaining({ modelName: 'qwen3-8b' }),
+        JSON.stringify({ query: 'weather' }),
+        expect.any(Object),
+        1
+      );
+      expect(res.body.output).toBe('mocked worker agent response');
     });
   });
 });
