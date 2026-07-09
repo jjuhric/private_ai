@@ -250,6 +250,14 @@ else
     echo "  Configuration Settings"
     echo "===================================================="
 
+    read -p "Is this machine the host? (y/n) [y]: " IS_HOST_YN
+    IS_HOST_YN=${IS_HOST_YN:-y}
+    if [[ "$IS_HOST_YN" =~ ^[Yy]$ ]]; then
+        IS_HOST="true"
+    else
+        IS_HOST="false"
+    fi
+
     # Device Type selection
     echo "Supported Device Types:"
     echo "  1) Windows"
@@ -271,67 +279,76 @@ else
         *) DEVICE_TYPE="$DEFAULT_DEVICE_TYPE" ;;
     esac
 
-    # Main Host role prompt
-    read -p "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [${DEFAULT_IS_MAIN_HOST}]: " MAIN_HOST_YN
-    MAIN_HOST_YN=${MAIN_HOST_YN:-$DEFAULT_IS_MAIN_HOST}
-    if [[ "$MAIN_HOST_YN" =~ ^[Yy]$ ]]; then
-        IS_MAIN_HOST="1"
+    if [ "$IS_HOST" = "true" ]; then
+        # Main Host role prompt
+        read -p "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [${DEFAULT_IS_MAIN_HOST}]: " MAIN_HOST_YN
+        MAIN_HOST_YN=${MAIN_HOST_YN:-$DEFAULT_IS_MAIN_HOST}
+        if [[ "$MAIN_HOST_YN" =~ ^[Yy]$ ]]; then
+            IS_MAIN_HOST="1"
+        else
+            IS_MAIN_HOST="0"
+        fi
+
+        MAIN_HOST_IP=""
+        if [ "$IS_MAIN_HOST" = "0" ]; then
+            read -p "Enter Main Host IP address (optional) [${DEFAULT_MAIN_HOST_IP}]: " MAIN_HOST_IP
+            MAIN_HOST_IP=${MAIN_HOST_IP:-$DEFAULT_MAIN_HOST_IP}
+        fi
+
+        # Admin account registration
+        read -p "Enter Admin Username [${DEFAULT_ADMIN_USER}]: " ADMIN_USER
+        ADMIN_USER=${ADMIN_USER:-$DEFAULT_ADMIN_USER}
+
+        read -p "Enter Admin Password [${DEFAULT_ADMIN_PASS}]: " ADMIN_PASS
+        ADMIN_PASS=${ADMIN_PASS:-$DEFAULT_ADMIN_PASS}
+
+        # User Profile Info
+        read -p "Enter your Name [${DEFAULT_USER_NAME}]: " USER_NAME
+        USER_NAME=${USER_NAME:-$DEFAULT_USER_NAME}
+
+        read -p "Enter your Zipcode [${DEFAULT_USER_ZIPCODE}]: " USER_ZIPCODE
+        USER_ZIPCODE=${USER_ZIPCODE:-$DEFAULT_USER_ZIPCODE}
+
+        read -p "Enter OpenWeatherMap API Key (optional) [${DEFAULT_WEATHER_KEY}]: " WEATHER_KEY
+        WEATHER_KEY=${WEATHER_KEY:-$DEFAULT_WEATHER_KEY}
+
+        # Local LLM address
+        read -p "Enter Local LLM Base URL [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
+        LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
+
+        # Optional Local API Key
+        read -p "Enter Local LLM API Key (optional) [${DEFAULT_LOCAL_KEY}]: " LOCAL_KEY
+        LOCAL_KEY=${LOCAL_KEY:-$DEFAULT_LOCAL_KEY}
+
+        # Online Gemini Key (Optional)
+        read -p "Enter Online Gemini API Key (optional) [${DEFAULT_ONLINE_KEY}]: " ONLINE_KEY
+        ONLINE_KEY=${ONLINE_KEY:-$DEFAULT_ONLINE_KEY}
+
+        # GitHub Access Token (REQUIRED for updates & tools)
+        while true; do
+            read -p "Enter GitHub Access Token (REQUIRED for updates/tools) [${DEFAULT_GITHUB_TOKEN}]: " GITHUB_TOKEN
+            GITHUB_TOKEN=${GITHUB_TOKEN:-$DEFAULT_GITHUB_TOKEN}
+            if [ ! -z "$GITHUB_TOKEN" ]; then
+                break
+            fi
+            echo "❌ Error: GitHub Access Token is required to download updates and sync custom tools."
+        done
+
+        # Deployment mode / Frontend compilation check
+        read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
+        BUILD_FE_YN=${BUILD_FE_YN:-y}
+
+        # Server port configuration
+        read -p "Enter Server PORT [${DEFAULT_PORT}]: " APP_PORT
+        APP_PORT=${APP_PORT:-$DEFAULT_PORT}
     else
+        # Node Client Configuration
+        read -p "Enter Main Host's IP address [${DEFAULT_MAIN_HOST_IP}]: " MAIN_HOST_IP
+        MAIN_HOST_IP=${MAIN_HOST_IP:-$DEFAULT_MAIN_HOST_IP}
+        APP_PORT="$DEFAULT_PORT"
+        BUILD_FE_YN="n"
         IS_MAIN_HOST="0"
     fi
-
-    MAIN_HOST_IP=""
-    if [ "$IS_MAIN_HOST" = "0" ]; then
-        read -p "Enter Main Host IP address (optional) [${DEFAULT_MAIN_HOST_IP}]: " MAIN_HOST_IP
-        MAIN_HOST_IP=${MAIN_HOST_IP:-$DEFAULT_MAIN_HOST_IP}
-    fi
-
-    # Admin account registration
-    read -p "Enter Admin Username [${DEFAULT_ADMIN_USER}]: " ADMIN_USER
-    ADMIN_USER=${ADMIN_USER:-$DEFAULT_ADMIN_USER}
-
-    read -p "Enter Admin Password [${DEFAULT_ADMIN_PASS}]: " ADMIN_PASS
-    ADMIN_PASS=${ADMIN_PASS:-$DEFAULT_ADMIN_PASS}
-
-    # User Profile Info
-    read -p "Enter your Name [${DEFAULT_USER_NAME}]: " USER_NAME
-    USER_NAME=${USER_NAME:-$DEFAULT_USER_NAME}
-
-    read -p "Enter your Zipcode [${DEFAULT_USER_ZIPCODE}]: " USER_ZIPCODE
-    USER_ZIPCODE=${USER_ZIPCODE:-$DEFAULT_USER_ZIPCODE}
-
-    read -p "Enter OpenWeatherMap API Key (optional) [${DEFAULT_WEATHER_KEY}]: " WEATHER_KEY
-    WEATHER_KEY=${WEATHER_KEY:-$DEFAULT_WEATHER_KEY}
-
-    # Local LLM address
-    read -p "Enter Local LLM Base URL [${DEFAULT_LOCAL_URL}]: " LOCAL_URL
-    LOCAL_URL=${LOCAL_URL:-$DEFAULT_LOCAL_URL}
-
-    # Optional Local API Key
-    read -p "Enter Local LLM API Key (optional) [${DEFAULT_LOCAL_KEY}]: " LOCAL_KEY
-    LOCAL_KEY=${LOCAL_KEY:-$DEFAULT_LOCAL_KEY}
-
-    # Online Gemini Key (Optional)
-    read -p "Enter Online Gemini API Key (optional) [${DEFAULT_ONLINE_KEY}]: " ONLINE_KEY
-    ONLINE_KEY=${ONLINE_KEY:-$DEFAULT_ONLINE_KEY}
-
-    # GitHub Access Token (REQUIRED for updates & tools)
-    while true; do
-        read -p "Enter GitHub Access Token (REQUIRED for updates/tools) [${DEFAULT_GITHUB_TOKEN}]: " GITHUB_TOKEN
-        GITHUB_TOKEN=${GITHUB_TOKEN:-$DEFAULT_GITHUB_TOKEN}
-        if [ ! -z "$GITHUB_TOKEN" ]; then
-            break
-        fi
-        echo "❌ Error: GitHub Access Token is required to download updates and sync custom tools."
-    done
-
-    # Deployment mode / Frontend compilation check
-    read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
-    BUILD_FE_YN=${BUILD_FE_YN:-y}
-
-    # Server port configuration
-    read -p "Enter Server PORT [${DEFAULT_PORT}]: " APP_PORT
-    APP_PORT=${APP_PORT:-$DEFAULT_PORT}
 fi
 
 # Create .env config file
@@ -353,6 +370,7 @@ write_env_var() {
 }
 
 write_env_var "PORT" "${APP_PORT}"
+write_env_var "IS_HOST" "${IS_HOST:-true}"
 write_env_var "DB_PATH" "${DEFAULT_DB_PATH}"
 write_env_var "LOCAL_LLM_URL" "${LOCAL_URL}"
 write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
@@ -399,50 +417,74 @@ if grep -q "$DEFAULT_SECRET" .env; then
     sed -i "s/$DEFAULT_SECRET/$NEW_SECRET/" .env
 fi
 
-# 6. Install Dependencies
-if [ "$SKIP_UPDATE" = false ]; then
-    log "Installing project dependencies (this may take a few minutes)..."
-    npm run install:all
-else
-    log "Skipping project dependencies install since it was completed during the update phase."
-fi
-
-# 7. Database Initialization & Seeding
-RESET_DB=false
-if [ "$NON_INTERACTIVE" = false ]; then
-    read -p "Do you want to reset the database and start fresh (deletes all users)? (y/n) [n]: " RESET_DB_YN
-    RESET_DB_YN=${RESET_DB_YN:-n}
-    if [[ "$RESET_DB_YN" =~ ^[Yy]$ ]]; then
-        RESET_DB=true
+if [ "$IS_HOST" = "true" ]; then
+    # 6. Install Dependencies
+    if [ "$SKIP_UPDATE" = false ]; then
+        log "Installing project dependencies (this may take a few minutes)..."
+        npm run install:all
+    else
+        log "Skipping project dependencies install since it was completed during the update phase."
     fi
-fi
 
-if [ "$RESET_DB" = true ]; then
-    log "Wiping existing database for a fresh setup..."
-    rm -f backend/database.db backend/database.db-wal backend/database.db-shm
-fi
+    # 7. Database Initialization & Seeding
+    RESET_DB=false
+    if [ "$NON_INTERACTIVE" = false ]; then
+        read -p "Do you want to reset the database and start fresh (deletes all users)? (y/n) [n]: " RESET_DB_YN
+        RESET_DB_YN=${RESET_DB_YN:-n}
+        if [[ "$RESET_DB_YN" =~ ^[Yy]$ ]]; then
+            RESET_DB=true
+        fi
+    fi
 
-log "Initializing database and seeding configuration..."
-node backend/scripts/seed_settings.js \
-    --username="$ADMIN_USER" \
-    --password="$ADMIN_PASS" \
-    --device_type="$DEVICE_TYPE" \
-    --is_main_host="$IS_MAIN_HOST" \
-    --local_url="$LOCAL_URL" \
-    --local_key="$LOCAL_KEY" \
-    --online_key="$ONLINE_KEY" \
-    --github_token="$GITHUB_TOKEN" \
-    --online_provider="$DEFAULT_ONLINE_PROVIDER" \
-    --name="$USER_NAME" \
-    --zipcode="$USER_ZIPCODE" \
-    --weather_api_key="$WEATHER_KEY"
+    if [ "$RESET_DB" = true ]; then
+        log "Wiping existing database for a fresh setup..."
+        rm -f backend/database.db backend/database.db-wal backend/database.db-shm
+    fi
 
-# 8. Build Frontend (if requested)
-if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
-    log "Building frontend application..."
-    npm run build
+    log "Initializing database and seeding configuration..."
+    node backend/scripts/seed_settings.js \
+        --username="$ADMIN_USER" \
+        --password="$ADMIN_PASS" \
+        --device_type="$DEVICE_TYPE" \
+        --is_main_host="$IS_MAIN_HOST" \
+        --local_url="$LOCAL_URL" \
+        --local_key="$LOCAL_KEY" \
+        --online_key="$ONLINE_KEY" \
+        --github_token="$GITHUB_TOKEN" \
+        --online_provider="$DEFAULT_ONLINE_PROVIDER" \
+        --name="$USER_NAME" \
+        --zipcode="$USER_ZIPCODE" \
+        --weather_api_key="$WEATHER_KEY"
+
+    # 8. Build Frontend (if requested)
+    if [[ "$BUILD_FE_YN" =~ ^[Yy]$ ]]; then
+        log "Building frontend application..."
+        npm run build
+    else
+        log "Skipping frontend compilation (backend-only deployment)."
+    fi
 else
-    log "Skipping frontend compilation (backend-only deployment)."
+    # Install Node Client dependencies
+    if [ "$SKIP_UPDATE" = false ]; then
+        log "Installing minimal Node Client dependencies..."
+        mkdir -p node_client
+        if [ ! -f "node_client/package.json" ]; then
+            cat << 'EOF' > node_client/package.json
+{
+  "name": "private-ai-node-client",
+  "version": "1.0.0",
+  "dependencies": {
+    "mqtt": "^5.5.0",
+    "dotenv": "^16.4.5",
+    "macaddress": "^0.5.8"
+  }
+}
+EOF
+        fi
+        npm install --prefix node_client
+    else
+        log "Skipping Node Client dependency install."
+    fi
 fi
 
 # 8.5. Configure Tailscale HTTPS (Optional)
@@ -469,19 +511,27 @@ fi
 if [ "$DEVICE_TYPE" != "windows" ] && [ "$DEVICE_TYPE" != "esp32" ]; then
     if command -v systemctl &> /dev/null && [ "$(id -u)" -eq 0 -o -n "$(command -v sudo)" ]; then
         log "Configuring systemd background service..."
-        NPM_PATH=$(which npm || echo "/usr/bin/npm")
+        NODE_PATH=$(which node || echo "/usr/bin/node")
+
+        if [ "$IS_HOST" = "true" ]; then
+            SERVICE_DESC="Private AI Assistant Service"
+            START_CMD="$(which npm || echo "/usr/bin/npm") start"
+        else
+            SERVICE_DESC="Private AI Node Edge Client"
+            START_CMD="$NODE_PATH node_client/client.js"
+        fi
 
         # Create or overwrite systemd service file
         sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
-Description=Private AI Assistant Service
+Description=$SERVICE_DESC
 After=network.target
 
 [Service]
 Type=simple
 User=$USER
 WorkingDirectory=$TARGET_DIR
-ExecStart=$NPM_PATH start
+ExecStart=$START_CMD
 Restart=on-failure
 Environment=NODE_ENV=production
 
@@ -500,37 +550,41 @@ EOF
 
         # Verify status
         if sudo systemctl is-active --quiet "$SERVICE_NAME".service; then
-            log_success "Private AI Assistant is running in the background!"
+            log_success "$SERVICE_DESC is running in the background!"
             log "Check status: sudo systemctl status $SERVICE_NAME"
             log "Check logs: journalctl -u $SERVICE_NAME -f"
         else
             log_error "Failed to start $SERVICE_NAME service. Please check systemctl logs."
         fi
     else
-        log_warn "systemd not available or sudo permissions missing. Starting backend in background via nohup fallback..."
+        log_warn "systemd not available or sudo permissions missing. Starting process in background via nohup fallback..."
         
-        # Stop any existing process running on the port
-        if command -v lsof &> /dev/null; then
-            PORT_PID=$(lsof -t -i:"$APP_PORT" -sTCP:LISTEN || true)
-            if [ -n "$PORT_PID" ]; then
-                log "Stopping existing process $PORT_PID on port $APP_PORT..."
-                kill -9 "$PORT_PID"
-                sleep 2
+        if [ "$IS_HOST" = "true" ]; then
+            # Stop any existing process running on the port
+            if command -v lsof &> /dev/null; then
+                PORT_PID=$(lsof -t -i:"$APP_PORT" -sTCP:LISTEN || true)
+                if [ -n "$PORT_PID" ]; then
+                    log "Stopping existing process $PORT_PID on port $APP_PORT..."
+                    kill -9 "$PORT_PID"
+                    sleep 2
+                fi
             fi
+            nohup npm start > /dev/null 2>&1 &
+        else
+            nohup node node_client/client.js > /dev/null 2>&1 &
         fi
-        
-        # Start in background using nohup
-        nohup npm start > /dev/null 2>&1 &
-        log_success "Successfully started the background application process on port $APP_PORT."
+        log_success "Successfully started the background application process."
     fi
 
-    # Setup daily cron job for autoupdate
-    log "Configuring daily autoupdate task via cron..."
-    if command -v crontab &> /dev/null; then
-        (crontab -l 2>/dev/null | grep -v "setup.sh --non-interactive"; echo "0 3 * * * cd $TARGET_DIR && ./setup.sh --non-interactive > /dev/null 2>&1") | crontab -
-        log_success "Successfully registered daily autoupdate cron job at 3:00 AM."
-    else
-        log "crontab utility not found. Skipped registering daily autoupdate cron job."
+    # Setup daily cron job for autoupdate (Host Only)
+    if [ "$IS_HOST" = "true" ]; then
+        log "Configuring daily autoupdate task via cron..."
+        if command -v crontab &> /dev/null; then
+            (crontab -l 2>/dev/null | grep -v "setup.sh --non-interactive"; echo "0 3 * * * cd $TARGET_DIR && ./setup.sh --non-interactive > /dev/null 2>&1") | crontab -
+            log_success "Successfully registered daily autoupdate cron job at 3:00 AM."
+        else
+            log "crontab utility not found. Skipped registering daily autoupdate cron job."
+        fi
     fi
 fi
 
@@ -538,7 +592,12 @@ echo -e "\n===================================================="
 echo "  Setup Completed Successfully!"
 echo "===================================================="
 echo "Device Type : $DEVICE_TYPE"
-echo "Main Host   : $IS_MAIN_HOST"
-echo "Port        : $APP_PORT"
-echo "Build UI    : $BUILD_FE_YN"
+echo "Is Host     : $IS_HOST"
+if [ "$IS_HOST" = "true" ]; then
+    echo "Main Host   : $IS_MAIN_HOST"
+    echo "Port        : $APP_PORT"
+    echo "Build UI    : $BUILD_FE_YN"
+else
+    echo "Main Host IP: $MAIN_HOST_IP"
+fi
 echo "===================================================="

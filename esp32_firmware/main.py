@@ -1,75 +1,150 @@
 import network
 import machine
-import socket
+import ubinascii
 import json
 import time
+import sys
+# Try importing ESP32 internal temp module
+try:
+    import esp32
+except ImportError:
+    esp32 = None
+
+# Try importing umqtt.simple
+try:
+    from umqtt.simple import MQTTClient
+except ImportError:
+    # Minimal fallback MQTT client mock/stub for compilation safety
+    class MQTTClient:
+        def __init__(self, *args, **kwargs): pass
+        def connect(self): pass
+        def publish(self, *args, **kwargs): pass
+        def subscribe(self, *args, **kwargs): pass
+        def set_callback(self, *args): pass
+        def check_msg(self): pass
+
+WIFI_SSID = "your-wifi-name"
+WIFI_PASS = "your-wifi-password"
+MQTT_BROKER = "192.168.1.42" # Fallback Main Host IP address
+MQTT_PORT = 1883
+
+# Generate deterministic node ID from hardware unique ID
+node_id = "esp32_" + ubinascii.hexlify(machine.unique_id()).decode()
 
 def connect_wifi(ssid, password):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     if not wlan.isconnected():
-        print('Connecting to network...')
+        print('Connecting to WiFi network...')
         wlan.connect(ssid, password)
-        while not wlan.isconnected():
+        # Timeout after 15 seconds
+        start = time.time()
+        while not wlan.isconnected() and time.time() - start < 15:
             time.sleep(1)
             print('.', end='')
     print('\nNetwork config:', wlan.ifconfig())
-    return wlan.ifconfig()[0]
+    return wlan.ifconfig()[0] if wlan.isconnected() else '0.0.0.0'
 
-def setup_server(ip, port=80):
-    addr = socket.getaddrinfo('0.0.0.0', port)[0][-1]
-    s = socket.socket()
-    s.bind(addr)
-    s.listen(1)
-    print('Listening on', addr)
-    return s
+def read_temperature():
+    if esp32:
+        try:
+            # esp32.raw_temperature() returns Fahrenheit on older MicroPython, Celsius on newer
+            tf = esp32.raw_temperature()
+            tc = (tf - 32) * 5 / 9 if tf > 80 else tf
+            return round(tc, 1)
+        except Exception:
+            pass
+    return "Unavailable"
 
-def handle_request(conn):
+def read_power():
+    # Attempt I2C query to INA219 at 0x41
     try:
-        request = conn.recv(1024)
-        req = request.decode('utf-8')
-        print("Request:")
-        print(req)
+        i2c = machine.I2C(0, scl=machine.Pin(22), sda=machine.Pin(21))
+        addr = 0x41
+        # Test if address responds
+        if addr in i2c.scan():
+            # INA219 minimal read bus voltage (register 0x02)
+            reg_volt = i2c.readfrom_mem(addr, 0x02, 2)
+            raw_volt = (reg_volt[0] * 256) + reg_volt[1]
+            voltage = (raw_volt >> 3) * 0.004
+            
+            # Simple battery percentage math
+            battery_percent = ((voltage - 9.0) / 3.6) * 100
+            battery_percent = max(0.0, min(100.0, battery_percent))
+            
+            return {
+                "voltage_v": round(voltage, 3),
+                "power_w": "Unavailable",
+                "battery_percent": round(battery_percent, 1)
+            }
+    except Exception:
+        pass
+    return "Unavailable"
 
-        # Simple routing
-        if "POST /api/gpio/write" in req:
-            # Parse body (very simple json parse for demo)
-            try:
-                body_start = req.find('\r\n\r\n') + 4
-                body = req[body_start:]
-                data = json.loads(body)
-                pin = data.get('pin')
-                value = data.get('value')
-                
-                if pin is not None and value is not None:
-                    p = machine.Pin(int(pin), machine.Pin.OUT)
-                    p.value(int(value))
-                    response = json.dumps({"success": True, "pin": pin, "value": value})
-                    conn.send('HTTP/1.1 200 OK\nContent-Type: application/json\n\n')
-                    conn.send(response)
-                else:
-                    conn.send('HTTP/1.1 400 Bad Request\n\nMissing pin or value')
-            except Exception as e:
-                conn.send('HTTP/1.1 500 Internal Error\n\n' + str(e))
-        else:
-            conn.send('HTTP/1.1 404 Not Found\n\n')
-    except Exception as e:
-        print(e)
-    finally:
-        conn.close()
+def mqtt_callback(topic, msg):
+    print("Received MQTT message on topic:", topic.decode())
+    try:
+        payload = json.loads(msg.decode())
+    except Exception:
+        print("Failed to decode JSON payload.")
+        return
+
+    if payload.get("command") == "get_system_info":
+        wlan = network.WLAN(network.STA_IF)
+        local_ip = wlan.ifconfig()[0] if wlan.isconnected() else "0.0.0.0"
+        
+        # Build system info
+        response_data = {
+            "node_id": node_id,
+            "ip_address": local_ip,
+            "os": "MicroPython " + sys.version,
+            "timezone": "UTC",
+            "timestamp": "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}Z".format(*time.gmtime()[:6]),
+            "temperature": read_temperature(),
+            "power": read_power()
+        }
+
+        response_payload = json.dumps({
+            "requestId": payload.get("requestId"),
+            "status": "success",
+            "data": response_data
+        })
+
+        response_topic = "nodes/{}/responses".format(node_id)
+        try:
+            mqtt_client.publish(response_topic, response_payload)
+            print("Published system info to:", response_topic)
+        except Exception as e:
+            print("Failed to publish MQTT response:", e)
 
 def main():
-    # Replace with your actual WiFi credentials via config file or user input
-    # ssid = 'YOUR_SSID'
-    # password = 'YOUR_PASSWORD'
-    # ip = connect_wifi(ssid, password)
+    global mqtt_client
+    print("Starting ESP32 Edge Node Client:", node_id)
     
-    # s = setup_server(ip, 80)
-    # while True:
-    #     conn, addr = s.accept()
-    #     print('Client connected from', addr)
-    #     handle_request(conn)
-    print("ESP32 REST Bridge stub ready. Update with actual WiFi credentials to run.")
+    # Connect WiFi
+    ip = connect_wifi(WIFI_SSID, WIFI_PASS)
+    if ip == '0.0.0.0':
+        print("WiFi Connection Failed. Running in offline/stub mode.")
+        return
+
+    # Connect MQTT Broker
+    try:
+        mqtt_client = MQTTClient(node_id, MQTT_BROKER, port=MQTT_PORT)
+        mqtt_client.set_callback(mqtt_callback)
+        mqtt_client.connect()
+        print("Connected to MQTT Broker at:", MQTT_BROKER)
+        
+        command_topic = "nodes/{}/commands".format(node_id)
+        mqtt_client.subscribe(command_topic)
+        print("Subscribed to command topic:", command_topic)
+
+        # Loop forever listening for commands
+        while True:
+            mqtt_client.check_msg()
+            time.sleep(0.5)
+            
+    except Exception as e:
+        print("MQTT Client connection error:", e)
 
 if __name__ == '__main__':
     main()

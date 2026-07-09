@@ -211,68 +211,83 @@ if ($NonInteractive) {
     $weatherKey = $defaultWeatherKey
     $buildFeYN = "y"
     $appPort = $defaultPort
-} else {
-    Write-Host "`n====================================================" -ForegroundColor Cyan
+}    Write-Host "`n====================================================" -ForegroundColor Cyan
     Write-Host "  Configuration Settings" -ForegroundColor Cyan
     Write-Host "====================================================" -ForegroundColor Cyan
+
+    $isHostYN = Read-Host "Is this machine the host? (y/n) [y]"
+    if ([string]::IsNullOrWhiteSpace($isHostYN)) { $isHostYN = "y" }
+    $isHost = "true"
+    if ($isHostYN -eq "n" -or $isHostYN -eq "N") {
+        $isHost = "false"
+    }
 
     $deviceType = Read-Host "Enter Device Type (windows, linux, rpi-5-8gb, rpi-5-16gb, rpi-zero-2w, esp32) [$defaultDeviceType]"
     if ([string]::IsNullOrWhiteSpace($deviceType)) { $deviceType = $defaultDeviceType }
 
-    $isMainHostYN = Read-Host "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [$defaultIsMainHostYN]"
-    if ([string]::IsNullOrWhiteSpace($isMainHostYN)) { $isMainHostYN = $defaultIsMainHostYN }
-    $isMainHost = "0"
-    if ($isMainHostYN -eq "y" -or $isMainHostYN -eq "Y") {
-        $isMainHost = "1"
-    }
+    if ($isHost -eq "true") {
+        $isMainHostYN = Read-Host "Should this node act as a Main Host (runs LLMs, chat UI, etc)? (y/n) [$defaultIsMainHostYN]"
+        if ([string]::IsNullOrWhiteSpace($isMainHostYN)) { $isMainHostYN = $defaultIsMainHostYN }
+        $isMainHost = "0"
+        if ($isMainHostYN -eq "y" -or $isMainHostYN -eq "Y") {
+            $isMainHost = "1"
+        }
 
-    $mainHostIp = ""
-    if ($isMainHost -eq "0") {
-        $mainHostIp = Read-Host "Enter Main Host IP address (optional) [$defaultMainHostIp]"
+        $mainHostIp = ""
+        if ($isMainHost -eq "0") {
+            $mainHostIp = Read-Host "Enter Main Host IP address (optional) [$defaultMainHostIp]"
+            if ([string]::IsNullOrWhiteSpace($mainHostIp)) { $mainHostIp = $defaultMainHostIp }
+        }
+
+        $adminUser = Read-Host "Enter Admin Username [$defaultAdminUser]"
+        if ([string]::IsNullOrWhiteSpace($adminUser)) { $adminUser = $defaultAdminUser }
+
+        $adminPass = Read-Host "Enter Admin Password [$defaultAdminPass]"
+        if ([string]::IsNullOrWhiteSpace($adminPass)) { $adminPass = $defaultAdminPass }
+
+        # User Profile Info
+        $userName = Read-Host "Enter your Name [$defaultUserName]"
+        if ([string]::IsNullOrWhiteSpace($userName)) { $userName = $defaultUserName }
+
+        $userZipcode = Read-Host "Enter your Zipcode [$defaultUserZipcode]"
+        if ([string]::IsNullOrWhiteSpace($userZipcode)) { $userZipcode = $defaultUserZipcode }
+
+        $weatherKey = Read-Host "Enter OpenWeatherMap API Key (optional) [$defaultWeatherKey]"
+        if ([string]::IsNullOrWhiteSpace($weatherKey)) { $weatherKey = $defaultWeatherKey }
+
+        # Local LLM address
+        $localUrl = Read-Host "Enter Local LLM Base URL [$defaultLocalUrl]"
+        if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
+
+        # Optional Local API Key
+        $localKey = Read-Host "Enter Local LLM API Key (optional) [$defaultLocalKey]"
+        if ([string]::IsNullOrWhiteSpace($localKey)) { $localKey = $defaultLocalKey }
+
+        # Online Gemini Key (Optional)
+        $onlineKey = Read-Host "Enter Online Gemini API Key (optional) [$defaultOnlineKey]"
+        if ([string]::IsNullOrWhiteSpace($onlineKey)) { $onlineKey = $defaultOnlineKey }
+
+        # GitHub Access Token (REQUIRED for updates & tools)
+        while ($true) {
+            $githubToken = Read-Host "Enter GitHub Access Token (REQUIRED for updates/tools) [$defaultGithubToken]"
+            if ([string]::IsNullOrWhiteSpace($githubToken)) { $githubToken = $defaultGithubToken }
+            if (-not [string]::IsNullOrWhiteSpace($githubToken)) { break }
+            Write-Host "❌ Error: GitHub Access Token is required to download updates and sync custom tools." -ForegroundColor Red
+        }
+
+        $buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
+        if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
+
+        $appPort = Read-Host "Enter Server PORT [$defaultPort]"
+        if ([string]::IsNullOrWhiteSpace($appPort)) { $appPort = $defaultPort }
+    } else {
+        # Node Client Configuration
+        $mainHostIp = Read-Host "Enter Main Host's IP address [$defaultMainHostIp]"
         if ([string]::IsNullOrWhiteSpace($mainHostIp)) { $mainHostIp = $defaultMainHostIp }
+        $appPort = $defaultPort
+        $buildFeYN = "n"
+        $isMainHost = "0"
     }
-
-    $adminUser = Read-Host "Enter Admin Username [$defaultAdminUser]"
-    if ([string]::IsNullOrWhiteSpace($adminUser)) { $adminUser = $defaultAdminUser }
-
-    $adminPass = Read-Host "Enter Admin Password [$defaultAdminPass]"
-    if ([string]::IsNullOrWhiteSpace($adminPass)) { $adminPass = $defaultAdminPass }
-
-    # User Profile Info
-    $userName = Read-Host "Enter your Name [$defaultUserName]"
-    if ([string]::IsNullOrWhiteSpace($userName)) { $userName = $defaultUserName }
-
-    $userZipcode = Read-Host "Enter your Zipcode [$defaultUserZipcode]"
-    if ([string]::IsNullOrWhiteSpace($userZipcode)) { $userZipcode = $defaultUserZipcode }
-
-    $weatherKey = Read-Host "Enter OpenWeatherMap API Key (optional) [$defaultWeatherKey]"
-    if ([string]::IsNullOrWhiteSpace($weatherKey)) { $weatherKey = $defaultWeatherKey }
-
-    # Local LLM address
-    $localUrl = Read-Host "Enter Local LLM Base URL [$defaultLocalUrl]"
-    if ([string]::IsNullOrWhiteSpace($localUrl)) { $localUrl = $defaultLocalUrl }
-
-    # Optional Local API Key
-    $localKey = Read-Host "Enter Local LLM API Key (optional) [$defaultLocalKey]"
-    if ([string]::IsNullOrWhiteSpace($localKey)) { $localKey = $defaultLocalKey }
-
-    # Online Gemini Key (Optional)
-    $onlineKey = Read-Host "Enter Online Gemini API Key (optional) [$defaultOnlineKey]"
-    if ([string]::IsNullOrWhiteSpace($onlineKey)) { $onlineKey = $defaultOnlineKey }
-
-    # GitHub Access Token (REQUIRED for updates & tools)
-    while ($true) {
-        $githubToken = Read-Host "Enter GitHub Access Token (REQUIRED for updates/tools) [$defaultGithubToken]"
-        if ([string]::IsNullOrWhiteSpace($githubToken)) { $githubToken = $defaultGithubToken }
-        if (-not [string]::IsNullOrWhiteSpace($githubToken)) { break }
-        Write-Host "❌ Error: GitHub Access Token is required to download updates and sync custom tools." -ForegroundColor Red
-    }
-
-    $buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
-    if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
-
-    $appPort = Read-Host "Enter Server PORT [$defaultPort]"
-    if ([string]::IsNullOrWhiteSpace($appPort)) { $appPort = $defaultPort }
 }
 
 # 6. Create or Configure .env
@@ -306,6 +321,7 @@ function Write-EnvVar ($Key, $Val) {
 }
 
 Write-EnvVar "PORT" $appPort
+Write-EnvVar "IS_HOST" $isHost
 Write-EnvVar "DB_PATH" $defaultDbPath
 Write-EnvVar "LOCAL_LLM_URL" $localUrl
 Write-EnvVar "LOCAL_LLM_KEY" $localKey
@@ -358,56 +374,83 @@ if ($envContent -like "*$defaultSecret*") {
 # Save env file
 Set-Content -Path ".env" -Value $envContent
 
-# 7. Install Dependencies
-if (-not $SkipUpdate) {
-    Write-Log "Installing NPM dependencies (this might take a few minutes)..."
-    & npm run install:all
-} else {
-    Write-Log "Skipping NPM dependencies install since it was completed during the update phase." "Green"
-}
-
-# 8. Database Seeding
-$resetDb = $false
-if (-not $NonInteractive) {
-    $resetDbYN = Read-Host "Do you want to reset the database and start fresh (deletes all users)? (y/n) [n]"
-    if ($resetDbYN -eq "y" -or $resetDbYN -eq "Y") {
-        $resetDb = $true
+if ($isHost -eq "true") {
+    # 7. Install Dependencies (Host)
+    if (-not $SkipUpdate) {
+        Write-Log "Installing NPM dependencies (this might take a few minutes)..."
+        & npm run install:all
+    } else {
+        Write-Log "Skipping NPM dependencies install since it was completed during the update phase." "Green"
     }
-}
 
-if ($resetDb) {
-    Write-Log "Wiping existing database for a fresh setup..." "Yellow"
-    $dbPath = "backend/database.db"
-    foreach ($suffix in ("", "-wal", "-shm")) {
-        $file = $dbPath + $suffix
-        if (Test-Path $file) {
-            Remove-Item $file -Force -ErrorAction SilentlyContinue
+    # 8. Database Seeding
+    $resetDb = $false
+    if (-not $NonInteractive) {
+        $resetDbYN = Read-Host "Do you want to reset the database and start fresh (deletes all users)? (y/n) [n]"
+        if ($resetDbYN -eq "y" -or $resetDbYN -eq "Y") {
+            $resetDb = $true
         }
     }
-}
 
-Write-Log "Seeding local database..."
-$seedCmd = "backend/scripts/seed_settings.js"
-& node $seedCmd `
-    --username="$adminUser" `
-    --password="$adminPass" `
-    --device_type="$deviceType" `
-    --is_main_host="$isMainHost" `
-    --local_url="$localUrl" `
-    --local_key="$localKey" `
-    --online_key="$onlineKey" `
-    --github_token="$githubToken" `
-    --online_provider="$defaultOnlineProvider" `
-    --name="$userName" `
-    --zipcode="$userZipcode" `
-    --weather_api_key="$weatherKey"
+    if ($resetDb) {
+        Write-Log "Wiping existing database for a fresh setup..." "Yellow"
+        $dbPath = "backend/database.db"
+        foreach ($suffix in ("", "-wal", "-shm")) {
+            $file = $dbPath + $suffix
+            if (Test-Path $file) {
+                Remove-Item $file -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
 
-# 9. Build Frontend
-if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
-    Write-Log "Compiling frontend assets..."
-    & npm run build
+    Write-Log "Seeding local database..."
+    $seedCmd = "backend/scripts/seed_settings.js"
+    & node $seedCmd `
+        --username="$adminUser" `
+        --password="$adminPass" `
+        --device_type="$deviceType" `
+        --is_main_host="$isMainHost" `
+        --local_url="$localUrl" `
+        --local_key="$localKey" `
+        --online_key="$onlineKey" `
+        --github_token="$githubToken" `
+        --online_provider="$defaultOnlineProvider" `
+        --name="$userName" `
+        --zipcode="$userZipcode" `
+        --weather_api_key="$weatherKey"
+
+    # 9. Build Frontend
+    if ($buildFeYN -eq "y" -or $buildFeYN -eq "Y") {
+        Write-Log "Compiling frontend assets..."
+        & npm run build
+    } else {
+        Write-Log "Skipped frontend compilation (backend-only deployment mode)."
+    }
 } else {
-    Write-Log "Skipped frontend compilation (backend-only deployment mode)."
+    # 7. Install Dependencies (Lightweight Node Client)
+    if (-not $SkipUpdate) {
+        Write-Log "Installing minimal Node Client dependencies..."
+        if (-not (Test-Path "node_client")) {
+            New-Item -ItemType Directory -Path "node_client" | Out-Null
+        }
+        if (-not (Test-Path "node_client/package.json")) {
+            $clientPkgJson = @'
+{
+  "name": "private-ai-node-client",
+  "version": "1.0.0",
+  "dependencies": {
+    "mqtt": "^5.5.0",
+    "dotenv": "^16.4.5",
+    "macaddress": "^0.5.8"
+  }
+}
+'@
+            Set-Content -Path "node_client/package.json" -Value $clientPkgJson
+        }
+        & npm install --prefix node_client
+    } else {
+        Write-Log "Skipping Node Client dependency install." "Green"
+    }
 }
 
 # 10. Register Startup Task
@@ -418,54 +461,61 @@ $updateTaskName = "PrivateAI-Updater"
 $taskStarted = $false
 
 try {
-    # Stop any existing process running on the port before registering/starting
-    $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
-    if ($portProcess) {
-        $procId = $portProcess.OwningProcess
-        Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
-        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
-    }
-
     # Stop existing scheduled tasks if running
     Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     Stop-ScheduledTask -TaskName $updateTaskName -ErrorAction SilentlyContinue
 
-    # Dynamically generate run-background.vbs with absolute node path to avoid path resolution issues
     $nodePath = (Get-Command node).Source
+    $targetScript = if ($isHost -eq "true") { "backend/server.js" } else { "node_client/client.js" }
+    
+    # Dynamically generate run-background.vbs with absolute node path to avoid path resolution issues
     $vbsContent = @"
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 WshShell.CurrentDirectory = scriptDir
 Do
-  WshShell.Run """$nodePath"" backend/server.js", 0, true
+  WshShell.Run """$nodePath"" $targetScript", 0, true
   WScript.Sleep 5000
 Loop
 "@
     [System.IO.File]::WriteAllText("$scriptRoot\run-background.vbs", $vbsContent)
 
-    # Register Web Server Task
+    if ($isHost -eq "true") {
+        # Stop any existing process running on the port before registering/starting
+        $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
+        if ($portProcess) {
+            $procId = $portProcess.OwningProcess
+            Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    # Register Scheduled Task
     $action = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-background.vbs`""
     $trigger = New-ScheduledTaskTrigger -AtLogon
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description "Private AI Assistant Background Web Server" -Force | Out-Null
+    $desc = if ($isHost -eq "true") { "Private AI Assistant Background Web Server" } else { "Private AI Node Edge Client" }
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Description $desc -Force | Out-Null
     Write-Log "Successfully registered/updated background scheduled task '$taskName' to run on Logon." "Green"
 
-    # Start Web Server Task
+    # Start Scheduled Task
     Start-ScheduledTask -TaskName $taskName -ErrorAction Stop
     Write-Log "Successfully started the background scheduled task '$taskName'." "Green"
     $taskStarted = $true
 
-    # Register Daily Autoupdate Task
-    Write-Log "Configuring daily autoupdate task..."
-    $updateAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-updater.vbs`""
-    $updateTrigger = New-ScheduledTaskTrigger -Daily -At "3:00AM"
-    $updateSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    
-    Register-ScheduledTask -TaskName $updateTaskName -Action $updateAction -Trigger $updateTrigger -Settings $updateSettings -Description "Private AI Assistant Daily Autoupdate" -Force | Out-Null
-    Write-Log "Successfully registered/updated background scheduled task '$updateTaskName' to run daily at 3:00 AM." "Green"
+    if ($isHost -eq "true") {
+        # Register Daily Autoupdate Task (Host Only)
+        Write-Log "Configuring daily autoupdate task..."
+        $updateAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-updater.vbs`""
+        $updateTrigger = New-ScheduledTaskTrigger -Daily -At "3:00AM"
+        $updateSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+        
+        Register-ScheduledTask -TaskName $updateTaskName -Action $updateAction -Trigger $updateTrigger -Settings $updateSettings -Description "Private AI Assistant Daily Autoupdate" -Force | Out-Null
+        Write-Log "Successfully registered/updated background scheduled task '$updateTaskName' to run daily at 3:00 AM." "Green"
+    }
 
 } catch {
     Write-Log "Failed to register or start Scheduled Tasks: $_" "Yellow"
@@ -474,24 +524,27 @@ Loop
 if (-not $taskStarted) {
     Write-Log "Falling back to starting application directly in background..." "Yellow"
     
-    # Stop any existing process running on the port
-    $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
-    if ($portProcess) {
-        $procId = $portProcess.OwningProcess
-        Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
-        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
+    if ($isHost -eq "true") {
+        # Stop any existing process running on the port
+        $portProcess = Get-NetTCPConnection -LocalPort $appPort -State Listen -ErrorAction SilentlyContinue
+        if ($portProcess) {
+            $procId = $portProcess.OwningProcess
+            Write-Log "Stopping existing process $procId on port $appPort..." "Yellow"
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+        }
     }
 
     # Dynamically generate run-background.vbs with absolute node path if not already done
     $nodePath = (Get-Command node).Source
+    $targetScript = if ($isHost -eq "true") { "backend/server.js" } else { "node_client/client.js" }
     $vbsContent = @"
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 WshShell.CurrentDirectory = scriptDir
 Do
-  WshShell.Run """$nodePath"" backend/server.js", 0, true
+  WshShell.Run """$nodePath"" $targetScript", 0, true
   WScript.Sleep 5000
 Loop
 "@
@@ -499,14 +552,19 @@ Loop
 
     # Fallback to direct hidden wscript process
     Start-Process "wscript.exe" -ArgumentList "run-background.vbs" -WorkingDirectory $scriptRoot
-    Write-Log "Successfully started the background application process directly on port $appPort." "Green"
+    Write-Log "Successfully started the background application process directly." "Green"
 }
 
 Write-Host "`n====================================================" -ForegroundColor Green
 Write-Host "  Setup Completed Successfully!" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
 Write-Host "Device Type : $deviceType" -ForegroundColor Green
-Write-Host "Main Host   : $isMainHost" -ForegroundColor Green
-Write-Host "PORT        : $appPort" -ForegroundColor Green
-Write-Host "Build UI    : $buildFeYN" -ForegroundColor Green
+Write-Host "Is Host     : $isHost" -ForegroundColor Green
+if ($isHost -eq "true") {
+    Write-Host "Main Host   : $isMainHost" -ForegroundColor Green
+    Write-Host "PORT        : $appPort" -ForegroundColor Green
+    Write-Host "Build UI    : $buildFeYN" -ForegroundColor Green
+} else {
+    Write-Host "Main Host IP: $mainHostIp" -ForegroundColor Green
+}
 Write-Host "====================================================" -ForegroundColor Green

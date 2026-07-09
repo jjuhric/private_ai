@@ -627,6 +627,12 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
         onCommandApprovalRequired: settings.onCommandApprovalRequired,
         settings
       });
+    } else if (decision.tool === 'remote_node_tool') {
+      const { handleRemoteNodeTool } = require('../tools/remote_node_tool');
+      output = await handleRemoteNodeTool(decision.action, decision.params, {
+        userId,
+        settings
+      });
     } else if (decision.tool === 'tool_manager') {
       const { handleToolManagerTool } = require('../tools/tool_manager_tool');
       output = await handleToolManagerTool(decision.action, decision.params);

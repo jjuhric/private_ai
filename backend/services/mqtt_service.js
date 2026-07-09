@@ -9,6 +9,7 @@ class MqttService {
     this.connected = false;
     this.subscriptions = new Map(); // topic -> Set of callbacks
     this.heartbeatInterval = null;
+    this.pendingRequests = new Map(); // requestId -> { resolve, reject, timeout }
   }
 
   init() {
@@ -53,6 +54,16 @@ class MqttService {
         }
       });
       
+      // Subscribe to edge node responses wildcard
+      this.subscribe('nodes/+/responses', (payload) => {
+        if (payload && payload.requestId && this.pendingRequests.has(payload.requestId)) {
+          const { resolve, reject, timeout } = this.pendingRequests.get(payload.requestId);
+          clearTimeout(timeout);
+          this.pendingRequests.delete(payload.requestId);
+          resolve(payload);
+        }
+      });
+
       // Resubscribe to all active subscriptions on reconnect
       for (const topic of this.subscriptions.keys()) {
         this.client.subscribe(topic, (err) => {
@@ -207,6 +218,35 @@ class MqttService {
       timestamp: new Date().toISOString()
     };
     this.publish(topic, payload, { retain: true });
+  }
+
+  async publishAndAwaitResponse(nodeId, command, timeoutMs = 8000) {
+    const crypto = require('crypto');
+    const requestId = crypto.randomUUID();
+    
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (this.pendingRequests.has(requestId)) {
+          this.pendingRequests.delete(requestId);
+          reject(new Error(`MQTT Request Timeout after ${timeoutMs}ms`));
+        }
+      }, timeoutMs);
+
+      this.pendingRequests.set(requestId, { resolve, reject, timeout });
+
+      const topic = `nodes/${nodeId}/commands`;
+      const payload = {
+        command,
+        requestId
+      };
+
+      const success = this.publish(topic, payload);
+      if (!success) {
+        clearTimeout(timeout);
+        this.pendingRequests.delete(requestId);
+        reject(new Error('Failed to publish command to MQTT broker.'));
+      }
+    });
   }
 
   disconnect() {
