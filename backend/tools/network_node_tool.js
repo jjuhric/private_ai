@@ -66,6 +66,9 @@ async function handleRemoteNodeBridge(params, options = {}) {
       return `Error: Node with ID ${nodeId} not found in database.`;
     }
 
+    const resolvedNodeId = node.id;
+    console.log(`[Network Node Tool] Resolved NodeId: "${nodeId}" matches Node: "${node.node_name}" [ID: ${resolvedNodeId}]`);
+
     // Check if the target node is the Parent/Main Host.
     // If it is, allow and route locally using Main Host local tools.
     if (node.is_main_host === 1 || node.node_name.toLowerCase() === 'parent') {

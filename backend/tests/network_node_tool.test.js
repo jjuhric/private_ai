@@ -230,6 +230,23 @@ describe('network_node_tool.js Tests', () => {
     expect(res).toContain('System info from RPi5');
   });
 
+  test('remote_node_bridge: resolves node by name if nodeId is a string name and strictly resolves numeric ID', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    mockDb.get.mockResolvedValueOnce({ id: 2, node_name: 'RPi5', is_main_host: 0, ip_address: '192.168.1.101', port: 3000, bridge_secret: 'secret123' });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ output: 'System info from RPi5' })
+    });
+
+    const res = await handleNetworkNodeTool(
+      'remote_node_bridge', 
+      { nodeId: 'RPi5', action: 'system_info' }, 
+      { userId: 1 }
+    );
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Resolved NodeId: "RPi5" matches Node: "RPi5" [ID: 2]'));
+    logSpy.mockRestore();
+  });
+
   test('handleNetworkNodeTool: error on unknown tool action', async () => {
     const res = await handleNetworkNodeTool('invalid_tool_action', {}, { userId: 1 });
     expect(res).toContain('Error: Unknown network node tool action');

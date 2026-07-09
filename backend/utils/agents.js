@@ -10,7 +10,12 @@ const AGENT_PROMPTS = new Proxy({}, {
       agentName = 'developer_agent';
     }
     try {
-      return require(`./agents/${agentName}`);
+      const basePrompt = require(`./agents/${agentName}`);
+      if (typeof basePrompt === 'string') {
+        const { getCustomizationsPrompt } = require('./customizations_loader');
+        return getCustomizationsPrompt(agentName, basePrompt);
+      }
+      return basePrompt;
     } catch (err) {
       console.warn(`Warning: Prompt file for agent "${agentName}" not found:`, err.message);
       return undefined;
