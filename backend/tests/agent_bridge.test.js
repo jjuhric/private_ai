@@ -49,8 +49,10 @@ jest.mock('../services/tool_manager', () => ({
 
 // Mock agents
 const mockRunWorkerAgent = jest.fn();
+const mockRunSupervisorHandoff = jest.fn();
 jest.mock('../utils/agents', () => ({
   runWorkerAgent: (...args) => mockRunWorkerAgent(...args),
+  runSupervisorHandoff: (...args) => mockRunSupervisorHandoff(...args),
   AGENT_PROMPTS: {}
 }));
 
@@ -400,6 +402,37 @@ describe('agent_bridge.js API Endpoint Tests', () => {
         1
       );
       expect(res.body.output).toBe('mocked worker agent response');
+    });
+
+    test('POST /supervisor-handoff: successfully executes supervisor routing and hands off to worker', async () => {
+      const mockResult = {
+        supervisor_decision: {
+          intent: 'search',
+          refined_data: { query: 'Seattle weather' },
+          next_action: 'delegate_to_weather_expert'
+        },
+        worker_output: 'Sunny, 72 degrees'
+      };
+      mockRunSupervisorHandoff.mockResolvedValueOnce(mockResult);
+
+      const res = await request(app)
+        .post('/api/bridge/supervisor-handoff')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({
+          userPrompt: 'what is the weather in Seattle?'
+        });
+
+      expect(res.status).toBe(200);
+      expect(mockRunSupervisorHandoff).toHaveBeenCalledWith(
+        'what is the weather in Seattle?',
+        expect.any(Object),
+        expect.any(Object),
+        1,
+        undefined
+      );
+      expect(res.body.success).toBe(true);
+      expect(res.body.supervisor_decision.intent).toBe('search');
+      expect(res.body.worker_output).toBe('Sunny, 72 degrees');
     });
   });
 });

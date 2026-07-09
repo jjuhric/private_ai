@@ -287,4 +287,45 @@ router.post('/execute', authenticateBridge, async (req, res) => {
   }
 });
 
+// POST /supervisor-handoff
+router.post('/supervisor-handoff', authenticateBridge, async (req, res) => {
+  const { userPrompt, settings = {}, githubToken } = req.body;
+  if (!userPrompt) {
+    return res.status(400).json({ error: 'userPrompt is required' });
+  }
+
+  try {
+    const db = await getDb();
+    const { runSupervisorHandoff } = require('../utils/agents');
+
+    // Build user settings fallback
+    const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
+    const { decrypt } = require('../utils/crypto');
+    const fullSettings = {
+      db,
+      userId: req.user.id,
+      provider: userSettings.provider || 'local',
+      modelName: userSettings.model_name || 'qwen2.5-coder-3b-instruct',
+      onlineProvider: userSettings.online_provider || 'gemini',
+      onlineKey: decrypt(userSettings.online_key),
+      geminiKey: decrypt(userSettings.gemini_key),
+      localBaseUrl: userSettings.local_url || 'http://192.168.1.42:1234/v1',
+      localApiKey: decrypt(userSettings.local_key),
+      localApiStyle: userSettings.local_api_style || 'openai',
+      onlineUrl: userSettings.online_url,
+      ...settings
+    };
+
+    const result = await runSupervisorHandoff(userPrompt, fullSettings, db, req.user.id, githubToken);
+
+    res.json({
+      success: true,
+      supervisor_decision: result.supervisor_decision,
+      worker_output: result.worker_output
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

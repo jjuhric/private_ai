@@ -138,7 +138,7 @@ jest.mock('child_process', () => {
 const { handleHostMachineTool } = require('../tools/host_machine_tool');
 const { handleCoderTool } = require('../tools/coder_tools');
 const { handleWeatherTool } = require('../tools/weather_tool');
-const { runAgentTurn, runWorkerAgent } = require('../utils/agents');
+const { runAgentTurn, runWorkerAgent, runSupervisorHandoff } = require('../utils/agents');
 const { runAgentLoop } = require('../ai');
 const fs = require('fs');
 const path = require('path');
@@ -1086,6 +1086,75 @@ describe('Multi-Agent System & Tools Tests', () => {
 
       const result = await runWorkerAgent('memory_agent', { provider: 'openai', modelName: 'gpt-4' }, 'Manage memories', mockDb, 1, 'token');
       expect(result).toBeDefined();
+      global.fetch = globalFetch;
+    });
+
+    test('runSupervisorHandoff routes to correct worker and returns output', async () => {
+      const globalFetch = global.fetch;
+      
+      global.fetch = jest.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  intent: 'search',
+                  refined_data: { query: 'apples' },
+                  next_action: 'delegate_to_web_searcher'
+                })
+              }
+            }]
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  thought: 'I will finish now',
+                  tool: 'none',
+                  action: '',
+                  params: {}
+                })
+              }
+            }]
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  status: 'success',
+                  summary: 'Mocked worker agent response',
+                  data: {}
+                })
+              }
+            }]
+          })
+        });
+
+      const mockDb = {
+        all: jest.fn().mockResolvedValue([]),
+        get: jest.fn().mockResolvedValue(null),
+        run: jest.fn().mockResolvedValue({ lastID: 1 })
+      };
+
+      const result = await runSupervisorHandoff(
+        'What is the weather?',
+        { provider: 'openai', modelName: 'gpt-4', userId: 1, db: mockDb },
+        mockDb,
+        1,
+        'token'
+      );
+
+      expect(result.supervisor_decision).toBeDefined();
+      expect(result.supervisor_decision.next_action).toBe('delegate_to_web_searcher');
+      expect(result.worker_output).toBeDefined();
+      
       global.fetch = globalFetch;
     });
 

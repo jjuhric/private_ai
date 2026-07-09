@@ -108,6 +108,7 @@ app.use('/api/vault', vaultRouter);
 app.use('/api/update', updateRouter);
 app.use('/api/host', hostRouter);
 app.use('/api/bridge', agentBridgeRouter);
+app.use('/api/agent-bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
