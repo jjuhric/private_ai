@@ -271,7 +271,14 @@ router.post('/execute', authenticateBridge, async (req, res) => {
       const { runWorkerAgent } = require('../utils/agents');
       const inputContext = typeof refinedData === 'string' ? refinedData : JSON.stringify(refinedData);
 
-      const result = await runWorkerAgent(next_agent, settings, inputContext, db, req.user.id);
+      const { enqueue } = require('../services/ai_queue');
+      const result = await enqueue(
+        (onThought) => {
+          onThought(`Routing task to worker: ${next_agent}`);
+          return runWorkerAgent(next_agent, settings, inputContext, db, req.user.id);
+        },
+        { nodeId: req.user.id ? `node-${req.user.id}` : 'node-bridge', name: `Remote Worker: ${next_agent}` }
+      );
       output = typeof result === 'string' ? result : JSON.stringify(result);
     } else {
       return res.status(400).json({ error: `Unknown action "${action}"` });
@@ -316,7 +323,14 @@ router.post('/supervisor-handoff', authenticateBridge, async (req, res) => {
       ...settings
     };
 
-    const result = await runSupervisorHandoff(userPrompt, fullSettings, db, req.user.id, githubToken);
+    const { enqueue } = require('../services/ai_queue');
+    const result = await enqueue(
+      (onThought) => {
+        onThought(`Running supervisor handoff`);
+        return runSupervisorHandoff(userPrompt, fullSettings, db, req.user.id, githubToken);
+      },
+      { nodeId: req.user.id ? `node-${req.user.id}` : 'supervisor-bridge', name: 'Remote Supervisor Handoff' }
+    );
 
     res.json({
       success: true,
