@@ -59,12 +59,63 @@ describe('Safe Update Service Tests', () => {
     expect(res.success).toBe(true);
 
     expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('git reset --hard'), expect.any(Object));
-    expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('npm run test:backend'), expect.any(Object));
+    expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('npm test'), expect.any(Object));
     expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('git pull origin main'), expect.any(Object));
 
     // Check restart trigger
     jest.advanceTimersByTime(2000);
     expect(process.exit).toHaveBeenCalledWith(0);
     jest.useRealTimers();
+  });
+
+  describe('Automatic Check Daemon Tests', () => {
+    let originalCheckForUpdatesAndRun;
+
+    beforeEach(() => {
+      originalCheckForUpdatesAndRun = safeUpdateService.checkForUpdatesAndRun;
+      safeUpdateService.checkForUpdatesAndRun = jest.fn().mockResolvedValue({ success: true });
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      safeUpdateService.checkForUpdatesAndRun = originalCheckForUpdatesAndRun;
+      safeUpdateService.stopDaemon();
+      jest.useRealTimers();
+    });
+
+    test('startDaemon starts interval and calls checkForUpdatesAndRun immediately and on tick', async () => {
+      safeUpdateService.startDaemon(1000);
+      expect(safeUpdateService.checkForUpdatesAndRun).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(1000);
+      expect(safeUpdateService.checkForUpdatesAndRun).toHaveBeenCalledTimes(2);
+    });
+
+    test('stopDaemon clears interval and stops polling', async () => {
+      safeUpdateService.startDaemon(1000);
+      expect(safeUpdateService.checkForUpdatesAndRun).toHaveBeenCalledTimes(1);
+
+      safeUpdateService.stopDaemon();
+      jest.advanceTimersByTime(1000);
+      expect(safeUpdateService.checkForUpdatesAndRun).toHaveBeenCalledTimes(1);
+    });
+
+    test('checkForUpdatesAndRun runs update pipeline if update is available', async () => {
+      jest.spyOn(safeUpdateService, 'checkForUpdates').mockResolvedValue({ hasUpdate: true });
+      jest.spyOn(safeUpdateService, 'runUpdatePipeline').mockResolvedValue({ success: true });
+
+      const res = await originalCheckForUpdatesAndRun.call(safeUpdateService);
+      expect(res.success).toBe(true);
+      expect(safeUpdateService.runUpdatePipeline).toHaveBeenCalled();
+    });
+
+    test('checkForUpdatesAndRun does not run update pipeline if no update is available', async () => {
+      jest.spyOn(safeUpdateService, 'checkForUpdates').mockResolvedValue({ hasUpdate: false });
+      jest.spyOn(safeUpdateService, 'runUpdatePipeline').mockResolvedValue({ success: true });
+
+      const res = await originalCheckForUpdatesAndRun.call(safeUpdateService);
+      expect(res.success).toBe(false);
+      expect(safeUpdateService.runUpdatePipeline).not.toHaveBeenCalled();
+    });
   });
 });

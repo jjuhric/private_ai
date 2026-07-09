@@ -90,6 +90,11 @@ getDb().then(async (db) => {
     setInterval(async () => {
       await runDailyMemoryCheck(db);
     }, 24 * 60 * 60 * 1000);
+    // Start automatic check daemon
+    if (process.env.NODE_ENV !== 'test') {
+      const safeUpdateService = require('./services/safe_update_service');
+      safeUpdateService.startDaemon();
+    }
   } catch (err) {
     logger.error('Error starting daily memory maintenance check:', err);
   }
