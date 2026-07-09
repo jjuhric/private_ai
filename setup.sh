@@ -476,7 +476,7 @@ else
   "dependencies": {
     "mqtt": "^5.5.0",
     "dotenv": "^16.4.5",
-    "macaddress": "^0.5.8"
+    "macaddress": "^0.2.9"
   }
 }
 EOF

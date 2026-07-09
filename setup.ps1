@@ -210,8 +210,8 @@ if ($NonInteractive) {
     $userZipcode = $defaultUserZipcode
     $weatherKey = $defaultWeatherKey
     $buildFeYN = "y"
-    $appPort = $defaultPort
-}    Write-Host "`n====================================================" -ForegroundColor Cyan
+} else {
+    Write-Host "`n====================================================" -ForegroundColor Cyan
     Write-Host "  Configuration Settings" -ForegroundColor Cyan
     Write-Host "====================================================" -ForegroundColor Cyan
 
@@ -441,7 +441,7 @@ if ($isHost -eq "true") {
   "dependencies": {
     "mqtt": "^5.5.0",
     "dotenv": "^16.4.5",
-    "macaddress": "^0.5.8"
+    "macaddress": "^0.2.9"
   }
 }
 '@
