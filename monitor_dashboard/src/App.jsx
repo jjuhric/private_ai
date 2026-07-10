@@ -609,24 +609,50 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   }
 
   return (
-    <div className="memory-pane" style={{ padding: '24px', overflowY: 'auto', height: '100%' }}>
-      <div className="section-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div className="memory-pane" style={{
+      padding: '16px 20px',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      overflow: 'hidden',
+      boxSizing: 'border-box'
+    }}>
+      <div className="section-header" style={{
+        marginBottom: '16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'nowrap',
+        width: '100%',
+        flexShrink: 0,
+        gap: '16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <Network className="text-accent-primary" size={24} />
-          <h2>Agent Network Dashboard</h2>
+          <h2 style={{ margin: 0, whiteSpace: 'nowrap', fontSize: '1.25rem' }}>Agent Network Dashboard</h2>
         </div>
-        <div className="sub-tab-buttons" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="sub-tab-buttons" style={{
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          maxWidth: '100%',
+          paddingBottom: '4px',
+          flexShrink: 1,
+          WebkitOverflowScrolling: 'touch'
+        }}>
           <button 
             className="btn"
             onClick={handleDisconnect}
-            style={{ padding: '6px 12px', fontSize: '0.85rem', background: '#dc2626', color: '#fff', border: 'none', marginRight: '12px' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             Disconnect Host
           </button>
           <button 
             className={`btn btn-secondary ${activeSubTab === 'network' ? 'active' : ''}`}
             onClick={() => setActiveSubTab('network')}
-            style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             <Layers size={14} style={{ marginRight: '6px' }} />
             Agent Network
@@ -634,7 +660,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
           <button 
             className={`btn btn-secondary ${activeSubTab === 'vault' ? 'active' : ''}`}
             onClick={() => setActiveSubTab('vault')}
-            style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             <FileText size={14} style={{ marginRight: '6px' }} />
             Document Vault (RAG)
@@ -642,7 +668,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
           <button 
             className={`btn btn-secondary ${activeSubTab === 'nodes' ? 'active' : ''}`}
             onClick={() => setActiveSubTab('nodes')}
-            style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             <Server size={14} style={{ marginRight: '6px' }} />
             Field Nodes
@@ -650,7 +676,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
           <button 
             className={`btn btn-secondary ${activeSubTab === 'host' ? 'active' : ''}`}
             onClick={() => setActiveSubTab('host')}
-            style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             <Cpu size={14} style={{ marginRight: '6px' }} />
             System Control
@@ -658,7 +684,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
           <button 
             className={`btn btn-secondary ${activeSubTab === 'tokens' ? 'active' : ''}`}
             onClick={() => setActiveSubTab('tokens')}
-            style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             <BarChart2 size={14} style={{ marginRight: '6px' }} />
             Show Token Count
@@ -667,7 +693,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
             <button 
               className={`btn btn-secondary ${activeSubTab === 'logs' ? 'active' : ''}`}
               onClick={() => setActiveSubTab('logs')}
-              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               <Monitor size={14} style={{ marginRight: '6px' }} />
               LM Studio Logs
@@ -676,151 +702,197 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
         </div>
       </div>
 
-      {activeSubTab === 'network' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Real-time Concurrency Queue Status */}
-          <div className="memory-card" style={{ padding: '20px', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <RefreshCw className={aiState.isBusy ? 'spin text-accent-primary' : 'text-secondary'} size={20} />
-                <h3 style={{ fontSize: '1.1rem', margin: 0, color: '#fff' }}>AI Concurrency Queue & Pipeline Status</h3>
-              </div>
-              <span className={`badge ${aiState.isBusy ? 'badge-short-term' : 'badge-long-term'}`} style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
-                {aiState.isBusy ? 'BUSY / PROCESSING' : 'IDLE / READY'}
-              </span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Current Thought / Activity:</div>
-                <div style={{ 
-                  background: 'rgba(0,0,0,0.3)', 
-                  padding: '12px', 
-                  borderRadius: '8px', 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.85rem', 
-                  color: 'var(--accent-primary)',
-                  minHeight: '44px',
-                  maxHeight: '120px',
-                  overflowY: 'auto'
-                }}>
-                  {aiState.thought}
+      <div style={{
+        flex: '1 1 0%',
+        overflowY: activeSubTab === 'network' ? 'hidden' : 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0
+      }}>
+        {activeSubTab === 'network' && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            height: '100%',
+            overflow: 'hidden'
+          }}>
+            {/* Section 2: Real-time Concurrency Queue Status */}
+            <div className="memory-card" style={{
+              padding: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255,255,255,0.02)',
+              backdropFilter: 'blur(10px)',
+              flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <RefreshCw className={aiState.isBusy ? 'spin text-accent-primary' : 'text-secondary'} size={20} />
+                  <h3 style={{ fontSize: '1rem', margin: 0, color: '#fff' }}>AI Concurrency Queue & Pipeline Status</h3>
                 </div>
-                {aiState.activeNode && (
-                  <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Active Node Execution: <strong style={{ color: '#fff' }}>{aiState.activeNode}</strong>
-                  </div>
-                )}
+                <span className={`badge ${aiState.isBusy ? 'badge-short-term' : 'badge-long-term'}`} style={{ padding: '4px 12px', fontSize: '0.78rem' }}>
+                  {aiState.isBusy ? 'BUSY / PROCESSING' : 'IDLE / READY'}
+                </span>
               </div>
 
-              <div>
-                <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Waiting Queue ({aiState.queueLength} tasks):</div>
-                <div style={{ 
-                  background: 'rgba(0,0,0,0.3)', 
-                  padding: '12px', 
-                  borderRadius: '8px', 
-                  minHeight: '44px',
-                  maxHeight: '120px',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px'
-                }}>
-                  {aiState.waitingQueue.length > 0 ? (
-                    aiState.waitingQueue.map((t, idx) => (
-                      <div key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>#{idx + 1}: {t.metadata.name}</span>
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t.metadata.nodeId}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px' }}>
-                      No waiting requests. Queue is empty.
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <div style={{ marginBottom: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Current Thought / Activity:</div>
+                  <div style={{ 
+                    background: 'rgba(0,0,0,0.3)', 
+                    padding: '10px 12px', 
+                    borderRadius: '8px', 
+                    fontFamily: 'monospace', 
+                    fontSize: '0.82rem', 
+                    color: 'var(--accent-primary)',
+                    height: '80px',
+                    overflowY: 'auto'
+                  }}>
+                    {aiState.thought}
+                  </div>
+                  {aiState.activeNode && (
+                    <div style={{ marginTop: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Active Node Execution: <strong style={{ color: '#fff' }}>{aiState.activeNode}</strong>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Agent Status Grid */}
-          <div>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '12px', color: 'var(--text-primary)' }}>Active Agent Registry</h3>
-            <div className="memory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {agents.map((agent, index) => {
-                const status = getAgentStatus(agent.type);
-                const IconComponent = agent.icon;
-                return (
-                  <div 
-                    key={index} 
-                    className={`memory-card ${status === 'Active' ? 'active-agent' : ''}`} 
-                    style={{ 
-                      padding: '16px', 
-                      position: 'relative',
-                      border: status === 'Active' ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.05)',
-                      boxShadow: status === 'Active' ? '0 0 15px rgba(100, 108, 255, 0.2)' : 'none',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {IconComponent && <IconComponent size={16} className={status === 'Active' ? 'text-accent-primary' : 'text-secondary'} />}
-                        <h4 style={{ fontWeight: 600, fontSize: '0.95rem', color: '#fff', margin: 0 }}>{agent.name}</h4>
+                <div>
+                  <div style={{ marginBottom: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Waiting Queue ({aiState.queueLength} tasks):</div>
+                  <div style={{ 
+                    background: 'rgba(0,0,0,0.3)', 
+                    padding: '10px 12px', 
+                    borderRadius: '8px', 
+                    height: '80px',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    {aiState.waitingQueue.length > 0 ? (
+                      aiState.waitingQueue.map((t, idx) => (
+                        <div key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>#{idx + 1}: {t.metadata.name}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{t.metadata.nodeId}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '8px' }}>
+                        No waiting requests. Queue is empty.
                       </div>
-                      <span className={`badge ${status === 'Active' ? 'badge-short-term' : 'badge-long-term'}`} style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
-                        {status}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{agent.desc}</p>
-                    {status === 'Active' && (
-                      <div className="pulsing-glow" style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        border: '1px solid var(--accent-primary)',
-                        borderRadius: '12px',
-                        pointerEvents: 'none',
-                        animation: 'pulse 1.5s infinite alternate'
-                      }} />
                     )}
                   </div>
-                );
-              })}
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Agent Status Grid */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              flex: '1 1 0%',
+              minHeight: '150px',
+              overflow: 'hidden'
+            }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '8px', color: 'var(--text-primary)', flexShrink: 0 }}>Active Agent Registry</h3>
+              <div className="memory-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '12px',
+                overflowY: 'auto',
+                flex: '1 1 0%',
+                paddingRight: '6px'
+              }}>
+                {agents.map((agent, index) => {
+                  const status = getAgentStatus(agent.type);
+                  const IconComponent = agent.icon;
+                  return (
+                    <div 
+                      key={index} 
+                      className={`memory-card ${status === 'Active' ? 'active-agent' : ''}`} 
+                      style={{ 
+                        padding: '12px 16px', 
+                        position: 'relative',
+                        border: status === 'Active' ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.05)',
+                        boxShadow: status === 'Active' ? '0 0 15px rgba(100, 108, 255, 0.2)' : 'none',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {IconComponent && <IconComponent size={15} className={status === 'Active' ? 'text-accent-primary' : 'text-secondary'} />}
+                          <h4 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff', margin: 0 }}>{agent.name}</h4>
+                        </div>
+                        <span className={`badge ${status === 'Active' ? 'badge-short-term' : 'badge-long-term'}`} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
+                          {status}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.35, margin: 0 }}>{agent.desc}</p>
+                      {status === 'Active' && (
+                        <div className="pulsing-glow" style={{
+                          position: 'absolute',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          border: '1px solid var(--accent-primary)',
+                          borderRadius: '12px',
+                          pointerEvents: 'none',
+                          animation: 'pulse 1.5s infinite alternate'
+                        }} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 4: Real-time Agent Execution logs */}
+            <div className="memory-card" style={{
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              flex: '1 1 0%',
+              minHeight: '120px',
+              overflow: 'hidden',
+              marginBottom: 0
+            }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '8px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <Cpu size={18} className="text-accent-primary" /> Live Agent Routing Sequence
+              </h3>
+              <div style={{
+                overflowY: 'auto',
+                flex: '1 1 0%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                paddingRight: '6px'
+              }}>
+                {toolLogs && toolLogs.length > 0 ? (
+                  toolLogs.map((log, idx) => (
+                    <div key={idx} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      padding: '8px 12px', 
+                      background: 'rgba(255,255,255,0.05)', 
+                      borderRadius: '8px', 
+                      fontSize: '0.85rem'
+                    }}>
+                      <CheckCircle size={14} className="text-accent-primary" />
+                      <div>
+                        <strong style={{ color: '#fff' }}>[{log.tool.toUpperCase()}]</strong> action: <code>{log.action}</code>
+                        {log.params && <span style={{ color: 'var(--text-secondary)', marginLeft: '8px' }}>({JSON.stringify(log.params)})</span>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 'auto' }}>
+                    No active session logs. Interact with the chat supervisor to trigger agent routing.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Real-time Agent Execution logs */}
-          <div className="memory-card" style={{ padding: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Cpu size={18} className="text-accent-primary" /> Live Agent Routing Sequence
-            </h3>
-            {toolLogs && toolLogs.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {toolLogs.map((log, idx) => (
-                  <div key={idx} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '12px', 
-                    padding: '8px 12px', 
-                    background: 'rgba(255,255,255,0.05)', 
-                    borderRadius: '8px', 
-                    fontSize: '0.85rem'
-                  }}>
-                    <CheckCircle size={14} className="text-accent-primary" />
-                    <div>
-                      <strong style={{ color: '#fff' }}>[{log.tool.toUpperCase()}]</strong> action: <code>{log.action}</code>
-                      {log.params && <span style={{ color: 'var(--text-secondary)', marginLeft: '8px' }}>({JSON.stringify(log.params)})</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                No active session logs. Interact with the chat supervisor to trigger agent routing.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {activeSubTab === 'vault' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
