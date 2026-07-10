@@ -26,10 +26,12 @@ test.describe('E2E Authentication and User Workflows', () => {
     await page.click('button[type="submit"]');
 
     // Should login successfully and show brand title
-    await expect(page.locator('h1')).toContainText('Private AI');
+    await expect(page.locator('.sidebar-brand h1')).toContainText('Private AI Assistant');
 
     // 5. Open Profile settings
-    await page.click(`text=👤 ${uniqueUsername}`, { force: true });
+    const profileBtn = page.locator(`text=👤 ${uniqueUsername}`);
+    await expect(profileBtn).toBeVisible();
+    await profileBtn.click();
     await expect(page.locator('.modal-content h3')).toContainText('User Profile Settings');
 
     // 6. Update preferences
