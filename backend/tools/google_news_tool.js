@@ -4,9 +4,14 @@ const { extractFirst100Words } = require('../utils/helpers');
 // Google News tool operations
 async function handleGoogleNewsTool(query) {
   try {
-    const rssUrl = query
-      ? `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`
-      : 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en';
+    let rssUrl = '';
+    if (query && query.toLowerCase().includes('dallas cowboys')) {
+      rssUrl = 'https://news.google.com/rss/search?hl=en-US&gl=US&q=dallas+cowboys&um=1&ie=UTF-8&ceid=US:en';
+    } else {
+      rssUrl = query
+        ? `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`
+        : 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en';
+    }
       
     const response = await fetch(rssUrl);
     if (!response.ok) throw new Error('Failed to fetch news RSS feed');
