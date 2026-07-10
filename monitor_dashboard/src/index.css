@@ -869,4 +869,9 @@ select.form-control option {
   animation: spin 1s linear infinite;
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.sub-tab-buttons::-webkit-scrollbar {
+  display: none !important;
+}
+
 

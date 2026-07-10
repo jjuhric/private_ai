@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar } from 'lucide-react';
+import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import TokenCountView from './TokenCountView';
 import LMStudioLogsView from './LMStudioLogsView';
 import CustomAlertModal from './CustomAlertModal';
@@ -119,6 +119,33 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   }, []);
 
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
+  const tabScrollRef = React.useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const checkScrollArrows = () => {
+    const el = tabScrollRef.current;
+    if (el) {
+      const { scrollLeft, scrollWidth, clientWidth } = el;
+      setShowLeftArrow(scrollLeft > 2);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 2);
+    }
+  };
+
+  useEffect(() => {
+    const el = tabScrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScrollArrows);
+      window.addEventListener('resize', checkScrollArrows);
+      
+      const timer = setTimeout(checkScrollArrows, 300);
+      return () => {
+        el.removeEventListener('scroll', checkScrollArrows);
+        window.removeEventListener('resize', checkScrollArrows);
+        clearTimeout(timer);
+      };
+    }
+  }, [tabScrollRef.current, settings, activeSubTab]);
   const [documents, setDocuments] = useState([]);
 
   useEffect(() => {
@@ -631,72 +658,152 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
           <Network className="text-accent-primary" size={24} />
           <h2 style={{ margin: 0, whiteSpace: 'nowrap', fontSize: '1.25rem' }}>Agent Network Dashboard</h2>
         </div>
-        <div className="sub-tab-buttons" style={{
+
+        <div className="scroll-tab-container" style={{
+          position: 'relative',
           display: 'flex',
-          gap: '8px',
           alignItems: 'center',
-          flexWrap: 'nowrap',
-          overflowX: 'auto',
-          maxWidth: '100%',
-          paddingBottom: '4px',
           flexShrink: 1,
-          WebkitOverflowScrolling: 'touch'
+          overflow: 'hidden',
+          maxWidth: '100%',
+          padding: '0 28px'
         }}>
-          <button 
-            className="btn"
-            onClick={handleDisconnect}
-            style={{ padding: '6px 12px', fontSize: '0.82rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            Disconnect Host
-          </button>
-          <button 
-            className={`btn btn-secondary ${activeSubTab === 'network' ? 'active' : ''}`}
-            onClick={() => setActiveSubTab('network')}
-            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            <Layers size={14} style={{ marginRight: '6px' }} />
-            Agent Network
-          </button>
-          <button 
-            className={`btn btn-secondary ${activeSubTab === 'vault' ? 'active' : ''}`}
-            onClick={() => setActiveSubTab('vault')}
-            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            <FileText size={14} style={{ marginRight: '6px' }} />
-            Document Vault (RAG)
-          </button>
-          <button 
-            className={`btn btn-secondary ${activeSubTab === 'nodes' ? 'active' : ''}`}
-            onClick={() => setActiveSubTab('nodes')}
-            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            <Server size={14} style={{ marginRight: '6px' }} />
-            Field Nodes
-          </button>
-          <button 
-            className={`btn btn-secondary ${activeSubTab === 'host' ? 'active' : ''}`}
-            onClick={() => setActiveSubTab('host')}
-            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            <Cpu size={14} style={{ marginRight: '6px' }} />
-            System Control
-          </button>
-          <button 
-            className={`btn btn-secondary ${activeSubTab === 'tokens' ? 'active' : ''}`}
-            onClick={() => setActiveSubTab('tokens')}
-            style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            <BarChart2 size={14} style={{ marginRight: '6px' }} />
-            Show Token Count
-          </button>
-          {(settings?.is_main_host === true || settings?.is_main_host === 1 || settings?.is_main_host === '1') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '3000' || window.location.port === '5173') && (
+          {showLeftArrow && (
             <button 
-              className={`btn btn-secondary ${activeSubTab === 'logs' ? 'active' : ''}`}
-              onClick={() => setActiveSubTab('logs')}
+              onClick={() => {
+                tabScrollRef.current?.scrollBy({ left: -160, behavior: 'smooth' });
+              }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#fff',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                transition: 'all 0.2s ease',
+                padding: 0
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.9)'; }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+          )}
+
+          <div 
+            ref={tabScrollRef}
+            className="sub-tab-buttons" 
+            style={{
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
+              maxWidth: '100%',
+              paddingBottom: '4px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <button 
+              className="btn"
+              onClick={handleDisconnect}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              Disconnect Host
+            </button>
+            <button 
+              className={`btn btn-secondary ${activeSubTab === 'network' ? 'active' : ''}`}
+              onClick={() => setActiveSubTab('network')}
               style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              <Monitor size={14} style={{ marginRight: '6px' }} />
-              LM Studio Logs
+              <Layers size={14} style={{ marginRight: '6px' }} />
+              Agent Network
+            </button>
+            <button 
+              className={`btn btn-secondary ${activeSubTab === 'vault' ? 'active' : ''}`}
+              onClick={() => setActiveSubTab('vault')}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <FileText size={14} style={{ marginRight: '6px' }} />
+              Document Vault (RAG)
+            </button>
+            <button 
+              className={`btn btn-secondary ${activeSubTab === 'nodes' ? 'active' : ''}`}
+              onClick={() => setActiveSubTab('nodes')}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <Server size={14} style={{ marginRight: '6px' }} />
+              Field Nodes
+            </button>
+            <button 
+              className={`btn btn-secondary ${activeSubTab === 'host' ? 'active' : ''}`}
+              onClick={() => setActiveSubTab('host')}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <Cpu size={14} style={{ marginRight: '6px' }} />
+              System Control
+            </button>
+            <button 
+              className={`btn btn-secondary ${activeSubTab === 'tokens' ? 'active' : ''}`}
+              onClick={() => setActiveSubTab('tokens')}
+              style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <BarChart2 size={14} style={{ marginRight: '6px' }} />
+              Show Token Count
+            </button>
+            {(settings?.is_main_host === true || settings?.is_main_host === 1 || settings?.is_main_host === '1') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (window.location.port === '3000' || window.location.port === '5173') && (
+              <button 
+                className={`btn btn-secondary ${activeSubTab === 'logs' ? 'active' : ''}`}
+                onClick={() => setActiveSubTab('logs')}
+                style={{ padding: '6px 12px', fontSize: '0.82rem', borderRadius: '6px', whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                <Monitor size={14} style={{ marginRight: '6px' }} />
+                LM Studio Logs
+              </button>
+            )}
+          </div>
+
+          {showRightArrow && (
+            <button 
+              onClick={() => {
+                tabScrollRef.current?.scrollBy({ left: 160, behavior: 'smooth' });
+              }}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#fff',
+                borderRadius: '50%',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                transition: 'all 0.2s ease',
+                padding: 0
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.9)'; }}
+            >
+              <ChevronRight size={16} />
             </button>
           )}
         </div>
