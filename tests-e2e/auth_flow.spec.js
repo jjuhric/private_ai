@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('E2E Authentication and User Workflows', () => {
   test('User Registration, Login, Profile and Navigation', async ({ page }) => {
+    page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
+    page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
+
     // 1. Visit homepage
     await page.goto('/');
     await expect(page.locator('h2')).toContainText('Welcome Back');
