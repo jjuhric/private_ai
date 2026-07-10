@@ -112,6 +112,14 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
   const streamAbortController = new AbortController();
   req.on('close', async () => {
     streamAbortController.abort();
+    clearInterval(heartbeat);
+
+    // Broadcast end of streaming status to Standalone Monitor
+    try {
+      const { broadcastAlert } = require('./alerts');
+      broadcastAlert({ type: 'streaming_status', isStreaming: false });
+      broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
+    } catch (e) {}
 
     // If provider is local, eject the currently loaded model on abort to free up resources
     if (settings.provider === 'local') {
@@ -293,11 +301,10 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
           }
         });
       } finally {
-        // Broadcast end of streaming status to Standalone Monitor
+        // Broadcast transition to Communication Specialist to Standalone Monitor
         try {
           const { broadcastAlert } = require('./alerts');
-          broadcastAlert({ type: 'streaming_status', isStreaming: false });
-          broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
+          broadcastAlert({ type: 'agent_status', agent: 'communication_specialist', status: 'active' });
         } catch (e) {}
       }
     }, { nodeId: 'chat-ui', name: `User Chat Request` });
@@ -373,6 +380,12 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
     }
   } finally {
     clearInterval(heartbeat);
+    // Broadcast end of streaming status to Standalone Monitor
+    try {
+      const { broadcastAlert } = require('./alerts');
+      broadcastAlert({ type: 'streaming_status', isStreaming: false });
+      broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
+    } catch (e) {}
     res.end();
   }
 });
