@@ -2,7 +2,9 @@ import React from 'react';
 import { Network } from 'lucide-react';
 
 export default function AgentDashboard() {
-  const token = localStorage.getItem('token') || '';
+  const token = (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.getItem === 'function')
+    ? (localStorage.getItem('token') || '')
+    : '';
   const monitorDashboardUrl = `http://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/monitor/?token=${encodeURIComponent(token)}`;
   const displayAddress = `${window.location.host}/monitor`;
 
