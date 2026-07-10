@@ -102,12 +102,25 @@ export default function ChatPane({
       }
     } else if (wasStreaming && !isStreaming) {
       setWasStreaming(false);
-      const lastMessage = messages[messages.length - 1];
-      if (voiceEnabled && lastMessage && lastMessage.role === 'assistant' && lastMessage.content) {
-        speakText(lastMessage.content);
+      if (voiceEnabled && streamContent && streamContent.trim() !== '') {
+        speakText(streamContent);
       }
     }
-  }, [isStreaming, messages, voiceEnabled, wasStreaming]);
+  }, [isStreaming, streamContent, voiceEnabled, wasStreaming]);
+
+  // Speak the last message if user manually enables voice
+  const prevVoiceEnabled = useRef(voiceEnabled);
+  useEffect(() => {
+    if (voiceEnabled && !prevVoiceEnabled.current) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant' && lastMessage.content) {
+        if (!lastMessage.content.includes('INPUT_REQUIRED_CHOICES')) {
+          speakText(lastMessage.content);
+        }
+      }
+    }
+    prevVoiceEnabled.current = voiceEnabled;
+  }, [voiceEnabled, messages]);
 
   const speakText = async (text) => {
     try {
