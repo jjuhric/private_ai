@@ -24,6 +24,17 @@ function App() {
   const [toast, setToast] = useState({ message: '', type: 'info' });
   const [popupAlert, setPopupAlert] = useState(null);
   const [popupConfirm, setPopupConfirm] = useState(null);
+  const [popupChoices, setPopupChoices] = useState(null);
+
+  const handleSelectChoice = (choice) => {
+    setPopupChoices(null);
+    if (choice.includes("Specify another") || choice.includes("Specify custom")) {
+      const inputEl = document.querySelector('.input-box input');
+      if (inputEl) inputEl.focus();
+    } else {
+      handleSendMessage(null, choice);
+    }
+  };
 
   useEffect(() => {
     window.alert = (message) => {
@@ -628,13 +639,14 @@ function App() {
   };
 
   // Chat Streaming Logic
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || !activeChatId || isStreaming) return;
+  const handleSendMessage = async (e, directText = null) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    
+    const messageText = directText !== null ? directText : inputText;
+    if (!messageText.trim() || !activeChatId || isStreaming) return;
 
-    const currentMsg = inputText;
     setInputText('');
-    setMessages(prev => [...prev, { role: 'user', content: currentMsg }]);
+    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
     
     setIsStreaming(true);
     setActiveAgent('supervisor');
@@ -657,7 +669,7 @@ function App() {
           'Authorization': `Bearer ${token}`
         },
         signal: controller.signal,
-        body: JSON.stringify({ chatId: activeChatId, message: currentMsg })
+        body: JSON.stringify({ chatId: activeChatId, message: messageText })
       });
 
       if (!response.ok) {
@@ -727,7 +739,17 @@ function App() {
                 currentEndTag = endTagGemma;
               }
               
-              if (currentStartTag) {
+              if (accumulatedRawContent.includes('INPUT_REQUIRED_CHOICES:')) {
+                const startIdx = accumulatedRawContent.indexOf('INPUT_REQUIRED_CHOICES:');
+                const payloadStr = accumulatedRawContent.substring(startIdx + 'INPUT_REQUIRED_CHOICES:'.length).trim();
+                try {
+                  const payload = JSON.parse(payloadStr);
+                  setPopupChoices(payload);
+                } catch (e) {
+                  // Incremental chunk might not be fully parsed yet
+                }
+                setStreamContent('');
+              } else if (currentStartTag) {
                 const startIdx = accumulatedRawContent.indexOf(currentStartTag);
                 const endIdx = accumulatedRawContent.indexOf(currentEndTag);
                 
@@ -1029,6 +1051,74 @@ function App() {
         alert={popupConfirm}
         onClose={() => setPopupConfirm(null)}
       />
+
+      {popupChoices && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="memory-card" style={{
+            padding: '32px',
+            maxWidth: '460px',
+            width: '100%',
+            textAlign: 'center',
+            background: 'var(--bg-glass)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '24px',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)'
+          }}>
+            <Network className="text-accent-primary" size={48} style={{ marginBottom: '20px', display: 'inline-block', filter: 'drop-shadow(0 0 8px var(--accent-primary))' }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 650, marginBottom: '20px', color: '#fff', lineHeight: '1.4' }}>
+              {popupChoices.question}
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              {popupChoices.choices.map((choice, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectChoice(choice)}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '12px 20px',
+                    fontSize: '0.9rem',
+                    fontWeight: 550,
+                    borderRadius: '12px',
+                    textAlign: 'left',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    color: '#e2e8f0',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2))';
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                  }}
+                >
+                  <span>{choice}</span>
+                  <span style={{ fontSize: '1.1rem', opacity: 0.8 }}>✨</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
