@@ -122,6 +122,42 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   const tabScrollRef = React.useRef(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const logsScrollRef = React.useRef(null);
+
+  const [aiState, setAiState] = useState({
+    isBusy: false,
+    activeTask: null,
+    queueLength: 0,
+    waitingQueue: [],
+    thought: 'Idle',
+    activeNode: null
+  });
+  
+  // Nodes State
+  const [nodes, setNodes] = useState([]);
+  const [showAddNode, setShowAddNode] = useState(false);
+  const [newNode, setNewNode] = useState({ node_name: '', device_type: 'rpi-5-8gb', ip_address: '', port: 3000, bridge_secret: '' });
+  const [fileContent, setFileContent] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  // Host telemetry and service control states
+  const [hostStatus, setHostStatus] = useState(null);
+  const [loadingHost, setLoadingHost] = useState(false);
+  const [restartServiceName, setRestartServiceName] = useState('private-ai');
+  const [restartingService, setRestartingService] = useState(false);
+
+   // Scanner and Walkthrough State
+  const [scanning, setScanning] = useState(false);
+  const [discoveredNodes, setDiscoveredNodes] = useState([]);
+  
+  // Health Polling State & Logic (Rule 5)
+  const [nodeHealthMap, setNodeHealthMap] = useState({});
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [selectedGuideDevice, setSelectedGuideDevice] = useState('rpi-5-8gb');
+  const [registeringNode, setRegisteringNode] = useState(null);
 
   const checkScrollArrows = () => {
     const el = tabScrollRef.current;
@@ -146,8 +182,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
       };
     }
   }, [tabScrollRef.current, settings, activeSubTab]);
-  const [documents, setDocuments] = useState([]);
-  const logsScrollRef = React.useRef(null);
+
 
   // Autoscroll active agent to top
   useEffect(() => {
@@ -229,36 +264,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
     });
   };
 
-  const [aiState, setAiState] = useState({
-    isBusy: false,
-    activeTask: null,
-    queueLength: 0,
-    waitingQueue: [],
-    thought: 'Idle',
-    activeNode: null
-  });
-  
-  // Nodes State
-  const [nodes, setNodes] = useState([]);
-  const [showAddNode, setShowAddNode] = useState(false);
-  const [newNode, setNewNode] = useState({ node_name: '', device_type: 'rpi-5-8gb', ip_address: '', port: 3000, bridge_secret: '' });
-  const [fileContent, setFileContent] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
 
-  // Host telemetry and service control states
-  const [hostStatus, setHostStatus] = useState(null);
-  const [loadingHost, setLoadingHost] = useState(false);
-  const [restartServiceName, setRestartServiceName] = useState('private-ai');
-  const [restartingService, setRestartingService] = useState(false);
-
-   // Scanner and Walkthrough State
-  const [scanning, setScanning] = useState(false);
-  const [discoveredNodes, setDiscoveredNodes] = useState([]);
-  
-  // Health Polling State & Logic (Rule 5)
-  const [nodeHealthMap, setNodeHealthMap] = useState({});
 
 
 
@@ -287,8 +293,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
       return nextHealth;
     });
   };
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [selectedGuideDevice, setSelectedGuideDevice] = useState('rpi-5-8gb');
+
 
   const handleScanNodes = async () => {
     setScanning(true);
@@ -311,7 +316,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
     }
   };
 
-  const [registeringNode, setRegisteringNode] = useState(null);
+
 
   const handleConfirmRegisterNode = async (e) => {
     if (e) e.preventDefault();
