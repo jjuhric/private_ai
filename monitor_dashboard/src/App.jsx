@@ -147,6 +147,30 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
     }
   }, [tabScrollRef.current, settings, activeSubTab]);
   const [documents, setDocuments] = useState([]);
+  const logsScrollRef = React.useRef(null);
+
+  // Autoscroll active agent to top
+  useEffect(() => {
+    const activeCard = document.querySelector('.active-agent');
+    const gridContainer = document.querySelector('.memory-grid');
+    if (activeCard && gridContainer) {
+      gridContainer.scrollTo({
+        top: activeCard.offsetTop - gridContainer.offsetTop - 10,
+        behavior: 'smooth'
+      });
+    }
+  }, [activeAgent, aiState.thought]);
+
+  // Autoscroll Live Agent Routing Sequence logs to the bottom
+  useEffect(() => {
+    const el = logsScrollRef.current;
+    if (el) {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [toolLogs]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -964,14 +988,16 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
               <h3 style={{ fontSize: '1rem', marginBottom: '8px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <Cpu size={18} className="text-accent-primary" /> Live Agent Routing Sequence
               </h3>
-              <div style={{
-                overflowY: 'auto',
-                flex: '1 1 0%',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                paddingRight: '6px'
-              }}>
+              <div 
+                ref={logsScrollRef}
+                style={{
+                  overflowY: 'auto',
+                  flex: '1 1 0%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  paddingRight: '6px'
+                }}>
                 {toolLogs && toolLogs.length > 0 ? (
                   toolLogs.map((log, idx) => (
                     <div key={idx} style={{ 
