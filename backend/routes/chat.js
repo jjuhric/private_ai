@@ -370,6 +370,47 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
 
     sendEvent('agent_status', { agent: null, status: 'idle' });
     sendEvent('done', { success: true });
+
+    // Unload local model if it's a final response (not follow-up or clarification)
+    if (settings.provider === 'local') {
+      const isFollowUpOrClarification = (content) => {
+        if (!content) return false;
+        if (content.includes('INPUT_REQUIRED_CHOICES')) return true;
+        const lowercase = content.toLowerCase();
+        return (
+          lowercase.includes('please specify') ||
+          lowercase.includes('provide the') ||
+          lowercase.includes('which city') ||
+          lowercase.includes('what time') ||
+          lowercase.includes('which location') ||
+          lowercase.includes('need more info') ||
+          lowercase.includes('need clarification') ||
+          lowercase.includes('more information')
+        ) && (lowercase.includes('?') || lowercase.includes('please'));
+      };
+
+      const isClarification = isFollowUpOrClarification(finalContent);
+      if (!isClarification) {
+        try {
+          const { decrypt } = require('../utils/crypto');
+          const decryptedLocalKey = decrypt(settings.local_key);
+          const localBaseUrl = settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1';
+          const localApiKey = decryptedLocalKey || process.env.LOCAL_LLM_KEY || '';
+
+          const { listLocalModels, unloadLocalModel } = require('../utils/lmstudio');
+          const availableModels = await listLocalModels(localBaseUrl, localApiKey);
+          const loadedModelObj = availableModels.find(m => m.isLoaded);
+          if (loadedModelObj && loadedModelObj.instanceId) {
+            console.log(`[Model Ejection] Final response completed. Ejecting active local model instance: ${loadedModelObj.instanceId}`);
+            await unloadLocalModel(localBaseUrl, localApiKey, loadedModelObj.instanceId);
+          }
+        } catch (ejectErr) {
+          console.error('Failed to eject local model on final response complete:', ejectErr);
+        }
+      } else {
+        console.log('[Model Ejection] Skipped model ejection: follow-up or clarification request detected.');
+      }
+    }
   } catch (err) {
     const logger = require('../utils/logger');
     logger.error('Stream processing error in chat route:', err);
