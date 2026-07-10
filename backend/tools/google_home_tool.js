@@ -91,10 +91,10 @@ async function handleGoogleHomeTool(db, userId, action, params) {
 
     // 4. Instantiation & direct play
     const Device = require('chromecast-api/lib/device');
-    const device = new Device('google-home', {
-      addresses: [targetIp],
+    const device = new Device({
+      host: targetIp,
       name: targetName || 'Google Home',
-      port: 8009
+      friendlyName: targetName || 'Google Home'
     });
 
     await new Promise((resolve, reject) => {
