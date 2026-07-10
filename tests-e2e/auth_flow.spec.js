@@ -31,7 +31,7 @@ test.describe('E2E Authentication and User Workflows', () => {
     // 5. Open Profile settings
     const profileBtn = page.locator(`text=👤 ${uniqueUsername}`);
     await expect(profileBtn).toBeVisible();
-    await profileBtn.click();
+    await profileBtn.click({ force: true });
     await expect(page.locator('.modal-content h3')).toContainText('User Profile Settings');
 
     // 6. Update preferences
