@@ -213,6 +213,7 @@ if ($NonInteractive) {
     $userZipcode = $defaultUserZipcode
     $weatherKey = $defaultWeatherKey
     $buildFeYN = "y"
+    $appPort = $defaultPort
 } else {
     Write-Host "`n====================================================" -ForegroundColor Cyan
     Write-Host "  Configuration Settings" -ForegroundColor Cyan
