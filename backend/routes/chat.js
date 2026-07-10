@@ -371,7 +371,8 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
     sendEvent('agent_status', { agent: null, status: 'idle' });
     sendEvent('done', { success: true });
   } catch (err) {
-    console.error('Stream processing error:', err);
+    const logger = require('../utils/logger');
+    logger.error('Stream processing error in chat route:', err);
     const errMsg = "Local LLM Connection Lost. The model may have run out of memory. Please lower context length.";
     if (!res.headersSent) {
       res.status(500).json({ error: errMsg });

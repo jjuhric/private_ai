@@ -112,13 +112,16 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     });
   } catch (fetchErr) {
     clearTimeout(timeoutId);
-    console.error('LM Studio connection error:', fetchErr);
+    const logger = require('./utils/logger');
+    logger.error('Local LLM fetch exception in callLocalLLMStream:', fetchErr);
     throw new Error("Local LLM Connection Lost. The model may have run out of memory. Please lower context length.");
   }
   clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errText = await response.text();
+    const logger = require('./utils/logger');
+    logger.error(`Local LLM response not ok: ${response.status} - ${errText}`);
     throw new Error(`LLM API error: ${response.status} - ${errText}`);
   }
 
