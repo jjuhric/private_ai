@@ -29,7 +29,7 @@ test.describe('E2E Authentication and User Workflows', () => {
     await expect(page.locator('h1')).toContainText('Private AI');
 
     // 5. Open Profile settings
-    await page.click(`text=👤 ${uniqueUsername}`);
+    await page.click(`text=👤 ${uniqueUsername}`, { force: true });
     await expect(page.locator('.modal-content h3')).toContainText('User Profile Settings');
 
     // 6. Update preferences
