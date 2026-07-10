@@ -120,6 +120,12 @@ async function getDb() {
     if (!settingsColumns.some(col => col.name === 'token_quota')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN token_quota INTEGER DEFAULT 1000000");
     }
+    if (!settingsColumns.some(col => col.name === 'google_home_ip')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN google_home_ip TEXT");
+    }
+    if (!settingsColumns.some(col => col.name === 'google_home_name')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN google_home_name TEXT");
+    }
 
     // Migrate memories to add embedding column if missing
     const memoriesColumns = await dbConnection.all('PRAGMA table_info(memories)');

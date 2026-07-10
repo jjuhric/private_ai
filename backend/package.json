@@ -32,7 +32,8 @@
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",
     "vectordb": "^0.4.2",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "chromecast-api": "^0.4.0"
   },
   "scripts": {
     "test": "jest --runInBand --forceExit",

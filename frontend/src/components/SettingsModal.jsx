@@ -22,6 +22,29 @@ export default function SettingsModal({
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminError, setAdminError] = useState('');
   const [adminSuccess, setAdminSuccess] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResults, setScanResults] = useState([]);
+  const [scanError, setScanError] = useState('');
+
+  const handleScanSpeakers = async () => {
+    setIsScanning(true);
+    setScanError('');
+    try {
+      const res = await fetch('/api/settings/google-home/scan', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setScanResults(data);
+      } else {
+        setScanError('Failed to scan for speakers.');
+      }
+    } catch (err) {
+      setScanError(err.message);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -378,6 +401,70 @@ export default function SettingsModal({
                   {showGithubToken ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
+            <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>Google Home Smart Speaker</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker Name</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Office Speaker"
+                    value={settings.google_home_name || ''}
+                    onChange={e => setSettings(prev => ({ ...prev, google_home_name: e.target.value }))}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker IP Address</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. 192.168.1.199"
+                    value={settings.google_home_ip || ''}
+                    onChange={e => setSettings(prev => ({ ...prev, google_home_ip: e.target.value }))}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ height: '38px', margin: 0, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={handleScanSpeakers}
+                  disabled={isScanning}
+                >
+                  {isScanning ? 'Scanning...' : 'Scan Network'}
+                </button>
+              </div>
+              
+              {scanError && <div style={{ color: 'var(--error)', fontSize: '0.8rem' }}>{scanError}</div>}
+              
+              {scanResults.length > 0 && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Discovered Speakers (Select to Apply)</label>
+                  <select
+                    className="form-control"
+                    onChange={e => {
+                      const selected = scanResults.find(d => d.ip === e.target.value);
+                      if (selected) {
+                        setSettings(prev => ({
+                          ...prev,
+                          google_home_name: selected.name,
+                          google_home_ip: selected.ip
+                        }));
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>-- Select a Speaker --</option>
+                    {scanResults.map(device => (
+                      <option key={device.ip} value={device.ip}>{device.name} ({device.ip})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 

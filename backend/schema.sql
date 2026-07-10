@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS user_settings (
   is_main_host INTEGER DEFAULT 0,
   working_directory TEXT,
   token_quota INTEGER DEFAULT 1000000,
+  google_home_ip TEXT,
+  google_home_name TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
