@@ -225,13 +225,25 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
     .trim();
 
   try {
-    return JSON.parse(respText);
+    const parsed = JSON.parse(respText);
+    if (parsed && parsed.next_action) {
+      parsed.tool = parsed.next_action;
+      parsed.params = parsed.refined_data || {};
+      parsed.thought = parsed.intent || '';
+    }
+    return parsed;
   } catch (err) {
     const firstBrace = respText.indexOf('{');
     const lastBrace = respText.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
-        return JSON.parse(respText.substring(firstBrace, lastBrace + 1));
+        const parsed = JSON.parse(respText.substring(firstBrace, lastBrace + 1));
+        if (parsed && parsed.next_action) {
+          parsed.tool = parsed.next_action;
+          parsed.params = parsed.refined_data || {};
+          parsed.thought = parsed.intent || '';
+        }
+        return parsed;
       } catch (e) {}
     }
     console.warn(`Failed to parse agent JSON, falling back to none: ${respText}`);
