@@ -26,3 +26,9 @@ test-results/
 # Credentials / Secrets
 backend/credentials.json
 backend/tokens.json
+
+# Local TTS cache
+backend/public/tts/
+
+# Local database data
+data/

@@ -56,7 +56,7 @@ describe('Quota Enforcement and Alerts Stream Tests', () => {
         return { id: params ? params[0] : 1 };
       }
       if (query.includes('token_quota')) {
-        return { token_quota: 100000 };
+        return { token_quota: params[0] === 1 ? 100000 : 10000, provider: 'online' };
       }
       if (query.includes('SUM(token_count)')) {
         return { total: 5000 }; // Only 5,000 tokens used in last 24h
@@ -79,7 +79,7 @@ describe('Quota Enforcement and Alerts Stream Tests', () => {
         return { id: params ? params[0] : 1 };
       }
       if (query.includes('token_quota')) {
-        return { token_quota: 10000 };
+        return { token_quota: 10000, provider: 'online' };
       }
       if (query.includes('SUM(token_count)')) {
         return { total: 15000 }; // 15,000 tokens used, quota exceeded

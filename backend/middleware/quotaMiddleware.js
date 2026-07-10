@@ -8,17 +8,29 @@ async function checkQuota(req, res, next) {
     const db = await getDb();
     const userId = req.user.id;
 
-    // Get user's quota config
+    // Get user's quota config and provider
     const settings = await db.get(
-      'SELECT token_quota FROM user_settings WHERE user_id = ?',
+      'SELECT token_quota, provider FROM user_settings WHERE user_id = ?',
       [userId]
     );
+    const provider = settings?.provider || 'local';
     const quotaLimit = settings?.token_quota !== undefined ? settings.token_quota : 1000000;
 
-    // Get current usage in the last 24 hours
+    // Option 4: If quotaLimit is 0, it means unlimited/disabled
+    if (quotaLimit === 0) {
+      return next();
+    }
+
+    // Option 2: Exclude local models from quota check
+    if (provider === 'local') {
+      return next();
+    }
+
+    // Get current online usage in the last 24 hours
     const usageRow = await db.get(
       `SELECT SUM(token_count) as total FROM token_usage 
        WHERE user_id = ? 
+         AND provider_type = 'online'
          AND created_at >= datetime('now', '-24 hours')`,
       [userId]
     );
