@@ -296,6 +296,156 @@ async function runAgentLoop({
   const firstUserIdx = (history || []).findIndex(msg => msg.role === 'user');
   const cleanedHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
 
+  // --- Google Home Direct Bypass Interceptor ---
+  const isGoogleHomeDeviceRequest = (msg) => {
+    const cleanMsg = msg.trim().toLowerCase();
+    const actions = ['turn on', 'turn off', 'pause', 'resume', 'stop'];
+    const action = actions.find(act => {
+      const regex = new RegExp(`\\b${act}\\b`, 'i');
+      return regex.test(cleanMsg);
+    });
+    
+    let isSplitAction = false;
+    let splitRest = '';
+    if (cleanMsg.startsWith('turn ')) {
+      if (cleanMsg.endsWith(' off')) {
+        isSplitAction = true;
+        splitRest = cleanMsg.substring(5, cleanMsg.length - 4).trim();
+      } else if (cleanMsg.endsWith(' on')) {
+        isSplitAction = true;
+        splitRest = cleanMsg.substring(5, cleanMsg.length - 3).trim();
+      }
+    }
+
+    if (!action && !isSplitAction) return false;
+    
+    let rest = '';
+    if (isSplitAction) {
+      rest = splitRest;
+    } else {
+      const actionRegex = new RegExp(`\\b${action}\\b\\s+(.+)`, 'i');
+      const match = cleanMsg.match(actionRegex);
+      if (!match) return false;
+      rest = match[1].trim();
+    }
+    
+    const locations = [
+      'office', 'living room', 'bedroom', 'bed room', 'kitchen', 'basement', 
+      'porch', 'backyard', 'hallway', 'bathroom', 'house', 'desk', 'den', 
+      'patio', 'garage', 'dining room', 'foyer', 'attic', 'closet', 'yard'
+    ];
+    
+    const devices = [
+      'light', 'lights', 'tv', 't.v.', 'television', 'fan', 'plug', 'speaker', 
+      'nest', 'mini', 'display', 'screen', 'air conditioner', 'ac', 'heater', 
+      'switch', 'plug', 'device', 'thermostat', 'camera'
+    ];
+    
+    const hasLocation = locations.some(loc => new RegExp(`\\b${loc}\\b`, 'i').test(rest));
+    const hasDevice = devices.some(dev => {
+      const escapedDev = dev.replace('.', '\\.');
+      return new RegExp(`\\b${escapedDev}\\b`, 'i').test(rest);
+    });
+    
+    return hasLocation && hasDevice;
+  };
+
+  if (isGoogleHomeDeviceRequest(userMessage)) {
+    onThought("[Google Home Intercept] Direct action/location/device command detected. Bypassing supervisor and sending directly to Google Assistant...\n");
+    if (onAgentStatus) onAgentStatus({ agent: 'system_specialist', status: 'active' });
+    
+    if (onToolCall) {
+      onToolCall({
+        tool: 'google_home',
+        action: 'send_command',
+        params: { command: userMessage },
+        agent: 'system_specialist'
+      });
+    }
+
+    let toolOutput = '';
+    try {
+      const { handleGoogleHomeTool } = require('./tools/google_home_tool');
+      toolOutput = await handleGoogleHomeTool(db, userId, 'send_command', { command: userMessage });
+    } catch (err) {
+      toolOutput = JSON.stringify({ success: false, error: err.message });
+    }
+
+    onThought(`Google Assistant execution completed. Tool output: ${toolOutput}\n`);
+
+    if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
+    onThought('Communication Specialist generating final response for Google device execution...\n');
+    
+    const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+    const responderInstruction = `${commSpecialistSystemPrompt}
+ 
+### INSTRUCTIONS:
+- You are operating in **MODE 2: Format Results**.
+- If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
+- The user requested: "${userMessage}".
+- The Google Home device tool returned this execution result:
+${toolOutput}
+- Present a warm, bubbly, and user-friendly final response formatting this result. Format in beautiful markdown with emojis. Let the user know the command succeeded or explain the failure.`;
+
+    const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
+
+    if (isGemini) {
+      const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
+      await callGeminiStream(
+        activeKey,
+        modelName,
+        responderInstruction,
+        cleanedHistory,
+        userMessage,
+        onContent,
+        abortSignal,
+        db,
+        userId,
+        provider
+      );
+    } else {
+      let targetUrl = '';
+      let targetKey = '';
+      let targetStyle = '';
+
+      if (provider === 'local') {
+        targetUrl = localBaseUrl || 'http://192.168.1.42:1234/v1';
+        targetKey = localApiKey;
+        targetStyle = localApiStyle || 'openai';
+      } else {
+        targetUrl = onlineUrl || 'https://api.openai.com/v1';
+        targetKey = onlineKey;
+        targetStyle = onlineProvider || 'openai';
+      }
+
+      const messages = [
+        { role: 'system', content: responderInstruction }
+      ];
+      for (const msg of cleanedHistory) {
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
+      }
+      messages.push({ role: 'user', content: userMessage });
+
+      await callLocalLLMStream(
+        targetUrl,
+        targetKey,
+        modelName,
+        messages,
+        targetStyle,
+        onContent,
+        abortSignal,
+        db,
+        userId,
+        provider
+      );
+    }
+    return;
+  }
+  // --- End of Google Home Direct Bypass Interceptor ---
+
   const settings = {
     db,
     userId,

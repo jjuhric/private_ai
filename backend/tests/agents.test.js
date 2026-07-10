@@ -1158,5 +1158,56 @@ describe('Multi-Agent System & Tools Tests', () => {
       global.fetch = globalFetch;
     });
 
+    test('runAgentLoop intercepts Google Home device commands directly', async () => {
+      jest.doMock('../tools/google_home_tool', () => ({
+        handleGoogleHomeTool: jest.fn().mockResolvedValue(JSON.stringify({
+          success: true,
+          message: 'Mocked Google Assistant execution'
+        }))
+      }));
+
+      const mockThought = jest.fn();
+      const mockContent = jest.fn();
+      const mockToolCall = jest.fn();
+      const globalFetch = global.fetch;
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          choices: [{ message: { content: 'Sure, I have turned off the office light! 💡' } }]
+        })
+      });
+
+      const mockDb = {
+        all: jest.fn().mockResolvedValue([]),
+        get: jest.fn().mockResolvedValue(null),
+        run: jest.fn().mockResolvedValue({ lastID: 1 })
+      };
+
+      const { runAgentLoop } = require('../ai');
+      await runAgentLoop({
+        db: mockDb,
+        userId: 1,
+        provider: 'openai',
+        modelName: 'gpt-4',
+        userMessage: 'Turn off the office light',
+        history: [],
+        onThought: mockThought,
+        onContent: mockContent,
+        onToolCall: mockToolCall
+      });
+
+      expect(mockToolCall).toHaveBeenCalledWith({
+        tool: 'google_home',
+        action: 'send_command',
+        params: { command: 'Turn off the office light' },
+        agent: 'system_specialist'
+      });
+      expect(mockContent).toHaveBeenCalledWith(expect.stringContaining('Sure, I have turned off the office light'));
+      global.fetch = globalFetch;
+      jest.dontMock('../tools/google_home_tool');
+    });
+
   });
 });
