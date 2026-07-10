@@ -1052,7 +1052,7 @@ function App() {
         onClose={() => setPopupConfirm(null)}
       />
 
-      {popupChoices && (
+      {popupChoices && Array.isArray(popupChoices.choices) && (
         <div style={{
           position: 'fixed',
           top: 0,
