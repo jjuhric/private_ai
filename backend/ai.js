@@ -575,7 +575,17 @@ If no changes are required and you can proceed without executing the code, then 
         `Translate this user request: "${userMessage}"\nMode: Create Project Idea`,
         []
       );
-      if (commTurn && commTurn.thought) {
+      if (commTurn && commTurn.params) {
+        if (commTurn.params.requested_action === 'clarification_needed') {
+          const choicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
+            question: commTurn.params.question || "Need clarification",
+            choices: commTurn.params.choices || ["Yes", "No"]
+          })}`;
+          onContent(choicesPayload);
+          return;
+        }
+        projectIdea = JSON.stringify(commTurn.params);
+      } else if (commTurn && commTurn.thought) {
         projectIdea = commTurn.thought;
       } else if (commTurn && typeof commTurn === 'string') {
         projectIdea = commTurn;
@@ -666,6 +676,47 @@ If no changes are required and you can proceed without executing the code, then 
     // Check for delegation
     if (decision.tool.startsWith('delegate_to_') && decision.tool !== 'delegate_to_remote_node') {
       const agentName = decision.tool.replace('delegate_to_', '');
+      
+      if (agentName === 'ask_communication_expert') {
+        const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+        const commSpecialistSettings = {
+          ...settings,
+          modelName: supervisorModel || settings.modelName
+        };
+        onThought("Supervisor asking Communication Specialist for clarification...\n");
+        if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
+        
+        let queryTask = userMessage;
+        if (decision.params && typeof decision.params === 'object') {
+          queryTask = decision.params.query || decision.params.task || userMessage;
+        } else if (typeof decision.params === 'string') {
+          queryTask = decision.params;
+        }
+        
+        const commTurn = await runAgentTurn(
+          'communication_specialist',
+          commSpecialistSystemPrompt,
+          commSpecialistSettings,
+          `Clarify this missing information: "${queryTask}"\nMode: Create Project Idea`,
+          []
+        );
+        
+        if (commTurn && commTurn.params && commTurn.params.requested_action === 'clarification_needed') {
+          const choicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
+            question: commTurn.params.question || "Need clarification",
+            choices: commTurn.params.choices || ["Yes", "No"]
+          })}`;
+          onContent(choicesPayload);
+          return;
+        } else {
+          const fallbackPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
+            question: queryTask,
+            choices: ["Provide detail", "Cancel"]
+          })}`;
+          onContent(fallbackPayload);
+          return;
+        }
+      }
       
       let subTaskObj = {};
       if (decision.params && typeof decision.params === 'object') {

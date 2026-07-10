@@ -19,7 +19,8 @@ export default defineConfig({
     timeout: 60000,
     env: {
       PORT: '5173',
-      DB_PATH: 'backend/test_database.db' // Use a separate DB for E2E testing
+      DB_PATH: 'backend/test_database.db', // Use a separate DB for E2E testing
+      LOCAL_LLM_URL: 'http://localhost:1234/v1' // Force setup complete to bypass SetupWizard
     }
   },
 });

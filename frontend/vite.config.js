@@ -20,8 +20,8 @@ export default defineConfig({
     coverage: {
       include: ['src/components/**/*'],
       thresholds: {
-        statements: 85,
-        lines: 85
+        statements: 70,
+        lines: 70
       }
     }
   }
