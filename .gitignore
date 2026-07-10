@@ -23,4 +23,6 @@ test-results/
 # Logs
 *.log
 
-
+# Credentials / Secrets
+backend/credentials.json
+backend/tokens.json

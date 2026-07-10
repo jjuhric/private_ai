@@ -63,7 +63,6 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     body = {
       model: finalModel,
       messages: anthropicMessages,
-      max_tokens: 4096,
       stream: true
     };
     if (systemMessage) {
@@ -89,7 +88,6 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
       temperature: 0.7,
       frequency_penalty: 0.3,
       presence_penalty: 0.1,
-      max_tokens: localStyle === 'lm-studio' ? 1024 : 4096,
       stream: true,
       ...(localStyle === 'lm-studio' ? { num_ctx: 16384 } : {})
     };

@@ -21,10 +21,12 @@
     "axios": "^1.18.1",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.2.0",
+    "chromecast-api": "^0.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
+    "google-assistant": "^0.7.0",
     "google-news-url-decoder": "^1.2.2",
     "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.14.0",
@@ -32,8 +34,7 @@
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",
     "vectordb": "^0.4.2",
-    "winston": "^3.19.0",
-    "chromecast-api": "^0.4.0"
+    "winston": "^3.19.0"
   },
   "scripts": {
     "test": "jest --runInBand --forceExit",

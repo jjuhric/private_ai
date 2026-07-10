@@ -1,6 +1,62 @@
 const os = require('os');
 const { getDb } = require('../db');
 const { generateTTS } = require('../utils/tts');
+const path = require('path');
+const fs = require('fs');
+
+async function executeViaAssistantSDK(command) {
+  const credentialsPath = path.resolve(__dirname, '../credentials.json');
+  const tokensPath = path.resolve(__dirname, '../tokens.json');
+  
+  if (!fs.existsSync(credentialsPath) || !fs.existsSync(tokensPath)) {
+    return { success: false, reason: 'missing_credentials' };
+  }
+
+  const GoogleAssistant = require('google-assistant');
+  const config = {
+    auth: {
+      keyFilePath: credentialsPath,
+      savedTokensPath: tokensPath,
+    },
+    conversation: {
+      lang: 'en-US',
+      isNew: true,
+    },
+  };
+
+  return new Promise((resolve) => {
+    try {
+      const assistant = new GoogleAssistant(config.auth);
+      assistant.on('ready', () => {
+        assistant.start(config.conversation, (conversation) => {
+          let responseText = '';
+          conversation
+            .on('text', (text) => {
+              responseText += text + ' ';
+            })
+            .on('ended', (error, continueConversation) => {
+              if (error) {
+                resolve({ success: false, error: error.message || error });
+              } else {
+                resolve({ success: true, response: responseText.trim() });
+              }
+            })
+            .on('error', (error) => {
+              resolve({ success: false, error: error.message || error });
+            });
+            
+          // Send the text command
+          conversation.type(command);
+        });
+      });
+      assistant.on('error', (err) => {
+        resolve({ success: false, error: err.message || err });
+      });
+    } catch (e) {
+      resolve({ success: false, error: e.message });
+    }
+  });
+}
 
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
@@ -29,15 +85,35 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     return JSON.stringify({ error: 'Command string is required' });
   }
 
-  // Prepend activation phrase if not already present
-  let voiceCommand = command.trim();
-  if (!/^ok\s+google/i.test(voiceCommand) && !/^hey\s+google/i.test(voiceCommand)) {
-    voiceCommand = `Ok Google, ${voiceCommand}`;
+  // 1. Try to execute via Assistant SDK first
+  const sdkResult = await executeViaAssistantSDK(command);
+  
+  let ttsText = '';
+  let commandExecuted = false;
+
+  if (sdkResult.success) {
+    // SDK execution worked. The command was actually executed!
+    // We will just cast a confirmation response to the Nest Mini.
+    ttsText = sdkResult.response || 'Action completed.';
+    commandExecuted = true;
+  } else {
+    // Fallback or failed. Use the old behavior of speaking the command.
+    if (sdkResult.reason === 'missing_credentials') {
+      console.warn('Google Assistant SDK credentials missing. Falling back to simple TTS broadcasting.');
+    } else {
+      console.error(`Google Assistant SDK error: ${sdkResult.error}. Falling back to simple TTS.`);
+    }
+    
+    // Prepend activation phrase if not already present
+    ttsText = command.trim();
+    if (!/^ok\s+google/i.test(ttsText) && !/^hey\s+google/i.test(ttsText)) {
+      ttsText = `Ok Google, ${ttsText}`;
+    }
   }
 
   try {
-    // 1. Generate local TTS file path
-    const ttsUrl = await generateTTS(voiceCommand);
+    // 2. Generate local TTS file path
+    const ttsUrl = await generateTTS(ttsText);
     const localIp = getLocalIpAddress();
     const port = process.env.PORT || 3000;
     const mediaUrl = `http://${localIp}:${port}${ttsUrl}`;
@@ -109,8 +185,11 @@ async function handleGoogleHomeTool(db, userId, action, params) {
 
     return JSON.stringify({
       success: true,
-      message: `Successfully casted command to Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
-      command_sent: voiceCommand
+      message: commandExecuted 
+        ? `Successfully executed command via Assistant SDK and casted confirmation to speaker (${targetName || 'Default'}) at ${targetIp}.`
+        : `Successfully casted command to Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
+      command_sent: commandExecuted ? command : ttsText,
+      assistant_response: sdkResult.response || null
     });
 
   } catch (error) {

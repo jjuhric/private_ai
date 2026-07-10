@@ -133,7 +133,6 @@ async function callLMStudio(messages) {
       // Qwen sampling parameters
       temperature: 0.1, 
       top_p: 0.9,
-      max_tokens: 1024,
       num_ctx: 16384,
       
       // Ensure structured outputs are strictly maintained for agent handlers

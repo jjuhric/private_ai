@@ -151,7 +151,7 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
         model: finalModel,
         system: systemPrompt,
         messages: [{ role: 'user', content: instructions }],
-        max_tokens: 1024
+        ...(provider === 'local' ? {} : { max_tokens: 1024 })
       };
     } else if (targetStyle === 'local-gemini') {
       body = {
@@ -167,8 +167,8 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
           { role: 'user', content: instructions }
         ],
         temperature: 0.1,
-        max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
         response_format: { type: "json_object" },
+        ...(provider === 'local' ? {} : { max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048 }),
         ...(targetStyle === 'lm-studio' ? { num_ctx: 16384 } : {})
       };
     }
@@ -351,7 +351,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
         model: finalModel,
         system: responderInstruction,
         messages: [{ role: 'user', content: 'Generate report.' }],
-        max_tokens: 1024
+        ...(provider === 'local' ? {} : { max_tokens: 1024 })
       };
     } else {
       body = {
@@ -361,8 +361,8 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
           { role: 'user', content: responderInstruction }
         ],
         temperature: 0.2,
-        max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048,
         response_format: { type: "json_object" },
+        ...(provider === 'local' ? {} : { max_tokens: targetStyle === 'lm-studio' ? 1024 : 2048 }),
         ...(targetStyle === 'lm-studio' ? { num_ctx: 16384 } : {})
       };
     }
@@ -818,7 +818,7 @@ async function runSupervisorTurn(systemPrompt, settings, userMessage) {
         model: finalModel,
         system: systemPrompt,
         messages: [{ role: 'user', content: `Parse this user request and return the JSON handoff output: ${userMessage}` }],
-        max_tokens: 1024
+        ...(provider === 'local' ? {} : { max_tokens: 1024 })
       };
     } else {
       body = {
@@ -828,8 +828,8 @@ async function runSupervisorTurn(systemPrompt, settings, userMessage) {
           { role: 'user', content: userMessage }
         ],
         temperature: 0.1,
-        max_tokens: 1024,
         response_format: { type: "json_object" },
+        ...(provider === 'local' ? {} : { max_tokens: 1024 }),
         ...(targetStyle === 'lm-studio' ? { num_ctx: 16384 } : {})
       };
     }
