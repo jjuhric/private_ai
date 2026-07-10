@@ -258,4 +258,21 @@ describe('ChatPane Component Tests', () => {
     fireEvent.click(stopBtn);
     expect(mockHandleStop).toHaveBeenCalledTimes(1);
   });
+
+  test('renders markdown links to open in a new tab', () => {
+    const messagesWithLinks = [
+      { id: 1, role: 'assistant', content: 'Here is a link: [Google](https://google.com)' }
+    ];
+    const { container } = render(
+      <ChatPane 
+        {...defaultProps} 
+        messages={messagesWithLinks}
+      />
+    );
+    const linkElement = container.querySelector('a');
+    expect(linkElement).toBeInTheDocument();
+    expect(linkElement.getAttribute('href')).toBe('https://google.com');
+    expect(linkElement.getAttribute('target')).toBe('_blank');
+    expect(linkElement.getAttribute('rel')).toBe('noopener noreferrer');
+  });
 });

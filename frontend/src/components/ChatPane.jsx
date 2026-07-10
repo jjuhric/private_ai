@@ -3,6 +3,27 @@ import { Calendar, Github, Search, Send, Square, Cpu, CloudSun, Newspaper, FileT
 import { marked } from 'marked';
 import ExpandableThoughts from './ExpandableThoughts';
 
+// Configure marked to open all links in a new tab
+marked.use({
+  renderer: {
+    link(token) {
+      let href, title, text;
+      if (typeof token === 'object' && token !== null && 'href' in token) {
+        href = token.href;
+        title = token.title;
+        text = token.text;
+      } else {
+        href = arguments[0];
+        title = arguments[1];
+        text = arguments[2];
+      }
+      const cleanHref = href ? href.replace(/"/g, '&quot;') : '';
+      const cleanTitle = title ? ` title="${title.replace(/"/g, '&quot;')}"` : '';
+      return `<a href="${cleanHref}"${cleanTitle} target="_blank" rel="noopener noreferrer">${text}</a>`;
+    }
+  }
+});
+
 export default function ChatPane({
   settings,
   messages,

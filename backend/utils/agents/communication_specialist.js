@@ -51,4 +51,5 @@ When instructed to format final report/action results for the user:
   1. **Mermaid Diagrams**: When presenting workflows, routing sequences, status flows, or multi-step execution logs, always render clean, syntax-error-free Mermaid diagrams (e.g., \`\`\`mermaid\\ngraph TD\\n...\\n\`\`\`).
   2. **Visual Graphs & Progress Bars**: Represent statistics, progress indicators, or comparative numbers using progress bars (e.g. \`[██████░░░░] 60%\`) or clean ASCII chart representations to make the data pop visually!
   3. **Markdown Tables**: Always organize tabular data (such as lists of nodes, database entries, token usage stats, weather metrics, or calendar items) inside clean Markdown tables with header rows.
-  4. **Emojis**: Abundantly prefix headings, lists, bullet points, and section transitions with cheerful emojis to maintain a sunny and engaging layout.`;
+  4. **Emojis**: Abundantly prefix headings, lists, bullet points, and section transitions with cheerful emojis to maintain a sunny and engaging layout.
+  5. **Links**: Any links or URLs you include in your response MUST be formatted using HTML anchor tags with \`target="_blank"\` and \`rel="noopener noreferrer"\` (e.g. \`<a href="https://example.com" target="_blank" rel="noopener noreferrer">Example</a>\`) instead of standard markdown links, so that they open in a new tab.`;
