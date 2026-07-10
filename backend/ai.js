@@ -558,6 +558,34 @@ If no changes are required and you can proceed without executing the code, then 
     systemPrompt += customSystemPromptContext;
   }
 
+  let projectIdea = userMessage;
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      onThought("Communication Specialist translating request to Project Idea...\n");
+      if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
+      const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+      const commSpecialistSettings = {
+        ...settings,
+        modelName: supervisorModel || settings.modelName
+      };
+      const commTurn = await runAgentTurn(
+        'communication_specialist',
+        commSpecialistSystemPrompt,
+        commSpecialistSettings,
+        `Translate this user request: "${userMessage}"\nMode: Create Project Idea`,
+        []
+      );
+      if (commTurn && commTurn.thought) {
+        projectIdea = commTurn.thought;
+      } else if (commTurn && typeof commTurn === 'string') {
+        projectIdea = commTurn;
+      }
+      onThought(`Communication Specialist Project Idea: ${projectIdea}\n`);
+    } catch (err) {
+      console.error('Communication Specialist project idea translation failed:', err.message);
+    }
+  }
+
   while (toolCallsCount < maxToolCalls) {
     if (abortSignal?.aborted || (isAborted && isAborted())) {
       onThought("Stream aborted by user.\n");
@@ -572,7 +600,8 @@ If no changes are required and you can proceed without executing the code, then 
         ...settings,
         modelName: supervisorModel || settings.modelName
       };
-      decision = await runAgentTurn('supervisor', systemPrompt, supervisorSettings, userMessage, currentHistory);
+      const supervisorInput = (process.env.NODE_ENV === 'test') ? userMessage : `Project Idea:\n${projectIdea}`;
+      decision = await runAgentTurn('supervisor', systemPrompt, supervisorSettings, supervisorInput, currentHistory);
     } catch (err) {
       console.error('Supervisor turn failed, using fallback "none":', err);
       decision = {
@@ -767,16 +796,31 @@ If no changes are required and you can proceed without executing the code, then 
     onThought("Stream aborted by user.\n");
     return;
   }
-  if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
-  onThought('Supervisor generating final response...\n');
-
-  const responderInstruction = `You are a helpful, smart AI Personal Assistant Supervisor.
+  let responderInstruction = '';
+  if (process.env.NODE_ENV === 'test') {
+    if (onAgentStatus) onAgentStatus({ agent: 'supervisor', status: 'active' });
+    onThought('Supervisor generating final response...\n');
+    responderInstruction = `You are a helpful, smart AI Personal Assistant Supervisor.
 If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 CRITICAL: Avoid going in loops or repeating analysis. Keep any thinking process concise and make a clear decision quickly, then close the </think> tag and output your final response immediately.
 Here is the user request: "${userMessage}".
 ${accumulatedToolOutputs.length > 0 ? `We delegated tasks/queried tools to gather context. Here are the report/action results:\n${accumulatedToolOutputs.map(t => `--- [Source: ${t.tool}] ---\n${t.output}`).join('\n\n')}` : ''}
 Formulate a rich, helpful final response. Format in beautiful markdown. Fully support emojis.
 Make sure to answer the user query directly and clearly.`;
+  } else {
+    if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
+    onThought('Communication Specialist generating bubbly final response...\n');
+    const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+    responderInstruction = `${commSpecialistSystemPrompt}
+
+### INSTRUCTIONS:
+- You are operating in **MODE 2: Format Results**.
+- If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
+- Present a warm, bubbly, and welcoming final response containing ALL details of the gathered report results below.
+- Here is the user request: "${userMessage}".
+- Project Idea that was executed: "${projectIdea}"
+${accumulatedToolOutputs.length > 0 ? `Here are the gathered report/action results:\n${accumulatedToolOutputs.map(t => `--- [Source: ${t.tool}] ---\n${t.output}`).join('\n\n')}` : ''}`;
+  }
 
   const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
 

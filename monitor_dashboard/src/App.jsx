@@ -5,6 +5,12 @@ import LMStudioLogsView from './LMStudioLogsView';
 
 const agents = [
   {
+    type: 'communication_specialist',
+    name: 'Communication Specialist',
+    icon: RefreshCw,
+    desc: 'Primary contact for the user. Bubbly, warm, and welcomes the user. Translates requests into project ideas and formats final reports beautifully.'
+  },
+  {
     type: 'supervisor',
     name: 'Supervisor Agent',
     icon: Network,
