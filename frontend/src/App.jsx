@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, ExternalLink } from 'lucide-react';
+import { Menu, ExternalLink, Network } from 'lucide-react';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import ChatPane from './components/ChatPane';
