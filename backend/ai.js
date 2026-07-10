@@ -693,6 +693,15 @@ If no changes are required and you can proceed without executing the code, then 
       try {
         toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId, githubToken);
       } catch (err) {
+        try {
+          const { broadcastAlert } = require('./routes/alerts');
+          broadcastAlert({
+            type: 'error',
+            message: `Agent "${agentName}" encountered an execution error: ${err.message}`,
+            timestamp: new Date().toISOString()
+          });
+        } catch (alertErr) {}
+
         if (agentName === 'system_specialist') {
           toolOutput = JSON.stringify({
             status: "error",
@@ -717,6 +726,16 @@ If no changes are required and you can proceed without executing the code, then 
             if (parsed.data?.error) errMsg = parsed.data.error;
             else if (parsed.summary) errMsg = parsed.summary;
           } catch (e) {}
+
+          try {
+            const { broadcastAlert } = require('./routes/alerts');
+            broadcastAlert({
+              type: 'error',
+              message: `Agentic execution failure in "${agentName}": ${errMsg}`,
+              timestamp: new Date().toISOString()
+            });
+          } catch (alertErr) {}
+
           onContent(`Error: The system specialist failed to execute the task. Details: ${errMsg}`);
           return;
         }

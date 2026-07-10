@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar } from 'lucide-react';
 import TokenCountView from './TokenCountView';
 import LMStudioLogsView from './LMStudioLogsView';
+import CustomAlertModal from './CustomAlertModal';
 
 const agents = [
   {
@@ -98,6 +99,23 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   const [inputUrl, setInputUrl] = useState(hostUrl || 'http://localhost:3000');
   const [inputToken, setInputToken] = useState(token);
   const [testStatus, setTestStatus] = useState('');
+  const [popupAlert, setPopupAlert] = useState(null);
+
+  useEffect(() => {
+    window.alert = (message) => {
+      let type = 'info';
+      if (message.toLowerCase().includes('fail') || message.toLowerCase().includes('error')) {
+        type = 'error';
+      } else if (message.toLowerCase().includes('warn')) {
+        type = 'warning';
+      }
+      setPopupAlert({
+        type,
+        title: 'Private AI',
+        message
+      });
+    };
+  }, []);
 
   const [activeSubTab, setActiveSubTab] = useState('network'); // 'network', 'vault', 'host', 'nodes'
   const [documents, setDocuments] = useState([]);
@@ -299,6 +317,12 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
               waitingQueue: data.waitingQueue || [],
               thought: data.thought || 'Idle',
               activeNode: data.activeNode || null
+            });
+          } else if (data && (data.type === 'error' || data.type === 'warning')) {
+            setPopupAlert({
+              type: data.type,
+              title: 'Private AI Alert',
+              message: data.message
             });
           }
         } catch (e) {}
@@ -1278,6 +1302,11 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
           </div>
         </div>
       )}
+
+      <CustomAlertModal
+        alert={popupAlert}
+        onClose={() => setPopupAlert(null)}
+      />
     </div>
   );
 }

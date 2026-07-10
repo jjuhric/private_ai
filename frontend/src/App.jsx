@@ -12,6 +12,7 @@ import Toast from './components/Toast';
 import SetupWizard from './components/SetupWizard';
 import SudoModal from './components/SudoModal';
 import PopoutWindow from './components/PopoutWindow';
+import CustomAlertModal from './components/CustomAlertModal';
 
 function App() {
   // Auth state
@@ -21,6 +22,23 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [toast, setToast] = useState({ message: '', type: 'info' });
+  const [popupAlert, setPopupAlert] = useState(null);
+
+  useEffect(() => {
+    window.alert = (message) => {
+      let type = 'info';
+      if (message.toLowerCase().includes('fail') || message.toLowerCase().includes('error')) {
+        type = 'error';
+      } else if (message.toLowerCase().includes('warn')) {
+        type = 'warning';
+      }
+      setPopupAlert({
+        type,
+        title: 'Private AI',
+        message
+      });
+    };
+  }, []);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -117,6 +135,13 @@ function App() {
       eventSource.onmessage = (event) => {
         try {
           const alert = JSON.parse(event.data);
+          if (alert.type === 'error' || alert.type === 'warning') {
+            setPopupAlert({
+              type: alert.type,
+              title: 'Private AI Alert',
+              message: alert.message
+            });
+          }
           showToast(alert.message, alert.type || 'info');
         } catch (err) {
           console.error('[Alert Stream] Failed to parse message:', err);
@@ -987,6 +1012,11 @@ function App() {
           />
         </PopoutWindow>
       )}
+
+      <CustomAlertModal
+        alert={popupAlert}
+        onClose={() => setPopupAlert(null)}
+      />
     </div>
   );
 }
