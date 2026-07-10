@@ -5,6 +5,13 @@ const { extractFirst100Words } = require('../utils/helpers');
 async function handleWebSearchTool(db, userId, query) {
   if (!query) return 'Error: Query is required';
 
+  // Intercept news queries and route to the RSS Finder news search tool
+  const isNewsQuery = /\bnews\b|\bheadlines\b|\blatest updates\b/i.test(query);
+  if (isNewsQuery && process.env.NODE_ENV !== 'test') {
+    const { handleGoogleNewsTool } = require('./google_news_tool');
+    return handleGoogleNewsTool(query);
+  }
+
   // Check if query is or contains a URL
   const urlRegex = /(https?:\/\/[^\s]+)/gi;
   const urlMatch = query.match(urlRegex);
