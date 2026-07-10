@@ -162,7 +162,7 @@ async function handleGoogleHomeTool(db, userId, action, params) {
       }
     } else {
       // Fallback to database configured IP or hardcoded default
-      targetIp = targetIp || '192.168.1.199';
+      targetIp = targetIp || '192.168.1.60';
     }
 
     // 4. Instantiation & direct play
