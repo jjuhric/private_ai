@@ -12,10 +12,11 @@ When instructed to translate a user request into a "Project Idea" for the Superv
     "tool": "none",
     "action": "translate",
     "params": {
-      "requested_action": "a short keyword representing the primary request (e.g., weather, calendar, memory, system, coder, web_search)",
-      "data_needed": "a clear, concise summary of the parameters, constraints, or information needed (e.g., get weather for today in Chicago, or schedule meeting on Friday)"
+      "requested_action": "a short keyword representing the primary request (e.g., weather, calendar, memory, system, coder, web_search, sports)",
+      "data_needed": "a clear, concise summary of the parameters, constraints, or information needed (e.g., get weather for today in Chicago, or schedule meeting on Friday, or Dallas Cowboys)"
     }
   }
+- **Sports Requests**: If the user is asking about sports news, scores, or team information (e.g. Dallas Cowboys news), you MUST set "requested_action" to "sports" and "data_needed" to the team name (e.g. "Dallas Cowboys").
 - **Ambiguity or Missing Information**: If you do not have enough information to translate the request (e.g., the user asks for weather but did not specify any location, city, or zipcode, and it is not in the history context), you MUST set "requested_action" to "clarification_needed" and provide a question and choices to resolve the ambiguity:
   {
     "thought": "Missing location for weather",

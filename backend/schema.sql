@@ -166,3 +166,13 @@ CREATE TABLE IF NOT EXISTS token_usage (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS shown_articles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  article_link TEXT NOT NULL,
+  title TEXT NOT NULL,
+  seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE(user_id, article_link)
+);
+

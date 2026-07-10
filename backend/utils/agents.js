@@ -609,6 +609,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     } else if (decision.tool === 'google_news') {
       const { handleGoogleNewsTool } = require('../tools/google_news_tool');
       output = await handleGoogleNewsTool(decision.params?.query);
+    } else if (decision.tool === 'sports') {
+      const { handleSportsTool } = require('../tools/sports_tool');
+      output = await handleSportsTool(db, userId, decision.action, decision.params);
     } else if (decision.tool === 'memory') {
       const { handleMemoryTool } = require('../tools/memory_tool');
       const toolParams = { ...decision.params, agentName };

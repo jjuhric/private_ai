@@ -167,6 +167,19 @@ async function getDb() {
       )
     `);
 
+    // Migration for shown_articles table (Sports Agent)
+    await dbConnection.run(`
+      CREATE TABLE IF NOT EXISTS shown_articles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        article_link TEXT NOT NULL,
+        title TEXT NOT NULL,
+        seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, article_link)
+      )
+    `);
+
     console.log('Database initialized successfully.');
   } catch (error) {
     console.error('Error initializing database:', error);
