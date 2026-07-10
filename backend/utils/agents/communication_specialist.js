@@ -18,6 +18,7 @@ When instructed to translate a user request into a "Project Idea" for the Superv
   }
 - **Sports Requests**: If the user is asking about sports news, scores, or team information (e.g. Dallas Cowboys news), you MUST set "requested_action" to "sports" and "data_needed" to the team name (e.g. "Dallas Cowboys").
 - **General News Requests**: If the user is asking about general news (e.g., "Give me the news", "What's in the news today?"), you MUST set "requested_action" to "news" and "data_needed" to "general". Do NOT replace sports requests with this.
+- **Smart Home / Home Automation Requests**: If the user is asking to control smart home devices or execute home automation tasks (e.g., turning on, off, or changing the color of lights, turning on/off TVs, turning on/off fans, plugs, outlets, etc.), you MUST set "requested_action" to "system" and set "data_needed" to the exact, complete, and literal message or command requested (e.g. "turn off the fan", "turn the office lights blue", "turn on the TV").
 - **Ambiguity or Missing Information**: If you do not have enough information to translate the request (e.g., the user asks for weather but did not specify any location, city, or zipcode, and it is not in the history context), you MUST set "requested_action" to "clarification_needed" and provide a question and choices to resolve the ambiguity:
   {
     "thought": "Missing location for weather",

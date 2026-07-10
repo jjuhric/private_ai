@@ -407,8 +407,8 @@ export default function SettingsModal({
           <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
             <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>Google Home Smart Speaker</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker Name</label>
                   <input
                     type="text"
@@ -418,7 +418,7 @@ export default function SettingsModal({
                     onChange={e => setSettings(prev => ({ ...prev, google_home_name: e.target.value }))}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker IP Address</label>
                   <input
                     type="text"
@@ -428,16 +428,17 @@ export default function SettingsModal({
                     onChange={e => setSettings(prev => ({ ...prev, google_home_ip: e.target.value }))}
                   />
                 </div>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  style={{ height: '38px', margin: 0, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  onClick={handleScanSpeakers}
-                  disabled={isScanning}
-                >
-                  {isScanning ? 'Scanning...' : 'Scan Network'}
-                </button>
               </div>
+              
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ width: '100%', height: '38px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={handleScanSpeakers}
+                disabled={isScanning}
+              >
+                {isScanning ? 'Scanning local network...' : 'Scan Local Network for Speakers'}
+              </button>
               
               {scanError && <div style={{ color: 'var(--error)', fontSize: '0.8rem' }}>{scanError}</div>}
               
