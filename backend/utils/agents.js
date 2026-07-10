@@ -614,6 +614,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     } else if (decision.tool === 'time') {
       const { handleTimeTool } = require('../tools/time_tool');
       output = await handleTimeTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'tts') {
+      const { handleTtsTool } = require('../tools/tts_tool');
+      output = await handleTtsTool(db, userId, decision.action, decision.params);
     } else if (decision.tool === 'search_web') {
       const { handleWebSearchTool } = require('../tools/web_search_tool');
       const q = decision.params?.query || task;

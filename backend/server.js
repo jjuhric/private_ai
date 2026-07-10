@@ -149,6 +149,29 @@ app.get('/monitor/*', (req, res) => {
   res.sendFile(path.join(monitorBuildPath, 'index.html'));
 });
 
+// Serve dynamically generated TTS audio files
+const ttsDir = path.join(__dirname, 'public/tts');
+if (!fs.existsSync(ttsDir)) {
+  fs.mkdirSync(ttsDir, { recursive: true });
+}
+app.use('/tts', express.static(ttsDir));
+
+// Expose TTS generation API endpoint
+const { generateTTS } = require('./utils/tts');
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required for TTS' });
+    }
+    const audioUrl = await generateTTS(text);
+    res.json({ audioUrl });
+  } catch (err) {
+    logger.error('TTS API error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fallback route to serve index.html for React/Vite single page app router
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api') || req.path.startsWith('/monitor')) {

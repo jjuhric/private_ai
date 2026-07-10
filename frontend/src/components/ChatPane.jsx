@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Github, Search, Send, Square, Cpu, CloudSun, Newspaper, FileText } from 'lucide-react';
+import { Calendar, Github, Search, Send, Square, Cpu, CloudSun, Newspaper, FileText, Volume2, VolumeX } from 'lucide-react';
 import { marked } from 'marked';
 import ExpandableThoughts from './ExpandableThoughts';
 
@@ -43,6 +43,97 @@ export default function ChatPane({
   const [editedCommands, setEditedCommands] = useState({});
   const scrollerRef = useRef(null);
   const isAtBottomRef = useRef(true);
+
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    try {
+      if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+        return localStorage.getItem('private_ai_voice_enabled') === 'true';
+      }
+    } catch (e) {}
+    return false;
+  });
+  const [wasStreaming, setWasStreaming] = useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined' && typeof localStorage.setItem === 'function') {
+        localStorage.setItem('private_ai_voice_enabled', voiceEnabled);
+      }
+    } catch (e) {}
+  }, [voiceEnabled]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Stop audio if user toggles voice off
+  useEffect(() => {
+    if (!voiceEnabled && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  }, [voiceEnabled]);
+
+  // Stop audio if a new message is added by the user (meaning they started a new turn)
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.role === 'user') {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    }
+  }, [messages]);
+
+  // Speak assistant message when streaming completes
+  useEffect(() => {
+    if (isStreaming) {
+      setWasStreaming(true);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    } else if (wasStreaming && !isStreaming) {
+      setWasStreaming(false);
+      const lastMessage = messages[messages.length - 1];
+      if (voiceEnabled && lastMessage && lastMessage.role === 'assistant' && lastMessage.content) {
+        speakText(lastMessage.content);
+      }
+    }
+  }, [isStreaming, messages, voiceEnabled, wasStreaming]);
+
+  const speakText = async (text) => {
+    try {
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!response.ok) {
+        throw new Error(`TTS API returned status ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.audioUrl) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        const audio = new Audio(data.audioUrl);
+        audioRef.current = audio;
+        audio.play().catch(err => {
+          console.warn('Audio playback was blocked or failed:', err);
+        });
+      }
+    } catch (err) {
+      console.error('Failed to speak response:', err);
+    }
+  };
 
   const scrollToBottom = (behavior = 'smooth') => {
     if (messagesEndRef && messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -89,6 +180,41 @@ export default function ChatPane({
 
   return (
     <div className="chat-pane">
+      {activeChatId && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          padding: '10px 20px',
+          borderBottom: '1px solid var(--border-glass)',
+          background: 'var(--bg-glass)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 10
+        }}>
+          <button
+            onClick={() => setVoiceEnabled(!voiceEnabled)}
+            className="btn-icon"
+            title={voiceEnabled ? "Mute Voice Response" : "Unmute Voice Response"}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 12px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              border: '1px solid var(--border-glass)',
+              background: 'rgba(255,255,255,0.02)',
+              color: voiceEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              filter: voiceEnabled ? 'drop-shadow(0 0 6px rgba(139, 92, 246, 0.4))' : 'none'
+            }}
+          >
+            {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+            <span>{voiceEnabled ? "Voice: Enabled" : "Voice: Muted"}</span>
+          </button>
+        </div>
+      )}
       <div className="messages-scroller" ref={scrollerRef} onScroll={handleScroll}>
         {!activeChatId ? (
           <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '20vh' }}>

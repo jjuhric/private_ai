@@ -850,6 +850,9 @@ If no changes are required and you can proceed without executing the code, then 
       } else if (decision.tool === 'time') {
         const { handleTimeTool } = require('./tools/time_tool');
         toolOutput = await handleTimeTool(db, userId, decision.action, decision.params);
+      } else if (decision.tool === 'tts') {
+        const { handleTtsTool } = require('./tools/tts_tool');
+        toolOutput = await handleTtsTool(db, userId, decision.action, decision.params);
       } else if (decision.tool === 'delegate_to_remote_node') {
         try {
           const { nodeId, command } = decision.params;
