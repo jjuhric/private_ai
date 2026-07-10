@@ -568,13 +568,40 @@ If no changes are required and you can proceed without executing the code, then 
         ...settings,
         modelName: supervisorModel || settings.modelName
       };
-      const commTurn = await runAgentTurn(
+      let commTurn = await runAgentTurn(
         'communication_specialist',
         commSpecialistSystemPrompt,
         commSpecialistSettings,
         `Translate this user request: "${userMessage}"\nMode: Create Project Idea`,
         []
       );
+
+      // Handle tool call if requested by the Communication Specialist
+      if (commTurn && commTurn.tool && commTurn.tool !== 'none') {
+        onThought(`Communication Specialist invoked tool: "${commTurn.tool}" with action "${commTurn.action}"...\n`);
+        let toolOutput = '';
+        if (commTurn.tool === 'time') {
+          try {
+            const { handleTimeTool } = require('./tools/time_tool');
+            toolOutput = await handleTimeTool(db, userId, commTurn.action, commTurn.params);
+          } catch (timeErr) {
+            toolOutput = `Error executing time tool: ${timeErr.message}`;
+          }
+        } else {
+          toolOutput = `Error: Unsupported tool "${commTurn.tool}" for Communication Specialist.`;
+        }
+        onThought(`Tool output: ${toolOutput}\n`);
+
+        // Run second turn with tool results
+        commTurn = await runAgentTurn(
+          'communication_specialist',
+          commSpecialistSystemPrompt,
+          commSpecialistSettings,
+          `Translate this user request: "${userMessage}"\nMode: Create Project Idea\nTool execution result for "${commTurn.tool}" ("${commTurn.action}"):\n${toolOutput}`,
+          []
+        );
+      }
+
       if (commTurn && commTurn.params) {
         if (commTurn.params.requested_action === 'clarification_needed') {
           const choicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
@@ -881,14 +908,22 @@ Make sure to answer the user query directly and clearly.`;
     if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
     onThought('Communication Specialist generating bubbly final response...\n');
     const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+    let currentTimeContext = '';
+    try {
+      const { handleTimeTool } = require('./tools/time_tool');
+      currentTimeContext = await handleTimeTool(db, userId, 'current_time', {});
+    } catch (timeErr) {
+      console.error('Failed to get current time for responder instruction:', timeErr);
+    }
     responderInstruction = `${commSpecialistSystemPrompt}
-
+ 
 ### INSTRUCTIONS:
 - You are operating in **MODE 2: Format Results**.
 - If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 - Present a warm, bubbly, and welcoming final response containing ALL details of the gathered report results below.
 - Here is the user request: "${userMessage}".
 - Project Idea that was executed: "${projectIdea}"
+${currentTimeContext ? `\n### Current System Time Context:\n${currentTimeContext}\n` : ''}
 ${accumulatedToolOutputs.length > 0 ? `Here are the gathered report/action results:\n${accumulatedToolOutputs.map(t => `--- [Source: ${t.tool}] ---\n${t.output}`).join('\n\n')}` : ''}`;
   }
 

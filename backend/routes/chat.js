@@ -231,46 +231,75 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
     // Send the model name to the frontend
     sendEvent('model_used', { model: actualModel });
 
+    // Broadcast streaming status to Standalone Monitor
+    try {
+      const { broadcastAlert } = require('./alerts');
+      broadcastAlert({ type: 'streaming_status', isStreaming: true });
+    } catch (e) {}
+
     const { enqueue } = require('../services/ai_queue');
     await enqueue(async (onThoughtCallback) => {
-      await runAgentLoop({
-        db,
-        userId: req.user.id,
-        chatId,
-        provider: settings.provider,
-        modelName: actualModel,
-        supervisorModel: actualModel,
-        userMessage: message,
-        history,
-        githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
-        localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
-        localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
-        localApiStyle: settings.local_api_style || 'openai',
-        onlineUrl: settings.online_url,
-        onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
-        geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
-        onlineProvider: settings.online_provider || 'gemini',
-        isAborted: () => streamAbortController.signal.aborted,
-        abortSignal: streamAbortController.signal,
-        onThought: (thoughtChunk) => {
-          accumulatedThoughts += thoughtChunk;
-          sendEvent('thought', thoughtChunk);
-          onThoughtCallback(thoughtChunk);
-        },
-        onContent: (contentChunk) => {
-          accumulatedContent += contentChunk;
-          sendEvent('content', contentChunk);
-        },
-        onToolCall: (toolCall) => {
-          sendEvent('tool', toolCall);
-        },
-        onAgentStatus: (statusData) => {
-          sendEvent('agent_status', statusData);
-        },
-        onCommandApprovalRequired: ({ commandId, command, safety_analysis }) => {
-          sendEvent('command_approval_required', { commandId, command, safety_analysis });
-        }
-      });
+      try {
+        await runAgentLoop({
+          db,
+          userId: req.user.id,
+          chatId,
+          provider: settings.provider,
+          modelName: actualModel,
+          supervisorModel: actualModel,
+          userMessage: message,
+          history,
+          githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
+          localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
+          localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
+          localApiStyle: settings.local_api_style || 'openai',
+          onlineUrl: settings.online_url,
+          onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+          geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
+          onlineProvider: settings.online_provider || 'gemini',
+          isAborted: () => streamAbortController.signal.aborted,
+          abortSignal: streamAbortController.signal,
+          onThought: (thoughtChunk) => {
+            accumulatedThoughts += thoughtChunk;
+            sendEvent('thought', thoughtChunk);
+            onThoughtCallback(thoughtChunk);
+          },
+          onContent: (contentChunk) => {
+            accumulatedContent += contentChunk;
+            sendEvent('content', contentChunk);
+          },
+          onToolCall: (toolCall) => {
+            sendEvent('tool', toolCall);
+            // Broadcast tool call to Standalone Monitor
+            try {
+              const { broadcastAlert } = require('./alerts');
+              broadcastAlert({ type: 'tool_call', toolCall });
+            } catch (e) {}
+          },
+          onAgentStatus: (statusData) => {
+            sendEvent('agent_status', statusData);
+            // Broadcast agent status to Standalone Monitor
+            try {
+              const { broadcastAlert } = require('./alerts');
+              broadcastAlert({
+                type: 'agent_status',
+                agent: statusData.agent,
+                status: statusData.status
+              });
+            } catch (e) {}
+          },
+          onCommandApprovalRequired: ({ commandId, command, safety_analysis }) => {
+            sendEvent('command_approval_required', { commandId, command, safety_analysis });
+          }
+        });
+      } finally {
+        // Broadcast end of streaming status to Standalone Monitor
+        try {
+          const { broadcastAlert } = require('./alerts');
+          broadcastAlert({ type: 'streaming_status', isStreaming: false });
+          broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
+        } catch (e) {}
+      }
     }, { nodeId: 'chat-ui', name: `User Chat Request` });
 
     // Save assistant response to database

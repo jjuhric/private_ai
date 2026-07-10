@@ -91,7 +91,15 @@ const agents = [
   }
 ];
 
-export default function App({ toolLogs, activeAgent, isStreaming }) {
+export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAgent, isStreaming: propIsStreaming }) {
+  const [localActiveAgent, setLocalActiveAgent] = useState(null);
+  const [localIsStreaming, setLocalIsStreaming] = useState(false);
+  const [localToolLogs, setLocalToolLogs] = useState([]);
+
+  const activeAgent = propActiveAgent !== undefined ? propActiveAgent : localActiveAgent;
+  const isStreaming = propIsStreaming !== undefined ? propIsStreaming : localIsStreaming;
+  const toolLogs = propToolLogs !== undefined ? propToolLogs : localToolLogs;
+
   const [token, setToken] = useState(localStorage.getItem('main_host_token') || '');
   const [hostUrl, setHostUrl] = useState(localStorage.getItem('main_host_url') || '');
   const [settings, setSettings] = useState(null);
@@ -380,6 +388,19 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
               thought: data.thought || 'Idle',
               activeNode: data.activeNode || null
             });
+          } else if (data && data.type === 'streaming_status') {
+            setLocalIsStreaming(data.isStreaming);
+            if (data.isStreaming) {
+              setLocalToolLogs([]);
+              setLocalActiveAgent(null);
+            }
+          } else if (data && data.type === 'agent_status') {
+            setLocalActiveAgent(data.agent);
+          } else if (data && data.type === 'tool_call') {
+            setLocalToolLogs(prev => {
+              if (data.toolCall && prev.some(log => log.id === data.toolCall.id)) return prev;
+              return [...prev, data.toolCall];
+            });
           } else if (data && (data.type === 'error' || data.type === 'warning')) {
             setPopupAlert({
               type: data.type,
@@ -577,6 +598,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
     // Heuristics based on real-time SSE thoughts
     const thought = (aiState.thought || '').toLowerCase();
     if (aiState.isBusy && thought) {
+      if (agentType === 'communication_specialist' && (thought.includes('communication_specialist') || thought.includes('communication specialist') || thought.includes('translating request') || thought.includes('generating bubbly final response'))) return 'Active';
       if (agentType === 'supervisor' && (thought.includes('supervisor') || thought.includes('deciding strategy') || thought.includes('generating final response'))) return 'Active';
       if (agentType === 'weather' && (thought.includes('weather_expert') || thought.includes('weather expert') || thought.includes('weather'))) return 'Active';
       if (agentType === 'memory' && (thought.includes('memory_agent') || thought.includes('memory expert') || thought.includes('memory'))) return 'Active';
@@ -597,6 +619,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
 
     currentAgent = currentAgent.toLowerCase().replace('delegate_to_', '');
 
+    if (agentType === 'communication_specialist' && (currentAgent === 'communication_specialist' || currentAgent === 'communication' || currentAgent === 'expert')) return 'Active';
     if (agentType === 'supervisor' && currentAgent === 'supervisor') return 'Active';
     if (agentType === 'memory' && (currentAgent === 'memory_agent' || currentAgent === 'memory')) return 'Active';
     if (agentType === 'calendar' && (currentAgent === 'calendar_handler' || currentAgent === 'calendar')) return 'Active';
