@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar, ChevronLeft, ChevronRight, Trophy, Newspaper } from 'lucide-react';
 import TokenCountView from './TokenCountView';
 import LMStudioLogsView from './LMStudioLogsView';
 import CustomAlertModal from './CustomAlertModal';
@@ -88,6 +88,18 @@ const agents = [
     name: 'Developer Agent',
     icon: Layers,
     desc: 'Orchestrates software development pipelines, manages workspace files, writes source code, and deploys new custom tools.'
+  },
+  {
+    type: 'sports',
+    name: 'Sports Agent',
+    icon: Trophy,
+    desc: 'Gathers and tracks sports news, scores, highlights, or team articles from Bleacher Report, ensuring unseen stories are shown first.'
+  },
+  {
+    type: 'news',
+    name: 'News Agent',
+    icon: Newspaper,
+    desc: 'Gathers general news briefs from TMZ and performs randomized searches on user preference topics, evaluating accuracy results.'
   }
 ];
 
@@ -612,6 +624,8 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       if (agentType === 'developer' && (thought.includes('developer_agent') || thought.includes('developer expert') || thought.includes('developer'))) return 'Active';
       if (agentType === 'system' && (thought.includes('system_specialist') || thought.includes('system expert') || thought.includes('system_agent') || thought.includes('system agent'))) return 'Active';
       if (agentType === 'node' && (thought.includes('node_agent') || thought.includes('node expert') || thought.includes('node agent'))) return 'Active';
+      if (agentType === 'sports' && (thought.includes('sports_agent') || thought.includes('sports expert') || thought.includes('sports'))) return 'Active';
+      if (agentType === 'news' && (thought.includes('news_agent') || thought.includes('news expert') || thought.includes('news'))) return 'Active';
     }
 
     let currentAgent = activeAgent || (toolLogs && toolLogs.length > 0 ? (toolLogs[toolLogs.length - 1].agent || toolLogs[toolLogs.length - 1].tool) : null) || (isStreaming ? 'supervisor' : null);
@@ -634,6 +648,10 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
     if (agentType === 'system' && (currentAgent === 'system_specialist' || currentAgent === 'system' || currentAgent === 'host_machine')) return 'Active';
     if (agentType === 'node' && (currentAgent === 'node_agent' || currentAgent === 'network_node' || currentAgent === 'list_network_nodes' || currentAgent === 'remote_node_bridge')) return 'Active';
     if (agentType === 'developer' && (currentAgent === 'developer_agent' || currentAgent === 'developer' || currentAgent === 'dev_pipeline')) return 'Active';
+    if (agentType === 'sports' && (currentAgent === 'sports_agent' || currentAgent === 'sports')) return 'Active';
+    if (agentType === 'news' && (currentAgent === 'news_agent' || currentAgent === 'news')) return 'Active';
+
+    return 'Idle';
 
     return 'Idle';
   };
@@ -962,7 +980,13 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                 flex: '1 1 0%',
                 paddingRight: '6px'
               }}>
-                {agents.map((agent, index) => {
+                {[...agents].sort((a, b) => {
+                  const aActive = getAgentStatus(a.type) === 'Active';
+                  const bActive = getAgentStatus(b.type) === 'Active';
+                  if (aActive && !bActive) return -1;
+                  if (!aActive && bActive) return 1;
+                  return 0;
+                }).map((agent, index) => {
                   const status = getAgentStatus(agent.type);
                   const IconComponent = agent.icon;
                   return (
