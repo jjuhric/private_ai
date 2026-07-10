@@ -691,9 +691,12 @@ If no changes are required and you can proceed without executing the code, then 
     decision.tool = toolName;
 
     // Loop detection protection
-    const toolCallSignature = `${decision.tool}:${decision.action || 'default'}:${JSON.stringify(decision.params || {})}`;
+    const isDelegation = decision.tool.startsWith('delegate_to_');
+    const toolCallSignature = isDelegation
+      ? decision.tool
+      : `${decision.tool}:${decision.action || 'default'}:${JSON.stringify(decision.params || {})}`;
     if (seenToolCalls.has(toolCallSignature)) {
-      onThought(`[Loop Detector] Detected duplicate tool call in coordinator loop: "${toolCallSignature}". Force terminating loop to prevent runaway execution.\n`);
+      onThought(`[Loop Detector] Detected duplicate delegation or tool call in coordinator loop: "${toolCallSignature}". Force terminating loop to prevent runaway execution.\n`);
       break;
     }
     seenToolCalls.add(toolCallSignature);
@@ -867,8 +870,9 @@ If no changes are required and you can proceed without executing the code, then 
     }
 
     let safeResult = typeof toolOutput === 'string' ? toolOutput : JSON.stringify(toolOutput);
-    if (safeResult.length > 3000) {
-      safeResult = safeResult.substring(0, 3000) + "\n... [TRUNCATED: Response too large for context]";
+    const limit = decision.tool === 'delegate_to_news_agent' ? 25000 : 3000;
+    if (safeResult.length > limit) {
+      safeResult = safeResult.substring(0, limit) + "\n... [TRUNCATED: Response too large for context]";
     }
     toolOutput = safeResult;
 

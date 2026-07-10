@@ -612,6 +612,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     } else if (decision.tool === 'sports') {
       const { handleSportsTool } = require('../tools/sports_tool');
       output = await handleSportsTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'news') {
+      const { handleNewsTool } = require('../tools/news_tool');
+      output = await handleNewsTool(db, userId, decision.action, decision.params);
     } else if (decision.tool === 'memory') {
       const { handleMemoryTool } = require('../tools/memory_tool');
       const toolParams = { ...decision.params, agentName };
@@ -687,8 +690,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     }
 
     let safeResult = typeof output === 'string' ? output : JSON.stringify(output);
-    if (safeResult.length > 3000) {
-      safeResult = safeResult.substring(0, 3000) + "\n... [TRUNCATED: Response too large for context]";
+    const limit = decision.tool === 'news' ? 25000 : 3000;
+    if (safeResult.length > limit) {
+      safeResult = safeResult.substring(0, limit) + "\n... [TRUNCATED: Response too large for context]";
     }
     output = safeResult;
 
