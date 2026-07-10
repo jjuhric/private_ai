@@ -152,11 +152,13 @@ $defaultToolRegistryLocalPath = "./tool_registry"
 $defaultUserName = ""
 $defaultUserZipcode = ""
 $defaultWeatherKey = ""
+$defaultIsHost = "true"
 
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
     foreach ($line in $envLines) {
         if ($line -match "^PORT=(.*)") { $defaultPort = $Matches[1].Trim() }
+        if ($line -match "^IS_HOST=(.+)") { $defaultIsHost = $Matches[1].Trim() }
         if ($line -match "^LOCAL_LLM_URL=(.*)") { $defaultLocalUrl = $Matches[1].Trim() }
         if ($line -match "^LOCAL_LLM_KEY=(.*)") { $defaultLocalKey = $Matches[1].Trim() }
         if ($line -match "^GEMINI_API_KEY=(.*)") { $defaultOnlineKey = $Matches[1].Trim() }
@@ -199,6 +201,7 @@ if ($NonInteractive) {
     Write-Log "Running in non-interactive mode. Utilizing configuration defaults." "Yellow"
     $deviceType = $defaultDeviceType
     $isMainHost = if ($defaultIsMainHostYN -eq "y") { "1" } else { "0" }
+    $isHost = $defaultIsHost
     $mainHostIp = $defaultMainHostIp
     $adminUser = $defaultAdminUser
     $adminPass = $defaultAdminPass
@@ -215,8 +218,9 @@ if ($NonInteractive) {
     Write-Host "  Configuration Settings" -ForegroundColor Cyan
     Write-Host "====================================================" -ForegroundColor Cyan
 
-    $isHostYN = Read-Host "Is this machine the host? (y/n) [y]"
-    if ([string]::IsNullOrWhiteSpace($isHostYN)) { $isHostYN = "y" }
+    $isHostDefaultStr = if ($defaultIsHost -eq "false") { "n" } else { "y" }
+    $isHostYN = Read-Host "Is this machine the host? (y/n) [$isHostDefaultStr]"
+    if ([string]::IsNullOrWhiteSpace($isHostYN)) { $isHostYN = $isHostDefaultStr }
     $isHost = "true"
     if ($isHostYN -eq "n" -or $isHostYN -eq "N") {
         $isHost = "false"
