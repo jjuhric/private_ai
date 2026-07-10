@@ -31,9 +31,11 @@ try {
 
   assistant.on('ready', () => {
     console.log('\n✅ Successfully authenticated with Google Assistant!');
-    console.log(`Tokens have been saved to: ${tokensPath}`);
-    console.log('You can now use the Google Assistant SDK to execute commands.');
-    process.exit(0);
+    console.log(`Saving tokens to: ${tokensPath}...`);
+    setTimeout(() => {
+      console.log('You can now use the Google Assistant SDK to execute commands.');
+      process.exit(0);
+    }, 1500);
   });
 
   assistant.on('error', (err) => {
