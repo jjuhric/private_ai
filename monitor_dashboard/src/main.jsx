@@ -16,11 +16,14 @@ if (hostUrl) {
   };
 
   const OriginalEventSource = window.EventSource;
-  window.EventSource = function(url, options) {
-    if (url.startsWith('/api/')) {
-      url = `${hostUrl}${url}`;
+  window.EventSource = class extends OriginalEventSource {
+    constructor(url, options) {
+      let finalUrl = url;
+      if (typeof url === 'string' && url.startsWith('/api/')) {
+        finalUrl = `${hostUrl}${url}`;
+      }
+      super(finalUrl, options);
     }
-    return new OriginalEventSource(url, options);
   };
 }
 

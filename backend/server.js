@@ -137,7 +137,8 @@ app.use(express.static(frontendBuildPath));
 // Serve standalone monitor dashboard from monitor_dashboard/dist if present
 const monitorBuildPath = path.join(__dirname, '../monitor_dashboard/dist');
 app.get('/monitor', (req, res, next) => {
-  if (req.path === '/monitor') {
+  const pathPart = req.originalUrl.split('?')[0];
+  if (pathPart === '/monitor') {
     const query = Object.keys(req.query).length ? '?' + new URLSearchParams(req.query).toString() : '';
     return res.redirect(301, '/monitor/' + query);
   }

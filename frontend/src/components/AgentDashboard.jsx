@@ -3,7 +3,8 @@ import { Network } from 'lucide-react';
 
 export default function AgentDashboard() {
   const token = localStorage.getItem('token') || '';
-  const monitorDashboardUrl = `http://${window.location.hostname}:${window.location.port}/monitor?token=${encodeURIComponent(token)}`;
+  const monitorDashboardUrl = `http://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/monitor/?token=${encodeURIComponent(token)}`;
+  const displayAddress = `${window.location.host}/monitor`;
 
   return (
     <div className="memory-pane" style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-primary)' }}>
@@ -24,8 +25,8 @@ export default function AgentDashboard() {
         >
           Launch Standalone Monitor
         </a>
-        <div style={{ marginTop: '24px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          Running on: <code style={{ color: 'var(--accent-secondary)' }}>{monitorDashboardUrl}</code>
+        <div style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Running on: <code style={{ color: 'var(--accent-secondary)' }}>{displayAddress}</code>
         </div>
       </div>
     </div>
