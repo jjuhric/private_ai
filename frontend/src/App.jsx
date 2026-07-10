@@ -23,6 +23,7 @@ function App() {
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [toast, setToast] = useState({ message: '', type: 'info' });
   const [popupAlert, setPopupAlert] = useState(null);
+  const [popupConfirm, setPopupConfirm] = useState(null);
 
   useEffect(() => {
     window.alert = (message) => {
@@ -289,23 +290,29 @@ function App() {
     }
   };
 
-  const deleteChat = async (id, e) => {
+  const deleteChat = (id, e) => {
     e.stopPropagation();
-    if (!window.confirm('Delete this chat room?')) return;
-    try {
-      const res = await fetch(`/api/chats/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setChats(prev => prev.filter(c => c.id !== id));
-        if (activeChatId === id) {
-          setActiveChatId(null);
+    setPopupConfirm({
+      type: 'confirm',
+      title: 'Private AI',
+      message: 'Delete this chat room?',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/chats/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            setChats(prev => prev.filter(c => c.id !== id));
+            if (activeChatId === id) {
+              setActiveChatId(null);
+            }
+          }
+        } catch (err) {
+          console.error(err);
         }
       }
-    } catch (err) {
-      console.error(err);
-    }
+    });
   };
 
   const handleRenameChat = async (id, newTitle) => {
@@ -1016,6 +1023,11 @@ function App() {
       <CustomAlertModal
         alert={popupAlert}
         onClose={() => setPopupAlert(null)}
+      />
+
+      <CustomAlertModal
+        alert={popupConfirm}
+        onClose={() => setPopupConfirm(null)}
       />
     </div>
   );

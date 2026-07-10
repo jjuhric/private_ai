@@ -100,6 +100,7 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   const [inputToken, setInputToken] = useState(token);
   const [testStatus, setTestStatus] = useState('');
   const [popupAlert, setPopupAlert] = useState(null);
+  const [popupConfirm, setPopupConfirm] = useState(null);
 
   useEffect(() => {
     window.alert = (message) => {
@@ -165,11 +166,16 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
   };
 
   const handleDisconnect = () => {
-    if (window.confirm('Disconnect from this Main Host and reset configurations?')) {
-      localStorage.removeItem('main_host_url');
-      localStorage.removeItem('main_host_token');
-      window.location.reload();
-    }
+    setPopupConfirm({
+      type: 'confirm',
+      title: 'Private AI',
+      message: 'Disconnect from this Main Host and reset configurations?',
+      onConfirm: () => {
+        localStorage.removeItem('main_host_url');
+        localStorage.removeItem('main_host_token');
+        window.location.reload();
+      }
+    });
   };
 
   const [aiState, setAiState] = useState({
@@ -363,15 +369,21 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
     } catch (err) { alert(`Error adding node: ${err.message}`); }
   };
 
-  const handleDeleteNode = async (id) => {
-    if (!window.confirm('Remove this field node?')) return;
-    try {
-      const res = await fetch(`/api/nodes/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) fetchNodes();
-    } catch (err) { alert(`Error deleting node: ${err.message}`); }
+  const handleDeleteNode = (id) => {
+    setPopupConfirm({
+      type: 'confirm',
+      title: 'Private AI',
+      message: 'Remove this field node?',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/nodes/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) fetchNodes();
+        } catch (err) { alert(`Error deleting node: ${err.message}`); }
+      }
+    });
   };
 
   const fetchHostStatus = async () => {
@@ -470,19 +482,25 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this document? This will remove all vector chunks from RAG memory.')) return;
-    try {
-      const res = await fetch(`/api/vault/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        fetchDocuments();
+  const handleDelete = (id) => {
+    setPopupConfirm({
+      type: 'confirm',
+      title: 'Private AI',
+      message: 'Are you sure you want to delete this document? This will remove all vector chunks from RAG memory.',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/vault/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            fetchDocuments();
+          }
+        } catch (err) {
+          console.error('Failed to delete document:', err);
+        }
       }
-    } catch (err) {
-      console.error('Failed to delete document:', err);
-    }
+    });
   };
 
   const handleFileInputChange = (e) => {
@@ -1306,6 +1324,11 @@ export default function App({ toolLogs, activeAgent, isStreaming }) {
       <CustomAlertModal
         alert={popupAlert}
         onClose={() => setPopupAlert(null)}
+      />
+
+      <CustomAlertModal
+        alert={popupConfirm}
+        onClose={() => setPopupConfirm(null)}
       />
     </div>
   );
