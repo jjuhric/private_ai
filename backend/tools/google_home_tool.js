@@ -21,6 +21,7 @@ async function executeViaAssistantSDK(command) {
     conversation: {
       lang: 'en-US',
       isNew: true,
+      textQuery: command,
     },
   };
 
@@ -31,7 +32,7 @@ async function executeViaAssistantSDK(command) {
         assistant.start(config.conversation, (conversation) => {
           let responseText = '';
           conversation
-            .on('text', (text) => {
+            .on('response', (text) => {
               responseText += text + ' ';
             })
             .on('ended', (error, continueConversation) => {
@@ -44,9 +45,6 @@ async function executeViaAssistantSDK(command) {
             .on('error', (error) => {
               resolve({ success: false, error: error.message || error });
             });
-            
-          // Send the text command
-          conversation.type(command);
         });
       });
       assistant.on('error', (err) => {
@@ -171,6 +169,10 @@ async function handleGoogleHomeTool(db, userId, action, params) {
       host: targetIp,
       name: targetName || 'Google Home',
       friendlyName: targetName || 'Google Home'
+    });
+
+    device.on('error', (err) => {
+      console.error('[Chromecast Device Error]:', err.message);
     });
 
     await new Promise((resolve, reject) => {
