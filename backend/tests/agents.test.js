@@ -1204,7 +1204,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         params: { command: 'Turn off the office light' },
         agent: 'system_specialist'
       });
-      expect(mockContent).toHaveBeenCalledWith(expect.stringContaining('Sure, I have turned off the office light'));
+      expect(mockContent).toHaveBeenCalledWith("Action Complete");
       global.fetch = globalFetch;
       jest.dontMock('../tools/google_home_tool');
     });

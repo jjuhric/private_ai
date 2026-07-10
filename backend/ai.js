@@ -95,7 +95,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
-  
+
   if (abortSignal) {
     abortSignal.addEventListener('abort', () => controller.abort());
   }
@@ -299,61 +299,37 @@ async function runAgentLoop({
   // --- Google Home Direct Bypass Interceptor ---
   const isGoogleHomeDeviceRequest = (msg) => {
     const cleanMsg = msg.trim().toLowerCase();
-    const actions = ['turn on', 'turn off', 'pause', 'resume', 'stop'];
-    const action = actions.find(act => {
-      const regex = new RegExp(`\\b${act}\\b`, 'i');
-      return regex.test(cleanMsg);
-    });
-    
-    let isSplitAction = false;
-    let splitRest = '';
-    if (cleanMsg.startsWith('turn ')) {
-      if (cleanMsg.endsWith(' off')) {
-        isSplitAction = true;
-        splitRest = cleanMsg.substring(5, cleanMsg.length - 4).trim();
-      } else if (cleanMsg.endsWith(' on')) {
-        isSplitAction = true;
-        splitRest = cleanMsg.substring(5, cleanMsg.length - 3).trim();
-      }
-    }
-
-    if (!action && !isSplitAction) return false;
-    
-    let rest = '';
-    if (isSplitAction) {
-      rest = splitRest;
-    } else {
-      const actionRegex = new RegExp(`\\b${action}\\b\\s+(.+)`, 'i');
-      const match = cleanMsg.match(actionRegex);
-      if (!match) return false;
-      rest = match[1].trim();
-    }
-    
     const locations = [
-      'office', 'living room', 'bedroom', 'bed room', 'kitchen', 'basement', 
-      'porch', 'backyard', 'hallway', 'bathroom', 'house', 'desk', 'den', 
-      'patio', 'garage', 'dining room', 'foyer', 'attic', 'closet', 'yard'
+      'office', 'living room', 'bedroom', 'faith\'s room', 'jeffery\'s room', 'all'
     ];
-    
+
     const devices = [
-      'light', 'lights', 'tv', 't.v.', 'television', 'fan', 'plug', 'speaker', 
-      'nest', 'mini', 'display', 'screen', 'air conditioner', 'ac', 'heater', 
+      'light', 'lights', 'tv', 't.v.', 'television', 'fan', 'plug', 'speaker',
+      'nest', 'mini', 'display', 'screen', 'air conditioner', 'ac', 'heater',
       'switch', 'plug', 'device', 'thermostat', 'camera'
     ];
-    
-    const hasLocation = locations.some(loc => new RegExp(`\\b${loc}\\b`, 'i').test(rest));
-    const hasDevice = devices.some(dev => {
-      const escapedDev = dev.replace('.', '\\.');
-      return new RegExp(`\\b${escapedDev}\\b`, 'i').test(rest);
+
+    const matchedLoc = locations.find(loc => new RegExp(`\\b${loc.replace("'", "\\'")}\\b`, 'i').test(cleanMsg));
+    const matchedDev = devices.find(dev => {
+      const escapedDev = dev.replace('.', '\\.').replace("'", "\\'");
+      return new RegExp(`\\b${escapedDev}\\b`, 'i').test(cleanMsg);
     });
-    
-    return hasLocation && hasDevice;
+
+    if (!matchedLoc || !matchedDev) return false;
+
+    const hasTurnOn = /\bturn\b.*\bon\b/i.test(cleanMsg);
+    const hasTurnOff = /\bturn\b.*\boff\b/i.test(cleanMsg);
+    const hasPause = /\bpause\b/i.test(cleanMsg);
+    const hasResume = /\bresume\b/i.test(cleanMsg);
+    const hasStop = /\bstop\b/i.test(cleanMsg);
+
+    return hasTurnOn || hasTurnOff || hasPause || hasResume || hasStop;
   };
 
   if (isGoogleHomeDeviceRequest(userMessage)) {
     onThought("[Google Home Intercept] Direct action/location/device command detected. Bypassing supervisor and sending directly to Google Assistant...\n");
     if (onAgentStatus) onAgentStatus({ agent: 'system_specialist', status: 'active' });
-    
+
     if (onToolCall) {
       onToolCall({
         tool: 'google_home',
@@ -373,9 +349,30 @@ async function runAgentLoop({
 
     onThought(`Google Assistant execution completed. Tool output: ${toolOutput}\n`);
 
+    let success = false;
+    try {
+      const parsed = JSON.parse(toolOutput);
+      if (parsed.success) {
+        success = true;
+      }
+    } catch (e) {}
+
+    if (success) {
+      onThought("Command succeeded. Programmatically responding 'Action Complete' to the user...\n");
+      onContent("Action Complete");
+      
+      if (db && typeof db.run === 'function' && chatId) {
+        await db.run(
+          'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+          [chatId, 'assistant', 'Action Complete']
+        ).catch(err => console.error('Failed to save programmatic response to database:', err));
+      }
+      return;
+    }
+
     if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
     onThought('Communication Specialist generating final response for Google device execution...\n');
-    
+
     const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
     const responderInstruction = `${commSpecialistSystemPrompt}
  
@@ -576,7 +573,7 @@ ${toolOutput}
       let parsedCommand = null;
       let parsedFile = null;
       let parsedContent = null;
-      
+
       const agentIndex = lastAssistantMsg.content.indexOf('Agent:');
       const commandIndex = lastAssistantMsg.content.indexOf('Command:');
       const fileIndex = lastAssistantMsg.content.indexOf('File:');
@@ -609,7 +606,7 @@ ${toolOutput}
         if (reply.startsWith('1') || reply === 'yes' || reply.includes('approve') || reply.includes('go ahead') || reply.includes('ok')) {
           const { handleCoderTool } = require('./tools/coder_tools');
           let toolOutput = '';
-          
+
           if (parsedCommand) {
             onThought(`User approved the command: "${parsedCommand}". Executing...\n`);
             try {
@@ -635,12 +632,12 @@ ${toolOutput}
               toolOutput = `Error writing file: ${err.message}`;
             }
           }
-          
+
           accumulatedToolOutputs.push({
             tool: `delegate_to_${parsedAgent}`,
             output: toolOutput
           });
-          
+
           currentHistory.push({
             role: 'assistant',
             content: lastAssistantMsg.content
@@ -653,13 +650,13 @@ ${toolOutput}
             role: 'user',
             content: parsedCommand ? `[Output for execute_command]:\n${toolOutput}` : `[Output for write_file]:\n${toolOutput}`
           });
-          
+
           toolCallsCount = 1; // Mark that we did 1 tool call turn already
         } else if (reply.startsWith('2') || reply === 'no' || reply.includes('reject') || reply.includes('refuse')) {
           onThought("User rejected running the command/file write. Asking why...\n");
           const promptMsg = "Why did you choose not to go forward with this code?";
           onContent(promptMsg);
-          
+
           if (db && typeof db.run === 'function' && chatId) {
             await db.run(
               'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
@@ -681,7 +678,7 @@ ${toolOutput}
         const fileIndex = originalProposal.content.indexOf('File:');
         const qaIndex = originalProposal.content.indexOf('QA Analysis:');
         const errorIndex = originalProposal.content.indexOf('Error:');
-        
+
         if (commandIndex !== -1) {
           const endCommandIndex = qaIndex !== -1 ? qaIndex : (errorIndex !== -1 ? errorIndex : originalProposal.content.indexOf('This command could cause'));
           if (endCommandIndex !== -1 && endCommandIndex > commandIndex) {
@@ -697,7 +694,7 @@ ${toolOutput}
           }
         }
       }
-      
+
       customSystemPromptContext = `\n\n### User Code Rejection Context:
 ${rejectedCommandInfo}The user chose not to run the code/command and provided this reason: "${userMessage}".
 Please evaluate their reason. If changes to the code or command are required based on their feedback, make those changes (e.g. call the coder/developer agent to edit the files, or adjust the command) and ask for approval again (which will undergo QA and Supervisor review again).
@@ -853,11 +850,11 @@ If no changes are required and you can proceed without executing the code, then 
     onToolCall({ tool: decision.tool, action: decision.action || 'delegate', params: decision.params });
 
     let toolOutput = '';
-    
+
     // Check for delegation
     if (decision.tool.startsWith('delegate_to_') && decision.tool !== 'delegate_to_remote_node') {
       const agentName = decision.tool.replace('delegate_to_', '');
-      
+
       if (agentName === 'ask_communication_expert') {
         const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
         const commSpecialistSettings = {
@@ -866,14 +863,14 @@ If no changes are required and you can proceed without executing the code, then 
         };
         onThought("Supervisor asking Communication Specialist for clarification...\n");
         if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
-        
+
         let queryTask = userMessage;
         if (decision.params && typeof decision.params === 'object') {
           queryTask = decision.params.query || decision.params.task || userMessage;
         } else if (typeof decision.params === 'string') {
           queryTask = decision.params;
         }
-        
+
         const commTurn = await runAgentTurn(
           'communication_specialist',
           commSpecialistSystemPrompt,
@@ -881,7 +878,7 @@ If no changes are required and you can proceed without executing the code, then 
           `Clarify this missing information: "${queryTask}"\nMode: Create Project Idea`,
           []
         );
-        
+
         if (commTurn && commTurn.params && commTurn.params.requested_action === 'clarification_needed') {
           const choicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
             question: commTurn.params.question || "Need clarification",
@@ -898,7 +895,7 @@ If no changes are required and you can proceed without executing the code, then 
           return;
         }
       }
-      
+
       let subTaskObj = {};
       if (decision.params && typeof decision.params === 'object') {
         subTaskObj = { ...decision.params };
@@ -917,7 +914,7 @@ If no changes are required and you can proceed without executing the code, then 
       if (!subTaskObj.task && !subTaskObj.query) {
         subTaskObj.task = userMessage;
       }
-      
+
       const subTask = JSON.stringify(subTaskObj);
 
       onThought(`Delegating sub-task to Agent "${agentName}": "${subTask}"...\n`);
@@ -932,7 +929,7 @@ If no changes are required and you can proceed without executing the code, then 
             message: `Agent "${agentName}" encountered an execution error: ${err.message}`,
             timestamp: new Date().toISOString()
           });
-        } catch (alertErr) {}
+        } catch (alertErr) { }
 
         if (agentName === 'system_specialist') {
           toolOutput = JSON.stringify({
@@ -957,7 +954,7 @@ If no changes are required and you can proceed without executing the code, then 
             const parsed = JSON.parse(toolOutput);
             if (parsed.data?.error) errMsg = parsed.data.error;
             else if (parsed.summary) errMsg = parsed.summary;
-          } catch (e) {}
+          } catch (e) { }
 
           try {
             const { broadcastAlert } = require('./routes/alerts');
@@ -966,7 +963,7 @@ If no changes are required and you can proceed without executing the code, then 
               message: `Agentic execution failure in "${agentName}": ${errMsg}`,
               timestamp: new Date().toISOString()
             });
-          } catch (alertErr) {}
+          } catch (alertErr) { }
 
           onContent(`Error: The system specialist failed to execute the task. Details: ${errMsg}`);
           return;
@@ -1177,13 +1174,13 @@ async function generateGreetingAndSave(db, userId, chatId) {
 function cleanAgentResponse(rawText) {
   if (!rawText) return '';
   let cleanText = rawText.trim();
-  
+
   // Safely discard the internal trace block if it bypasses the parser
   if (cleanText.includes('</think>')) {
     const parts = cleanText.split('</think>');
     cleanText = parts[parts.length - 1].trim();
   }
-  
+
   return cleanText;
 }
 
@@ -1191,10 +1188,10 @@ function cleanAgentResponse(rawText) {
 async function processAgentTurn(promptContext) {
   // 1. Dispatch formatted prompt context to the local server array
   const rawLLMOutput = await callLMStudio(promptContext);
-  
+
   // 2. Clean out any loose markdown logic or lingering thought blocks
   const sanitizedJSON = cleanAgentResponse(rawLLMOutput);
-  
+
   try {
     // 3. Hand the raw action instructions directly to tool registries safely
     return JSON.parse(sanitizedJSON);
@@ -1205,10 +1202,10 @@ async function processAgentTurn(promptContext) {
   }
 }
 
-module.exports = { 
-  runAgentLoop, 
-  handleGoogleNewsTool, 
+module.exports = {
+  runAgentLoop,
+  handleGoogleNewsTool,
   generateGreetingAndSave,
   cleanAgentResponse,
-  processAgentTurn 
+  processAgentTurn
 };
