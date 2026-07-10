@@ -157,7 +157,7 @@ $defaultIsHost = "true"
 if (Test-Path ".env") {
     $envLines = Get-Content ".env"
     foreach ($line in $envLines) {
-        if ($line -match "^PORT=(.*)") { $defaultPort = $Matches[1].Trim() }
+        if ($line -match "^PORT=(.+)") { $defaultPort = $Matches[1].Trim() }
         if ($line -match "^IS_HOST=(.+)") { $defaultIsHost = $Matches[1].Trim() }
         if ($line -match "^LOCAL_LLM_URL=(.*)") { $defaultLocalUrl = $Matches[1].Trim() }
         if ($line -match "^LOCAL_LLM_KEY=(.*)") { $defaultLocalKey = $Matches[1].Trim() }
