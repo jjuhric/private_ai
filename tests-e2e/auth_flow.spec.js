@@ -29,7 +29,7 @@ test.describe('E2E Authentication and User Workflows', () => {
     await page.click('button[type="submit"]');
  
     // Should login successfully and show brand title
-    await expect(page.locator('.sidebar-brand h1')).toContainText('PATTI');
+    await expect(page.locator('.sidebar-brand img[alt="PATTI"]')).toBeVisible();
 
     // Dismiss the custom registration success modal which renders on main layout mount
     await page.click('text=Acknowledge');
