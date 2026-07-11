@@ -301,7 +301,7 @@ async function runAgentLoop({
 
   // --- Direct Send Message to Device Interceptor ---
   const cleanMsgForSend = userMessage.trim().toLowerCase();
-  const isSendMsgPattern = /^\s*send\s+message\s+to\s+device/i.test(cleanMsgForSend);
+  const isSendMsgPattern = /^\s*send\s+(?:a\s+)?message\s+to\s+device/i.test(cleanMsgForSend);
   const isIpOnlyPattern = /^\s*(?:\d{1,3}\.){3}\d{1,3}\s*$/i.test(cleanMsgForSend);
 
   if (isIpOnlyPattern && chatId) {
@@ -317,10 +317,10 @@ async function runAgentLoop({
 
     const lastAssistantMsg = lastMsgs.find(m => m.role === 'assistant');
     if (lastAssistantMsg && lastAssistantMsg.content.includes('Which device would you like to send this message to?')) {
-      const originalUserMsgObj = lastMsgs.find(m => m.role === 'user' && /^\s*send\s+message\s+to\s+device/i.test(m.content));
+      const originalUserMsgObj = lastMsgs.find(m => m.role === 'user' && /^\s*send\s+(?:a\s+)?message\s+to\s+device/i.test(m.content));
       if (originalUserMsgObj) {
         const ip = userMessage.trim();
-        let temp = originalUserMsgObj.content.replace(/^\s*send\s+message\s+to\s+device/i, '');
+        let temp = originalUserMsgObj.content.replace(/^\s*send\s+(?:a\s+)?message\s+to\s+device/i, '');
         temp = temp.replace(/^\s*saying/i, '');
         const text = temp.trim();
 
@@ -362,7 +362,7 @@ async function runAgentLoop({
     if (ipMatch) {
       const ip = ipMatch[0];
       let temp = userMessage.replace(new RegExp(`\\b${ip}\\b`, 'g'), '');
-      temp = temp.replace(/^\s*send\s+message\s+to\s+device/i, '');
+      temp = temp.replace(/^\s*send\s+(?:a\s+)?message\s+to\s+device/i, '');
       temp = temp.replace(/^\s*saying/i, '');
       const text = temp.trim();
 
