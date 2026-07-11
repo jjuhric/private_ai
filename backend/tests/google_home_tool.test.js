@@ -21,6 +21,31 @@ jest.mock('chromecast-api/lib/device', () => {
   });
 });
 
+jest.mock('google-assistant', () => {
+  return jest.fn().mockImplementation(() => {
+    const assistant = {
+      on: jest.fn((event, callback) => {
+        if (event === 'ready') {
+          setTimeout(callback, 0);
+        }
+        return assistant;
+      }),
+      start: jest.fn((conversationConfig, callback) => {
+        const conversation = {
+          on: jest.fn((event, cb) => {
+            if (event === 'ended') {
+              setTimeout(() => cb(null, false), 0);
+            }
+            return conversation;
+          })
+        };
+        setTimeout(() => callback(conversation), 0);
+      })
+    };
+    return assistant;
+  });
+});
+
 describe('Google Home Tool Tests', () => {
   let dbMock;
 
