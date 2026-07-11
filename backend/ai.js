@@ -506,10 +506,12 @@ async function runAgentLoop({
     onThought('Communication Specialist generating final response for Google device execution...\n');
 
     const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
-    const responderInstruction = `${commSpecialistSystemPrompt}
+    const mode2SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 1 -->[\s\S]*?<!-- END MODE 1 -->/g, '');
+    const responderInstruction = `${mode2SystemPrompt}
  
 ### INSTRUCTIONS:
 - You are operating in **MODE 2: Format Results**.
+- CRITICAL: You are NOT operating in MODE 1. Do NOT translate the request, do NOT output a JSON translation, and do NOT ask for clarification or missing information. Your ONLY task is to format the gathered results below.
 - If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 - The user requested: "${userMessage}".
 - The Google Home device tool returned this execution result:
@@ -735,10 +737,12 @@ ${toolOutput}
     onThought('Communication Specialist generating final response...\n');
 
     const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
-    const responderInstruction = `${commSpecialistSystemPrompt}
+    const mode2SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 1 -->[\s\S]*?<!-- END MODE 1 -->/g, '');
+    const responderInstruction = `${mode2SystemPrompt}
  
 ### INSTRUCTIONS:
 - You are operating in **MODE 2: Format Results**.
+- CRITICAL: You are NOT operating in MODE 1. Do NOT translate the request, do NOT output a JSON translation, and do NOT ask for clarification or missing information. Your ONLY task is to format the gathered results below.
 - If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 - The user requested: "${userMessage}".
 - The ${isAgentInfo ? 'System Specialist' : 'Memory Agent'} returned this context:
@@ -969,13 +973,14 @@ If no changes are required and you can proceed without executing the code, then 
       onThought("Communication Specialist translating request to Project Idea...\n");
       if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
       const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+      const mode1SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 2 -->[\s\S]*?<!-- END MODE 2 -->/g, '');
       const commSpecialistSettings = {
         ...settings,
         modelName: supervisorModel || settings.modelName
       };
       let commTurn = await runAgentTurn(
         'communication_specialist',
-        commSpecialistSystemPrompt,
+        mode1SystemPrompt,
         commSpecialistSettings,
         `Translate this user request: "${userMessage}"\nMode: Create Project Idea`,
         []
@@ -1000,7 +1005,7 @@ If no changes are required and you can proceed without executing the code, then 
         // Run second turn with tool results
         commTurn = await runAgentTurn(
           'communication_specialist',
-          commSpecialistSystemPrompt,
+          mode1SystemPrompt,
           commSpecialistSettings,
           `Translate this user request: "${userMessage}"\nMode: Create Project Idea\nTool execution result for "${commTurn.tool}" ("${commTurn.action}"):\n${toolOutput}`,
           []
@@ -1114,6 +1119,7 @@ If no changes are required and you can proceed without executing the code, then 
 
       if (agentName === 'ask_communication_expert') {
         const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+        const mode1SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 2 -->[\s\S]*?<!-- END MODE 2 -->/g, '');
         const commSpecialistSettings = {
           ...settings,
           modelName: supervisorModel || settings.modelName
@@ -1130,7 +1136,7 @@ If no changes are required and you can proceed without executing the code, then 
 
         const commTurn = await runAgentTurn(
           'communication_specialist',
-          commSpecialistSystemPrompt,
+          mode1SystemPrompt,
           commSpecialistSettings,
           `Clarify this missing information: "${queryTask}"\nMode: Create Project Idea`,
           []
@@ -1323,6 +1329,7 @@ Make sure to answer the user query directly and clearly.`;
     if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
     onThought('Communication Specialist generating bubbly final response...\n');
     const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+    const mode2SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 1 -->[\s\S]*?<!-- END MODE 1 -->/g, '');
     let currentTimeContext = '';
     try {
       const { handleTimeTool } = require('./tools/time_tool');
@@ -1330,10 +1337,11 @@ Make sure to answer the user query directly and clearly.`;
     } catch (timeErr) {
       console.error('Failed to get current time for responder instruction:', timeErr);
     }
-    responderInstruction = `${commSpecialistSystemPrompt}
+    responderInstruction = `${mode2SystemPrompt}
  
 ### INSTRUCTIONS:
 - You are operating in **MODE 2: Format Results**.
+- CRITICAL: You are NOT operating in MODE 1. Do NOT translate the request, do NOT output a JSON translation, and do NOT ask for clarification or missing information. Your ONLY task is to format the gathered results below.
 - If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
 - Present a warm, bubbly, and welcoming final response containing ALL details of the gathered report results below.
 - Here is the user request: "${userMessage}".
