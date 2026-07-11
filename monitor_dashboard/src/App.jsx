@@ -1178,16 +1178,16 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: 'center', 
-            justifyContent: 'center', 
-            minHeight: '60vh', 
-            padding: '40px',
+            justifyContent: 'flex-start', 
+            minHeight: 'auto', 
+            padding: '40px 24px', 
             background: 'var(--bg-glass)', 
             border: '1px solid var(--border-glass)', 
             borderRadius: '24px', 
             boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
             textAlign: 'center',
             gap: '24px',
-            marginTop: '20px'
+            marginTop: '12px'
           }}>
             <div style={{
               position: 'relative',
