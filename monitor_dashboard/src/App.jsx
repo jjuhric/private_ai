@@ -1187,7 +1187,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
             boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
             textAlign: 'center',
             gap: '24px',
-            marginTop: '12px'
+            margin: '24px auto auto auto'
           }}>
             <div style={{
               position: 'relative',
