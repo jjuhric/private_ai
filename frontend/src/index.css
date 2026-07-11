@@ -912,28 +912,44 @@ select.form-control option {
   }
 }
 
-.patti-logo-text {
+.patti-word-gradient {
+  font-family: 'Cinzel Decorative', Georgia, serif;
+  background: linear-gradient(135deg, #a78bfa, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   display: inline-flex;
   align-items: center;
   gap: 1px;
   line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
 }
 
-.patti-logo-text .special-letter {
-  font-size: 1.65rem;
-  margin-right: 0px;
+.patti-word-gradient span {
+  font-size: inherit;
+  font-weight: 700;
+  display: inline-block;
+  vertical-align: middle;
+  background: none;
+  -webkit-text-fill-color: initial;
 }
 
-.sidebar-brand h1.patti-logo-text {
+.sidebar-brand h1.patti-word-gradient {
   display: inline-flex;
 }
 
-.app-title.patti-logo-text {
+.header-only-mobile {
   display: inline-flex;
 }
 
-.app-title.patti-logo-text .special-letter {
-  font-size: 2.3rem;
+@media (min-width: 992px) {
+  .header-only-mobile {
+    display: none;
+  }
+}
+
+.app-title.patti-word-gradient {
+  display: inline-flex;
+  font-size: 2.5rem;
 }
 
 

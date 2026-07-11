@@ -896,21 +896,30 @@ function App() {
               title={activeTab !== 'chat' ? "Return to Chat" : ""}
             >
                {activeTab === 'chat' ? (
-                 <span className="patti-fullname">
-                   <span className="special-letter">P</span>
-                   <span className="normal-text">rofessional&nbsp;</span>
-                   <span className="special-letter">A</span>
-                   <span className="normal-text">rtificial&nbsp;</span>
-                   <span className="special-letter">T</span>
-                   <span className="normal-text">ext&nbsp;</span>
-                   <span className="normal-text">and&nbsp;</span>
-                   <span className="special-letter">T</span>
-                   <span className="normal-text">ype&nbsp;</span>
-                   <span className="special-letter">I</span>
-                   <span className="normal-text">ntelligence</span>
+                 <span className="patti-header-brand" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                   <span className="patti-word-gradient header-only-mobile" style={{ fontSize: '1.4rem' }}>
+                     <span>P</span>
+                     <span>A</span>
+                     <span>T</span>
+                     <span>T</span>
+                     <span>I</span>
+                   </span>
+                   <span className="patti-fullname">
+                     <span className="special-letter">P</span>
+                     <span className="normal-text">rofessional&nbsp;</span>
+                     <span className="special-letter">A</span>
+                     <span className="normal-text">rtificial&nbsp;</span>
+                     <span className="special-letter">T</span>
+                     <span className="normal-text">ext&nbsp;</span>
+                     <span className="normal-text">and&nbsp;</span>
+                     <span className="special-letter">T</span>
+                     <span className="normal-text">ype&nbsp;</span>
+                     <span className="special-letter">I</span>
+                     <span className="normal-text">ntelligence</span>
+                   </span>
                  </span>
                ) : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard'))}
-            </h2>
+             </h2>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
