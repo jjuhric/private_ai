@@ -656,7 +656,7 @@ export default function SetupWizard({ token, onComplete }) {
                 onClick={handleSave}
                 style={{ flex: 1, padding: '10px 0' }}
               >
-                Launch Private AI 🚀
+                Launch P.A.T.T.I. 🚀
               </button>
             </div>
           </div>

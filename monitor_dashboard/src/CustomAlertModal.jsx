@@ -82,9 +82,9 @@ export default function CustomAlertModal({ alert, onClose }) {
           background: 'rgba(0, 0, 0, 0.2)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src={logoUrl} alt="Private AI" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+            <img src={logoUrl} alt="P.A.T.T.I." style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
             <span style={{ fontWeight: 650, fontSize: '1rem', color: '#f8fafc', letterSpacing: '0.5px' }}>
-              Private AI
+              P.A.T.T.I.
             </span>
           </div>
           <button 

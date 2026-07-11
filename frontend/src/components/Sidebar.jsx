@@ -32,7 +32,7 @@ export default function Sidebar({
             className="sidebar-logo" 
             onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
           />
-          <h1>Private AI Assistant</h1>
+          <h1>P.A.T.T.I. Assistant</h1>
         </div>
         <button 
           className="btn-icon" 

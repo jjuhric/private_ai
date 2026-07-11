@@ -132,7 +132,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       }
       setPopupAlert({
         type,
-        title: 'Private AI',
+        title: 'P.A.T.T.I.',
         message
       });
     };
@@ -274,7 +274,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
   const handleDisconnect = () => {
     setPopupConfirm({
       type: 'confirm',
-      title: 'Private AI',
+      title: 'P.A.T.T.I.',
       message: 'Disconnect from this Main Host and reset configurations?',
       onConfirm: () => {
         localStorage.removeItem('main_host_url');
@@ -416,7 +416,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
           } else if (data && (data.type === 'error' || data.type === 'warning')) {
             setPopupAlert({
               type: data.type,
-              title: 'Private AI Alert',
+              title: 'P.A.T.T.I. Alert',
               message: data.message
             });
           }
@@ -461,7 +461,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
   const handleDeleteNode = (id) => {
     setPopupConfirm({
       type: 'confirm',
-      title: 'Private AI',
+      title: 'P.A.T.T.I.',
       message: 'Remove this field node?',
       onConfirm: async () => {
         try {
@@ -574,7 +574,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
   const handleDelete = (id) => {
     setPopupConfirm({
       type: 'confirm',
-      title: 'Private AI',
+      title: 'P.A.T.T.I.',
       message: 'Are you sure you want to delete this document? This will remove all vector chunks from RAG memory.',
       onConfirm: async () => {
         try {
@@ -1375,7 +1375,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
             {scanning && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '30px 10px', color: 'var(--text-secondary)' }}>
                 <RefreshCw size={24} className="animate-spin text-accent-primary" />
-                <span>Scanning local network subnet for active Private AI nodes...</span>
+                <span>Scanning local network subnet for active P.A.T.T.I. nodes...</span>
               </div>
             )}
 

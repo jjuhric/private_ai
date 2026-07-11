@@ -251,7 +251,7 @@ export default function ChatPane({
                 style={{ width: 72, height: 72, marginBottom: 16 }} 
                 onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
               />
-              <h3 className="starter-title">Welcome to Private AI</h3>
+              <h3 className="starter-title">Welcome to P.A.T.T.I.</h3>
               <p className="starter-subtitle">
                 Your private multi-agent assistant with web search, persistent memory storage, hardware sensors, and document vault.
               </p>

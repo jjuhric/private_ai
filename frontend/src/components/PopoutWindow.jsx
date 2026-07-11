@@ -50,7 +50,7 @@ export default function PopoutWindow({ children, onClose }) {
       });
 
       // Set page Title
-      doc.title = 'Private AI Chat';
+      doc.title = 'P.A.T.T.I. Chat';
 
       // Set baseline themes and background styles
       doc.body.className = document.body.className;

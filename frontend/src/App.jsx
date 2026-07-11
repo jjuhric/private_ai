@@ -46,7 +46,7 @@ function App() {
       }
       setPopupAlert({
         type,
-        title: 'Private AI',
+        title: 'P.A.T.T.I.',
         message
       });
     };
@@ -150,7 +150,7 @@ function App() {
           if (alert.type === 'error' || alert.type === 'warning') {
             setPopupAlert({
               type: alert.type,
-              title: 'Private AI Alert',
+              title: 'P.A.T.T.I. Alert',
               message: alert.message
             });
           }
@@ -305,7 +305,7 @@ function App() {
     e.stopPropagation();
     setPopupConfirm({
       type: 'confirm',
-      title: 'Private AI',
+      title: 'P.A.T.T.I.',
       message: 'Delete this chat room?',
       onConfirm: async () => {
         try {
@@ -895,7 +895,7 @@ function App() {
               }}
               title={activeTab !== 'chat' ? "Return to Chat" : ""}
             >
-              {activeTab === 'chat' ? 'Private AI Assistant' : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard'))}
+               {activeTab === 'chat' ? 'P.A.T.T.I. Assistant' : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard'))}
             </h2>
           </div>
 
