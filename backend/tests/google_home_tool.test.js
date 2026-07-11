@@ -32,11 +32,11 @@ jest.mock('google-assistant', () => {
       }),
       start: jest.fn((conversationConfig, callback) => {
         const conversation = {
-          on: jest.fn((event, cb) => {
-            if (event === 'ended') {
-              setTimeout(() => cb(null, false), 0);
+          on: jest.fn().mockImplementation(function(event, cb) {
+            if (event === 'error') {
+              setTimeout(() => cb(new Error('Mocked SDK failure')), 0);
             }
-            return conversation;
+            return this;
           })
         };
         setTimeout(() => callback(conversation), 0);
