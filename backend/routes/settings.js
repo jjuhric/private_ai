@@ -66,7 +66,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 router.put('/', authenticateToken, async (req, res) => {
-  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory, google_home_ip, google_home_name } = req.body;
+  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory, google_home_enabled, google_home_ip, google_home_name } = req.body;
   try {
     const db = await getDb();
     const { encrypt, decrypt } = require('../utils/crypto');
@@ -92,9 +92,9 @@ router.put('/', authenticateToken, async (req, res) => {
          user_id, provider, model_name, github_token, gemini_key, local_key, 
          local_url, local_api_style, online_url, online_key, online_provider,
          preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory,
-         google_home_ip, google_home_name
+         google_home_enabled, google_home_ip, google_home_name
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET
          provider = excluded.provider,
          model_name = excluded.model_name,
@@ -112,6 +112,7 @@ router.put('/', authenticateToken, async (req, res) => {
          device_type = COALESCE(excluded.device_type, device_type),
          is_main_host = COALESCE(excluded.is_main_host, is_main_host),
          working_directory = COALESCE(excluded.working_directory, working_directory),
+         google_home_enabled = excluded.google_home_enabled,
          google_home_ip = excluded.google_home_ip,
          google_home_name = excluded.google_home_name`,
       [
@@ -119,6 +120,7 @@ router.put('/', authenticateToken, async (req, res) => {
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
         device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir,
+        (google_home_enabled === 1 || google_home_enabled === '1' || google_home_enabled === true || google_home_enabled === 'true') ? 1 : 0,
         google_home_ip || null, google_home_name || null
       ]
     );
@@ -128,34 +130,25 @@ router.put('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Scan local network for Google Nest/Home speakers
+// Scan local network for Google Nest/Home speakers using node-dns-sd
 router.get('/google-home/scan', authenticateToken, async (req, res) => {
   try {
-    const ChromecastAPI = require('chromecast-api');
-    const client = new ChromecastAPI();
-    const devices = [];
-
-    // Listen for devices
-    client.on('device', (device) => {
-      if (device && device.host && !devices.some(d => d.ip === device.host)) {
-        devices.push({
-          name: device.friendlyName || device.name,
-          ip: device.host
-        });
-      }
-    });
-
-    // Scan for 3.5 seconds
-    setTimeout(() => {
-      try {
-        if (client.browser && typeof client.browser.destroy === 'function') {
-          client.browser.destroy();
-        }
-      } catch (e) {
-        console.error('Failed to destroy chromecast-api browser:', e);
-      }
+    const mDnsSd = require('node-dns-sd');
+    mDnsSd.discover({
+      name: '_googlecast._tcp.local',
+      timeout: 3
+    }).then((device_list) => {
+      const devices = device_list.map(device => {
+        const cleanName = device.fqdn ? device.fqdn.replace('._googlecast._tcp.local', '') : 'Google Home';
+        return {
+          name: device.modelName ? `${device.modelName} (${cleanName})` : cleanName,
+          ip: device.address
+        };
+      });
       res.json(devices);
-    }, 3500);
+    }).catch((err) => {
+      res.status(500).json({ error: err.message || err });
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

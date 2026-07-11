@@ -74,6 +74,27 @@ function getLocalIpAddress() {
  * Executes a home automation command via local Google Cast connection.
  */
 async function handleGoogleHomeTool(db, userId, action, params) {
+  if (action === 'list_devices') {
+    try {
+      const mDnsSd = require('node-dns-sd');
+      const deviceList = await mDnsSd.discover({ name: '_googlecast._tcp.local', timeout: 3 });
+      const devices = deviceList.map(device => ({
+        fqdn: device.fqdn,
+        address: device.address,
+        modelName: device.modelName
+      }));
+      return JSON.stringify({
+        success: true,
+        devices: devices
+      });
+    } catch (err) {
+      return JSON.stringify({
+        success: false,
+        error: `Failed to discover devices: ${err.message}`
+      });
+    }
+  }
+
   if (action !== 'send_command') {
     return JSON.stringify({ error: `Unknown action: ${action}` });
   }
@@ -83,7 +104,16 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     return JSON.stringify({ error: 'Command string is required' });
   }
 
-  // 1. Try to execute via Assistant SDK first
+  // 1. Fetch saved configuration settings and check if enabled
+  const settings = await db.get('SELECT google_home_enabled, google_home_ip, google_home_name FROM user_settings WHERE user_id = ?', [userId]) || {};
+  if (!settings.google_home_enabled) {
+    return JSON.stringify({
+      success: false,
+      error: 'Google Home speaker integration is disabled. You can optionally enable it in the Assistant Settings modal.'
+    });
+  }
+
+  // 2. Try to execute via Assistant SDK first
   const sdkResult = await executeViaAssistantSDK(command);
   
   let ttsText = '';
@@ -110,14 +140,12 @@ async function handleGoogleHomeTool(db, userId, action, params) {
   }
 
   try {
-    // 2. Generate local TTS file path
+    // 3. Generate local TTS file path
     const ttsUrl = await generateTTS(ttsText);
     const localIp = getLocalIpAddress();
     const port = process.env.PORT || 3000;
     const mediaUrl = `http://${localIp}:${port}${ttsUrl}`;
 
-    // 2. Fetch saved configuration settings
-    const settings = await db.get('SELECT google_home_ip, google_home_name FROM user_settings WHERE user_id = ?', [userId]) || {};
     let targetIp = settings.google_home_ip;
     const targetName = settings.google_home_name;
 

@@ -30,6 +30,7 @@
     "google-news-url-decoder": "^1.2.2",
     "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.14.0",
+    "node-dns-sd": "^1.0.1",
     "node-html-parser": "^8.0.4",
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",

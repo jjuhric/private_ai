@@ -46,12 +46,19 @@ jest.mock('google-assistant', () => {
   });
 });
 
+jest.mock('node-dns-sd', () => ({
+  discover: jest.fn(() => Promise.resolve([
+    { fqdn: 'google-nest-mini.local', address: '192.168.1.150', modelName: 'Google Nest Mini' }
+  ]))
+}));
+
 describe('Google Home Tool Tests', () => {
   let dbMock;
 
   beforeEach(() => {
     dbMock = {
       get: jest.fn(() => Promise.resolve({
+        google_home_enabled: 1,
         google_home_ip: '192.168.1.60',
         google_home_name: null
       })),
@@ -69,10 +76,31 @@ describe('Google Home Tool Tests', () => {
     expect(JSON.parse(res).error).toContain('Command string is required');
   });
 
+  test('returns error when speaker integration is disabled', async () => {
+    dbMock.get.mockResolvedValueOnce({
+      google_home_enabled: 0,
+      google_home_ip: '192.168.1.60',
+      google_home_name: null
+    });
+    const res = await handleGoogleHomeTool(dbMock, 1, 'send_command', { command: 'turn off lights' });
+    const parsed = JSON.parse(res);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('disabled');
+  });
+
   test('successfully sends command and prepends Ok Google', async () => {
     const res = await handleGoogleHomeTool(dbMock, 1, 'send_command', { command: 'turn off office lights' });
     const parsed = JSON.parse(res);
     expect(parsed.success).toBe(true);
     expect(parsed.command_sent).toBe('Ok Google, turn off office lights');
+  });
+
+  test('successfully lists discovered devices', async () => {
+    const res = await handleGoogleHomeTool(dbMock, 1, 'list_devices', {});
+    const parsed = JSON.parse(res);
+    expect(parsed.success).toBe(true);
+    expect(parsed.devices).toHaveLength(1);
+    expect(parsed.devices[0].modelName).toBe('Google Nest Mini');
+    expect(parsed.devices[0].address).toBe('192.168.1.150');
   });
 });

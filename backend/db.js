@@ -120,6 +120,9 @@ async function getDb() {
     if (!settingsColumns.some(col => col.name === 'token_quota')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN token_quota INTEGER DEFAULT 1000000");
     }
+    if (!settingsColumns.some(col => col.name === 'google_home_enabled')) {
+      await dbConnection.run("ALTER TABLE user_settings ADD COLUMN google_home_enabled INTEGER DEFAULT 0");
+    }
     if (!settingsColumns.some(col => col.name === 'google_home_ip')) {
       await dbConnection.run("ALTER TABLE user_settings ADD COLUMN google_home_ip TEXT");
     }

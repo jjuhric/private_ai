@@ -405,68 +405,82 @@ export default function SettingsModal({
           </div>
 
           <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
-            <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>Google Home Smart Speaker</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Office Speaker"
-                    value={settings.google_home_name || ''}
-                    onChange={e => setSettings(prev => ({ ...prev, google_home_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker IP Address</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. 192.168.1.60"
-                    value={settings.google_home_ip || ''}
-                    onChange={e => setSettings(prev => ({ ...prev, google_home_ip: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="btn-primary"
-                style={{ width: '100%', height: '38px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                onClick={handleScanSpeakers}
-                disabled={isScanning}
-              >
-                {isScanning ? 'Scanning local network...' : 'Scan Local Network for Speakers'}
-              </button>
-
-              {scanError && <div style={{ color: 'var(--error)', fontSize: '0.8rem' }}>{scanError}</div>}
-
-              {scanResults.length > 0 && (
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Discovered Speakers (Select to Apply)</label>
-                  <select
-                    className="form-control"
-                    onChange={e => {
-                      const selected = scanResults.find(d => d.ip === e.target.value);
-                      if (selected) {
-                        setSettings(prev => ({
-                          ...prev,
-                          google_home_name: selected.name,
-                          google_home_ip: selected.ip
-                        }));
-                      }
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>-- Select a Speaker --</option>
-                    {scanResults.map(device => (
-                      <option key={device.ip} value={device.ip}>{device.name} ({device.ip})</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Google Home Smart Speaker</h4>
+              <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', gap: '8px', fontSize: '0.85rem' }}>
+                <input 
+                  type="checkbox" 
+                  checked={!!(settings.google_home_enabled === 1 || settings.google_home_enabled === true)}
+                  onChange={e => setSettings(prev => ({ ...prev, google_home_enabled: e.target.checked ? 1 : 0 }))}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                />
+                Enable Integration
+              </label>
             </div>
+            
+            {(settings.google_home_enabled === 1 || settings.google_home_enabled === true) ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Office Speaker"
+                      value={settings.google_home_name || ''}
+                      onChange={e => setSettings(prev => ({ ...prev, google_home_name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Speaker IP Address</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. 192.168.1.60"
+                      value={settings.google_home_ip || ''}
+                      onChange={e => setSettings(prev => ({ ...prev, google_home_ip: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ width: '100%', height: '38px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={handleScanSpeakers}
+                  disabled={isScanning}
+                >
+                  {isScanning ? 'Scanning local network...' : 'Scan Local Network for Speakers'}
+                </button>
+
+                {scanError && <div style={{ color: 'var(--error)', fontSize: '0.8rem' }}>{scanError}</div>}
+
+                {scanResults.length > 0 && (
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Discovered Speakers (Select to Apply)</label>
+                    <select
+                      className="form-control"
+                      onChange={e => {
+                        const selected = scanResults.find(d => d.ip === e.target.value);
+                        if (selected) {
+                          setSettings(prev => ({
+                            ...prev,
+                            google_home_name: selected.name,
+                            google_home_ip: selected.ip
+                          }));
+                        }
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>-- Select a Speaker --</option>
+                      {scanResults.map(device => (
+                        <option key={device.ip} value={device.ip}>{device.name} ({device.ip})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
