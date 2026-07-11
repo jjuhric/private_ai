@@ -554,7 +554,9 @@ ${toolOutput}
     const cleanMsg = msg.trim().toLowerCase();
     const myKeywords = [
       'my info', 'my information', 'about me', 'who am i',
-      'my details', 'my profile'
+      'my details', 'my profile', 'my name', 'my birthday',
+      'my dob', 'my zipcode', 'my location', 'my age',
+      'my gender', 'my interests'
     ];
     return myKeywords.some(kw => cleanMsg.includes(kw));
   };
