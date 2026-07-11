@@ -4,6 +4,58 @@ const { generateTTS } = require('../utils/tts');
 const path = require('path');
 const fs = require('fs');
 
+async function executeViaAssistantSDK(command) {
+  const credentialsPath = path.resolve(__dirname, '../credentials.json');
+  const tokensPath = path.resolve(__dirname, '../tokens.json');
+  
+  if (!fs.existsSync(credentialsPath) || !fs.existsSync(tokensPath)) {
+    return { success: false, reason: 'missing_credentials' };
+  }
+
+  const GoogleAssistant = require('google-assistant');
+  const config = {
+    auth: {
+      keyFilePath: credentialsPath,
+      savedTokensPath: tokensPath,
+    },
+    conversation: {
+      lang: 'en-US',
+      isNew: true,
+      textQuery: command,
+    },
+  };
+
+  return new Promise((resolve) => {
+    try {
+      const assistant = new GoogleAssistant(config.auth);
+      assistant.on('ready', () => {
+        assistant.start(config.conversation, (conversation) => {
+          let responseText = '';
+          conversation
+            .on('response', (text) => {
+              responseText += text + ' ';
+            })
+            .on('ended', (error, continueConversation) => {
+              if (error) {
+                resolve({ success: false, error: error.message || error });
+              } else {
+                resolve({ success: true, response: responseText.trim() });
+              }
+            })
+            .on('error', (error) => {
+              resolve({ success: false, error: error.message || error });
+            });
+        });
+      });
+      assistant.on('error', (err) => {
+        resolve({ success: false, error: err.message || err });
+      });
+    } catch (e) {
+      resolve({ success: false, error: e.message });
+    }
+  });
+}
+
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -19,7 +71,7 @@ function getLocalIpAddress() {
 }
 
 /**
- * Executes a text-to-speech broadcast command via local Google Cast connection.
+ * Executes a Google Home command or speaks a text message.
  */
 async function handleGoogleHomeTool(db, userId, action, params) {
   if (action === 'list_devices') {
@@ -43,16 +95,111 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     }
   }
 
+  if (action === 'speak_text') {
+    const { text, device_name, device_ip } = params;
+    if (!text) {
+      return JSON.stringify({ error: 'Text/message parameter is required' });
+    }
+
+    const settings = await db.get('SELECT google_home_enabled, google_home_ip, google_home_name FROM user_settings WHERE user_id = ?', [userId]) || {};
+    if (!settings.google_home_enabled) {
+      return JSON.stringify({
+        success: false,
+        error: 'Google Home speaker integration is disabled. You can optionally enable it in the Assistant Settings modal.'
+      });
+    }
+
+    try {
+      const ttsText = text.trim();
+      const ttsUrl = await generateTTS(ttsText);
+      const localIp = getLocalIpAddress();
+      const port = process.env.PORT || 3000;
+      const mediaUrl = `http://${localIp}:${port}${ttsUrl}`;
+
+      let targetIp = device_ip || settings.google_home_ip;
+      let targetName = device_name || settings.google_home_name;
+
+      let resolvedDevice = null;
+      const ChromecastAPI = require('chromecast-api');
+
+      if (targetName) {
+        const client = new ChromecastAPI();
+        resolvedDevice = await new Promise((resolve) => {
+          let found = false;
+          const timeout = setTimeout(() => {
+            try {
+              if (client.browser && typeof client.browser.destroy === 'function') {
+                client.browser.destroy();
+              }
+            } catch (e) {}
+            resolve(null);
+          }, 2500);
+
+          client.on('device', (device) => {
+            if (device && (device.friendlyName === targetName || device.name === targetName)) {
+              found = true;
+              clearTimeout(timeout);
+              try {
+                if (client.browser && typeof client.browser.destroy === 'function') {
+                  client.browser.destroy();
+                }
+              } catch (e) {}
+              resolve(device);
+            }
+          });
+        });
+      }
+
+      if (resolvedDevice) {
+        targetIp = resolvedDevice.host;
+      } else {
+        targetIp = targetIp || '192.168.1.60';
+      }
+
+      const Device = require('chromecast-api/lib/device');
+      const device = new Device({
+        host: targetIp,
+        name: targetName || 'Google Home',
+        friendlyName: targetName || 'Google Home'
+      });
+
+      device.on('error', (err) => {
+        console.error('[Chromecast Device Error]:', err.message);
+      });
+
+      await new Promise((resolve, reject) => {
+        device.play(mediaUrl, { startTime: 0 }, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      return JSON.stringify({
+        success: true,
+        message: `Successfully spoke message on Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
+        text_spoken: ttsText
+      });
+
+    } catch (error) {
+      return JSON.stringify({
+        success: false,
+        error: `Failed to speak message: ${error.message}`
+      });
+    }
+  }
+
   if (action !== 'send_command') {
     return JSON.stringify({ error: `Unknown action: ${action}` });
   }
 
   const { command } = params;
   if (!command) {
-    return JSON.stringify({ error: 'Command/message string is required' });
+    return JSON.stringify({ error: 'Command string is required' });
   }
 
-  // 1. Fetch saved configuration settings and check if enabled
   const settings = await db.get('SELECT google_home_enabled, google_home_ip, google_home_name FROM user_settings WHERE user_id = ?', [userId]) || {};
   if (!settings.google_home_enabled) {
     return JSON.stringify({
@@ -61,9 +208,28 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     });
   }
 
+  const sdkResult = await executeViaAssistantSDK(command);
+  
+  let ttsText = '';
+  let commandExecuted = false;
+
+  if (sdkResult.success) {
+    ttsText = sdkResult.response || 'Action completed.';
+    commandExecuted = true;
+  } else {
+    if (sdkResult.reason === 'missing_credentials') {
+      console.warn('Google Assistant SDK credentials missing. Falling back to simple TTS broadcasting.');
+    } else {
+      console.error(`Google Assistant SDK error: ${sdkResult.error}. Falling back to simple TTS.`);
+    }
+    
+    ttsText = command.trim();
+    if (!/^ok\s+google/i.test(ttsText) && !/^hey\s+google/i.test(ttsText)) {
+      ttsText = `Ok Google, ${ttsText}`;
+    }
+  }
+
   try {
-    // 2. Generate local TTS file path
-    const ttsText = command.trim();
     const ttsUrl = await generateTTS(ttsText);
     const localIp = getLocalIpAddress();
     const port = process.env.PORT || 3000;
@@ -72,7 +238,6 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     let targetIp = settings.google_home_ip;
     const targetName = settings.google_home_name;
 
-    // 3. Scan & dynamic resolution if friendly name is configured
     let resolvedDevice = null;
     const ChromecastAPI = require('chromecast-api');
 
@@ -113,7 +278,6 @@ async function handleGoogleHomeTool(db, userId, action, params) {
       targetIp = targetIp || '192.168.1.60';
     }
 
-    // 4. Instantiation & direct play
     const Device = require('chromecast-api/lib/device');
     const device = new Device({
       host: targetIp,
@@ -137,14 +301,17 @@ async function handleGoogleHomeTool(db, userId, action, params) {
 
     return JSON.stringify({
       success: true,
-      message: `Successfully spoke message on Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
-      text_spoken: ttsText
+      message: commandExecuted 
+        ? `Successfully executed command via Assistant SDK and casted confirmation to speaker (${targetName || 'Default'}) at ${targetIp}.`
+        : `Successfully casted command to Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
+      command_sent: commandExecuted ? command : ttsText,
+      assistant_response: sdkResult.response || null
     });
 
   } catch (error) {
     return JSON.stringify({
       success: false,
-      error: `Failed to speak message: ${error.message}`
+      error: `Failed to cast command: ${error.message}`
     });
   }
 }
