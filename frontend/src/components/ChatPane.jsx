@@ -253,7 +253,17 @@ export default function ChatPane({
               />
               <h3 className="starter-title">Welcome to PATTI</h3>
               <p className="starter-subtitle" style={{ fontSize: '1.1rem', letterSpacing: '0.5px', opacity: 0.9 }}>
-                <span className="special-letter">P</span>rofessional <span className="special-letter">A</span>rtificial <span className="special-letter">T</span>ext and <span className="special-letter">T</span>ype <span className="special-letter">I</span>ntelligence
+                <span className="special-letter">P</span>
+                <span className="normal-text">rofessional&nbsp;</span>
+                <span className="special-letter">A</span>
+                <span className="normal-text">rtificial&nbsp;</span>
+                <span className="special-letter">T</span>
+                <span className="normal-text">ext&nbsp;</span>
+                <span className="normal-text">and&nbsp;</span>
+                <span className="special-letter">T</span>
+                <span className="normal-text">ype&nbsp;</span>
+                <span className="special-letter">I</span>
+                <span className="normal-text">ntelligence</span>
               </p>
               <div className="starter-chips-grid">
                 {starterPrompts.map((chip, idx) => (

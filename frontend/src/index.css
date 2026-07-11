@@ -871,9 +871,27 @@ select.form-control option {
 
 /* PATTI Full Name and Special Letter styling */
 .special-letter {
-  color: #a78bfa;
-  font-weight: 800;
-  text-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+  font-family: 'Cinzel Decorative', Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #a78bfa, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
+  margin-right: 1px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.normal-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.98rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .patti-header-container {
@@ -887,12 +905,9 @@ select.form-control option {
 
 @media (min-width: 992px) {
   .patti-fullname {
-    display: inline-block;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-left: 12px;
-    opacity: 0.85;
+    display: inline-flex;
+    align-items: center;
+    gap: 0px;
     letter-spacing: 0.3px;
   }
 }

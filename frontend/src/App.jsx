@@ -896,11 +896,18 @@ function App() {
               title={activeTab !== 'chat' ? "Return to Chat" : ""}
             >
                {activeTab === 'chat' ? (
-                 <span className="patti-header-container">
-                   <span className="patti-title">PATTI</span>
-                   <span className="patti-fullname">
-                     - <span className="special-letter">P</span>rofessional <span className="special-letter">A</span>rtificial <span className="special-letter">T</span>ext and <span className="special-letter">T</span>ype <span className="special-letter">I</span>ntelligence
-                   </span>
+                 <span className="patti-fullname">
+                   <span className="special-letter">P</span>
+                   <span className="normal-text">rofessional&nbsp;</span>
+                   <span className="special-letter">A</span>
+                   <span className="normal-text">rtificial&nbsp;</span>
+                   <span className="special-letter">T</span>
+                   <span className="normal-text">ext&nbsp;</span>
+                   <span className="normal-text">and&nbsp;</span>
+                   <span className="special-letter">T</span>
+                   <span className="normal-text">ype&nbsp;</span>
+                   <span className="special-letter">I</span>
+                   <span className="normal-text">ntelligence</span>
                  </span>
                ) : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard'))}
             </h2>
