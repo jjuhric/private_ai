@@ -83,8 +83,12 @@ export default function CustomAlertModal({ alert, onClose }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src={logoUrl} alt="PATTI" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-            <span style={{ fontWeight: 650, fontSize: '1rem', color: '#f8fafc', letterSpacing: '0.5px' }}>
-              PATTI
+            <span className="patti-logo-text" style={{ fontSize: '1rem' }}>
+              <span className="special-letter" style={{ fontSize: '1.2rem' }}>P</span>
+              <span className="special-letter" style={{ fontSize: '1.2rem' }}>A</span>
+              <span className="special-letter" style={{ fontSize: '1.2rem' }}>T</span>
+              <span className="special-letter" style={{ fontSize: '1.2rem' }}>T</span>
+              <span className="special-letter" style={{ fontSize: '1.2rem' }}>I</span>
             </span>
           </div>
           <button 

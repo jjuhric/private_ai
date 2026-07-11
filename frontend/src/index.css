@@ -912,5 +912,29 @@ select.form-control option {
   }
 }
 
+.patti-logo-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+}
+
+.patti-logo-text .special-letter {
+  font-size: 1.65rem;
+  margin-right: 0px;
+}
+
+.sidebar-brand h1.patti-logo-text {
+  display: inline-flex;
+}
+
+.app-title.patti-logo-text {
+  display: inline-flex;
+}
+
+.app-title.patti-logo-text .special-letter {
+  font-size: 2.3rem;
+}
+
 
 

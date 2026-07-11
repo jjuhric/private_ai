@@ -251,7 +251,16 @@ export default function ChatPane({
                 style={{ width: 72, height: 72, marginBottom: 16 }} 
                 onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
               />
-              <h3 className="starter-title">Welcome to PATTI</h3>
+              <h3 className="starter-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                Welcome to&nbsp;
+                <span className="patti-logo-text">
+                  <span className="special-letter">P</span>
+                  <span className="special-letter">A</span>
+                  <span className="special-letter">T</span>
+                  <span className="special-letter">T</span>
+                  <span className="special-letter">I</span>
+                </span>
+              </h3>
               <p className="starter-subtitle" style={{ fontSize: '1.1rem', letterSpacing: '0.5px', opacity: 0.9 }}>
                 <span className="special-letter">P</span>
                 <span className="normal-text">rofessional&nbsp;</span>

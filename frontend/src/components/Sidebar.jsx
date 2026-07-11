@@ -32,7 +32,13 @@ export default function Sidebar({
             className="sidebar-logo" 
             onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
           />
-          <h1>PATTI</h1>
+          <h1 className="patti-logo-text">
+            <span className="special-letter">P</span>
+            <span className="special-letter">A</span>
+            <span className="special-letter">T</span>
+            <span className="special-letter">T</span>
+            <span className="special-letter">I</span>
+          </h1>
         </div>
         <button 
           className="btn-icon" 
