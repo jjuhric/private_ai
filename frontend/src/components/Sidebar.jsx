@@ -32,13 +32,11 @@ export default function Sidebar({
             className="sidebar-logo" 
             onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
           />
-          <h1 className="patti-word-gradient" style={{ fontSize: '1.65rem' }}>
-            <span>P</span>
-            <span>A</span>
-            <span>T</span>
-            <span>T</span>
-            <span>I</span>
-          </h1>
+          <img 
+            src="/patti_text.png" 
+            alt="PATTI" 
+            className="patti-logo-image sidebar-patti-logo" 
+          />
         </div>
         <button 
           className="btn-icon" 

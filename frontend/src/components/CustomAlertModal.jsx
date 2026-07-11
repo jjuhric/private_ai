@@ -83,13 +83,11 @@ export default function CustomAlertModal({ alert, onClose }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src={logoUrl} alt="PATTI" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-            <span className="patti-word-gradient" style={{ fontSize: '1.2rem' }}>
-              <span>P</span>
-              <span>A</span>
-              <span>T</span>
-              <span>T</span>
-              <span>I</span>
-            </span>
+            <img 
+              src={pattiTextUrl} 
+              alt="PATTI" 
+              className="patti-logo-image modal-patti-logo" 
+            />
           </div>
           <button 
             onClick={onClose}

@@ -22,13 +22,11 @@ export default function Auth({
             className="app-logo" 
             onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
           />
-          <h1 className="app-title patti-word-gradient">
-            <span>P</span>
-            <span>A</span>
-            <span>T</span>
-            <span>T</span>
-            <span>I</span>
-          </h1>
+          <img 
+            src="/patti_text.png" 
+            alt="PATTI" 
+            className="patti-logo-image auth-patti-logo" 
+          />
         </div>
         <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
         

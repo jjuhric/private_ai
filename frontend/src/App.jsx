@@ -897,13 +897,11 @@ function App() {
             >
                {activeTab === 'chat' ? (
                  <span className="patti-header-brand" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                   <span className="patti-word-gradient header-only-mobile" style={{ fontSize: '1.4rem' }}>
-                     <span>P</span>
-                     <span>A</span>
-                     <span>T</span>
-                     <span>T</span>
-                     <span>I</span>
-                   </span>
+                   <img 
+                     src="/patti_text.png" 
+                     alt="PATTI" 
+                     className="patti-logo-image header-patti-logo header-only-mobile" 
+                   />
                    <span className="patti-fullname">
                      <span className="special-letter">P</span>
                      <span className="normal-text">rofessional&nbsp;</span>

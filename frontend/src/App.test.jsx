@@ -114,7 +114,7 @@ describe('Main App Component Tests', () => {
     });
 
     // Sidebar renders app logo title and username
-    expect(screen.getAllByText((content, element) => element.textContent === 'PATTI').length).toBeGreaterThan(0);
+    expect(screen.getAllByAltText('PATTI').length).toBeGreaterThan(0);
     expect(screen.getByText('👤 appuser')).toBeInTheDocument();
     expect(screen.getByText('App Chat One')).toBeInTheDocument();
   });
