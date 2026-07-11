@@ -803,6 +803,51 @@ function App() {
     } catch (err) {
       if (err.name === 'AbortError') {
         console.log('Stream aborted by user.');
+        let finalThoughts = coordinatorThoughts;
+        let finalContent = accumulatedRawContent;
+
+        const startTagGemma = '<|channel>thought';
+        const endTagGemma = '<channel|>';
+        const startTagXml = '<think>';
+        const endTagXml = '</think>';
+        
+        let currentStartTag = '';
+        let currentEndTag = '';
+        
+        if (accumulatedRawContent.includes(startTagXml)) {
+          currentStartTag = startTagXml;
+          currentEndTag = endTagXml;
+        } else if (accumulatedRawContent.includes(startTagGemma)) {
+          currentStartTag = startTagGemma;
+          currentEndTag = endTagGemma;
+        }
+
+        if (currentStartTag) {
+          const startIdx = accumulatedRawContent.indexOf(currentStartTag);
+          const endIdx = accumulatedRawContent.indexOf(currentEndTag);
+          if (endIdx !== -1) {
+            const extractedThoughts = accumulatedRawContent.substring(startIdx + currentStartTag.length, endIdx).trim();
+            finalThoughts = (coordinatorThoughts + '\n' + extractedThoughts).trim();
+            finalContent = accumulatedRawContent.substring(endIdx + currentEndTag.length).trim();
+          } else {
+            const extractedThoughts = accumulatedRawContent.substring(startIdx + currentStartTag.length).trim();
+            finalThoughts = (coordinatorThoughts + '\n' + extractedThoughts).trim();
+            finalContent = '';
+          }
+        }
+        
+        if (finalContent.trim()) {
+          finalContent = finalContent.trim() + " \n\nInteraction stopped by user.";
+        } else {
+          finalContent = "Interaction stopped by user.";
+        }
+
+        setMessages(prev => [...prev, {
+          id: 'aborted-' + Date.now(),
+          role: 'assistant',
+          content: finalContent,
+          thoughts: finalThoughts
+        }]);
       } else {
         console.error(err);
         showToast('Communication failed. Is LM Studio or backend active?', 'error');

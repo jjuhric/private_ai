@@ -103,6 +103,8 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
     }
   }
 
+  let completed = false;
+
   // Set up SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -120,6 +122,58 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
       broadcastAlert({ type: 'streaming_status', isStreaming: false });
       broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
     } catch (e) {}
+
+    if (!completed) {
+      completed = true;
+      try {
+        let finalContent = accumulatedContent.trim();
+        if (finalContent) {
+          finalContent += " \n\nInteraction stopped by user.";
+        } else {
+          finalContent = "Interaction stopped by user.";
+        }
+
+        let finalThoughts = accumulatedThoughts;
+        const startTag = '<|channel>thought';
+        const endTag = '<channel|>';
+        if (finalContent.includes(startTag)) {
+          const startIdx = finalContent.indexOf(startTag);
+          const endIdx = finalContent.indexOf(endTag);
+          if (endIdx !== -1) {
+            const extractedThoughts = finalContent.substring(startIdx + startTag.length, endIdx).trim();
+            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+            finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTag.length)).trim();
+          } else {
+            const extractedThoughts = finalContent.substring(startIdx + startTag.length).trim();
+            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+            finalContent = finalContent.substring(0, startIdx).trim();
+          }
+        }
+
+        const startTagXml = '<think>';
+        const endTagXml = '</think>';
+        if (finalContent.includes(startTagXml)) {
+          const startIdx = finalContent.indexOf(startTagXml);
+          const endIdx = finalContent.indexOf(endTagXml);
+          if (endIdx !== -1) {
+            const extractedThoughts = finalContent.substring(startIdx + startTagXml.length, endIdx).trim();
+            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+            finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTagXml.length)).trim();
+          } else {
+            const extractedThoughts = finalContent.substring(startIdx + startTagXml.length).trim();
+            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+            finalContent = finalContent.substring(0, startIdx).trim();
+          }
+        }
+
+        await db.run(
+          'INSERT INTO messages (chat_id, role, content, thoughts) VALUES (?, ?, ?, ?)',
+          [chatId, 'assistant', finalContent, finalThoughts]
+        );
+      } catch (dbErr) {
+        console.error('Failed to save aborted assistant message:', dbErr);
+      }
+    }
 
     // If provider is local, eject the currently loaded model on abort to free up resources
     if (settings.provider === 'local') {
@@ -349,6 +403,8 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
       'INSERT INTO messages (chat_id, role, content, thoughts) VALUES (?, ?, ?, ?)',
       [chatId, 'assistant', finalContent, finalThoughts]
     );
+
+    completed = true;
 
     const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
     const chatMemContent = `User asked: "${message.trim()}"\nAssistant replied: "${finalContent.trim()}"`;
