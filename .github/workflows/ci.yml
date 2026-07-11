@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 env:
-  CFLAGS: "-Wno-error"
-  CXXFLAGS: "-Wno-error"
+  CFLAGS: "-Wno-error -Dgpr_gettid=gettid"
+  CXXFLAGS: "-Wno-error -Dgpr_gettid=gettid"
 
 jobs:
   backend-tests:
