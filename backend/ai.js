@@ -299,6 +299,139 @@ async function runAgentLoop({
     cleanedHistory = [];
   }
 
+  // --- Direct Send Message to Device Interceptor ---
+  const cleanMsgForSend = userMessage.trim().toLowerCase();
+  const isSendMsgPattern = /^\s*send\s+message\s+to\s+device/i.test(cleanMsgForSend);
+  const isIpOnlyPattern = /^\s*(?:\d{1,3}\.){3}\d{1,3}\s*$/i.test(cleanMsgForSend);
+
+  if (isIpOnlyPattern && chatId) {
+    let lastMsgs = [];
+    try {
+      lastMsgs = await db.all(
+        'SELECT role, content FROM messages WHERE chat_id = ? ORDER BY id DESC LIMIT 5',
+        [chatId]
+      );
+    } catch (dbErr) {
+      console.error('Failed to query messages in IP interceptor:', dbErr);
+    }
+
+    const lastAssistantMsg = lastMsgs.find(m => m.role === 'assistant');
+    if (lastAssistantMsg && lastAssistantMsg.content.includes('Which device would you like to send this message to?')) {
+      const originalUserMsgObj = lastMsgs.find(m => m.role === 'user' && /^\s*send\s+message\s+to\s+device/i.test(m.content));
+      if (originalUserMsgObj) {
+        const ip = userMessage.trim();
+        let temp = originalUserMsgObj.content.replace(/^\s*send\s+message\s+to\s+device/i, '');
+        temp = temp.replace(/^\s*saying/i, '');
+        const text = temp.trim();
+
+        onThought(`[Google Home Intercept] Executing speak_text on device ${ip}: "${text}"\n`);
+        const { handleGoogleHomeTool } = require('./tools/google_home_tool');
+        const toolOutput = await handleGoogleHomeTool(db, userId, 'speak_text', { text, device_ip: ip });
+
+        let success = false;
+        try {
+          const parsed = JSON.parse(toolOutput);
+          if (parsed.success) {
+            success = true;
+          }
+        } catch (e) {}
+
+        if (success) {
+          onThought("Speak text completed successfully.\n");
+          onContent("Action Complete");
+          await db.run(
+            'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+            [chatId, 'assistant', 'Action Complete']
+          );
+        } else {
+          const errMsg = `Failed to send message to speaker: ${JSON.parse(toolOutput).error || 'Unknown error'}`;
+          onContent(errMsg);
+          await db.run(
+            'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+            [chatId, 'assistant', errMsg]
+          );
+        }
+        return;
+      }
+    }
+  }
+
+  if (isSendMsgPattern) {
+    onThought("[Google Home Intercept] Direct Send Message to Device command detected.\n");
+    const ipMatch = userMessage.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+    if (ipMatch) {
+      const ip = ipMatch[0];
+      let temp = userMessage.replace(new RegExp(`\\b${ip}\\b`, 'g'), '');
+      temp = temp.replace(/^\s*send\s+message\s+to\s+device/i, '');
+      temp = temp.replace(/^\s*saying/i, '');
+      const text = temp.trim();
+
+      onThought(`[Google Home Intercept] Executing speak_text on device ${ip}: "${text}"\n`);
+      const { handleGoogleHomeTool } = require('./tools/google_home_tool');
+      const toolOutput = await handleGoogleHomeTool(db, userId, 'speak_text', { text, device_ip: ip });
+
+      let success = false;
+      try {
+        const parsed = JSON.parse(toolOutput);
+        if (parsed.success) {
+          success = true;
+        }
+      } catch (e) {}
+
+      if (success) {
+        onThought("Speak text completed successfully.\n");
+        onContent("Action Complete");
+        await db.run(
+          'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+          [chatId, 'assistant', 'Action Complete']
+        );
+      } else {
+        const errMsg = `Failed to send message to speaker: ${JSON.parse(toolOutput).error || 'Unknown error'}`;
+        onContent(errMsg);
+        await db.run(
+          'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+          [chatId, 'assistant', errMsg]
+        );
+      }
+      return;
+    } else {
+      onThought("[Google Home Intercept] No device IP found. Scanning local network for Google Cast devices...\n");
+      let devices = [];
+      try {
+        const mDnsSd = require('node-dns-sd');
+        const deviceList = await mDnsSd.discover({ name: '_googlecast._tcp.local', timeout: 3 });
+        devices = deviceList;
+      } catch (scanErr) {
+        console.error('Failed to scan for speakers:', scanErr);
+      }
+
+      if (devices.length === 0) {
+        const errMsg = "No Google Home/Cast devices discovered on the local network. Please specify the target device IP address manually.";
+        onContent(errMsg);
+        await db.run(
+          'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+          [chatId, 'assistant', errMsg]
+        );
+        return;
+      }
+
+      let responseText = "Which device would you like to send this message to? Please respond with the IP address. Available devices:\n\n";
+      devices.forEach((device) => {
+        responseText += `Device Name: ${device.fqdn}\n`;
+        responseText += `IP Address: ${device.address}\n`;
+        responseText += `Model: ${device.modelName}\n`;
+        responseText += `-------------------------\n`;
+      });
+
+      onContent(responseText);
+      await db.run(
+        'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+        [chatId, 'assistant', responseText]
+      );
+      return;
+    }
+  }
+
   // --- Google Home Direct Bypass Interceptor ---
   const isGoogleHomeDeviceRequest = (msg) => {
     const cleanMsg = msg.trim().toLowerCase();
