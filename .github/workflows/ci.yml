@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "25.5.0"
+          node-version: "22"
           cache: "npm"
       - name: Install Project Dependencies
         run: npm run install:all
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "25.5.0"
+          node-version: "22"
           cache: "npm"
       - name: Install Project Dependencies
         run: npm run install:all
@@ -51,7 +51,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "25.5.0"
+          node-version: "22"
           cache: "npm"
       - name: Install Project Dependencies
         run: npm run install:all
