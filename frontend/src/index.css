@@ -869,4 +869,33 @@ select.form-control option {
   animation: spin 1s linear infinite;
 }
 
+/* PATTI Full Name and Special Letter styling */
+.special-letter {
+  color: #a78bfa;
+  font-weight: 800;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+}
+
+.patti-header-container {
+  display: inline-flex;
+  align-items: center;
+}
+
+.patti-fullname {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .patti-fullname {
+    display: inline-block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-left: 12px;
+    opacity: 0.85;
+    letter-spacing: 0.3px;
+  }
+}
+
+
 

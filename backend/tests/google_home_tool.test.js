@@ -70,9 +70,9 @@ describe('Google Home Tool Tests', () => {
   });
 
   test('successfully sends command and prepends Ok Google', async () => {
-    const res = await handleGoogleHomeTool(dbMock, 1, 'send_command', { command: 'turn off lights' });
+    const res = await handleGoogleHomeTool(dbMock, 1, 'send_command', { command: 'turn off office lights' });
     const parsed = JSON.parse(res);
     expect(parsed.success).toBe(true);
-    expect(parsed.command_sent).toBe('Ok Google, turn off lights');
+    expect(parsed.command_sent).toBe('Ok Google, turn off office lights');
   });
 });

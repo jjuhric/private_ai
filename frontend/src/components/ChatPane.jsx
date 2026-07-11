@@ -253,7 +253,7 @@ export default function ChatPane({
               />
               <h3 className="starter-title">Welcome to PATTI</h3>
               <p className="starter-subtitle" style={{ fontSize: '1.1rem', letterSpacing: '0.5px', opacity: 0.9 }}>
-                Professional Assistant Text and Type Intelligence
+                <span className="special-letter">P</span>rofessional <span className="special-letter">A</span>rtificial <span className="special-letter">T</span>ext and <span className="special-letter">T</span>ype <span className="special-letter">I</span>ntelligence
               </p>
               <div className="starter-chips-grid">
                 {starterPrompts.map((chip, idx) => (

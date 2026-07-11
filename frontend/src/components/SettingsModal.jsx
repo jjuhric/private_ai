@@ -423,13 +423,13 @@ export default function SettingsModal({
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. 192.168.1.199"
+                    placeholder="e.g. 192.168.1.60"
                     value={settings.google_home_ip || ''}
                     onChange={e => setSettings(prev => ({ ...prev, google_home_ip: e.target.value }))}
                   />
                 </div>
               </div>
-              
+
               <button
                 type="button"
                 className="btn-primary"
@@ -439,9 +439,9 @@ export default function SettingsModal({
               >
                 {isScanning ? 'Scanning local network...' : 'Scan Local Network for Speakers'}
               </button>
-              
+
               {scanError && <div style={{ color: 'var(--error)', fontSize: '0.8rem' }}>{scanError}</div>}
-              
+
               {scanResults.length > 0 && (
                 <div className="form-group" style={{ margin: 0 }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Discovered Speakers (Select to Apply)</label>
