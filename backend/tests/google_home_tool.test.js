@@ -4,10 +4,19 @@ jest.mock('../utils/tts', () => ({
   generateTTS: jest.fn(() => Promise.resolve('/tts/mocked_hash.mp3'))
 }));
 
+jest.mock('chromecast-api', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      on: jest.fn()
+    };
+  });
+});
+
 jest.mock('chromecast-api/lib/device', () => {
   return jest.fn().mockImplementation(() => {
     return {
-      play: jest.fn((url, options, callback) => callback(null))
+      play: jest.fn((url, options, callback) => callback(null)),
+      on: jest.fn()
     };
   });
 });
