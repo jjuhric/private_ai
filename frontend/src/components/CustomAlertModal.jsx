@@ -5,6 +5,7 @@ export default function CustomAlertModal({ alert, onClose }) {
   if (!alert) return null;
 
   const logoUrl = window.location.pathname.startsWith('/monitor') ? '/monitor/favicon.png' : '/favicon.png';
+  const pattiTextUrl = window.location.pathname.startsWith('/monitor') ? '/monitor/patti_text.png' : '/patti_text.png';
 
   const getTypeStyles = () => {
     switch (alert.type) {
