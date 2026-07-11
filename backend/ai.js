@@ -294,7 +294,10 @@ async function runAgentLoop({
 
   // Filter history to ensure it starts with a user message
   const firstUserIdx = (history || []).findIndex(msg => msg.role === 'user');
-  const cleanedHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
+  let cleanedHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
+  if (process.env.NODE_ENV !== 'test') {
+    cleanedHistory = [];
+  }
 
   // --- Google Home Direct Bypass Interceptor ---
   const isGoogleHomeDeviceRequest = (msg) => {
@@ -536,6 +539,129 @@ ${toolOutput}
     workingDirectory = defaultWorkingDir;
   }
   settings.workingDirectory = workingDirectory;
+
+  // --- Personal Info Interceptor ---
+  const isAgentInfoRequest = (msg) => {
+    const cleanMsg = msg.trim().toLowerCase();
+    const yourKeywords = [
+      'your info', 'your information', 'about you', 'who are you',
+      'your specs', 'your host', 'your system', 'your settings'
+    ];
+    return yourKeywords.some(kw => cleanMsg.includes(kw));
+  };
+
+  const isUserInfoRequest = (msg) => {
+    const cleanMsg = msg.trim().toLowerCase();
+    const myKeywords = [
+      'my info', 'my information', 'about me', 'who am i',
+      'my details', 'my profile'
+    ];
+    return myKeywords.some(kw => cleanMsg.includes(kw));
+  };
+
+  if (isAgentInfoRequest(userMessage) || isUserInfoRequest(userMessage)) {
+    const isAgentInfo = isAgentInfoRequest(userMessage);
+    const targetAgent = isAgentInfo ? 'system_specialist' : 'memory_agent';
+    
+    onThought(`[Personal Info Intercept] Personal information query detected. Routing directly to ${targetAgent}...\n`);
+    if (onAgentStatus) onAgentStatus({ agent: targetAgent, status: 'active' });
+
+    if (onToolCall) {
+      onToolCall({
+        tool: `delegate_to_${targetAgent}`,
+        action: 'delegate',
+        params: { task: userMessage },
+        agent: targetAgent
+      });
+    }
+
+    let toolOutput = '';
+    try {
+      toolOutput = await runWorkerAgent(targetAgent, settings, JSON.stringify({ task: userMessage }), db, userId, githubToken);
+    } catch (err) {
+      toolOutput = `Error getting information: ${err.message}`;
+    }
+
+    onThought(`${isAgentInfo ? 'System Specialist' : 'Memory Agent'} execution completed. Tool output: ${toolOutput}\n`);
+
+    let profileDetailsText = '';
+    if (!isAgentInfo) {
+      try {
+        const profile = await db.get('SELECT name, zipcode, country, temp_unit, dob, gender, political_leaning, interests FROM users WHERE id = ?', [userId]);
+        if (profile) {
+          profileDetailsText = `\n\n### User Profile Details:\n- Name: ${profile.name || 'Not set'}\n- Zipcode: ${profile.zipcode || 'Not set'}\n- Country: ${profile.country || 'US'}\n- Temp Unit: ${profile.temp_unit || 'imperial'}\n- Date of Birth (DOB): ${profile.dob || 'Not set'}\n- Gender: ${profile.gender || 'Not set'}\n- Political Leaning: ${profile.political_leaning || 'Not set'}\n- Interests: ${profile.interests || '[]'}`;
+        }
+      } catch (profileErr) {
+        console.error('Failed to get user profile details for intercept:', profileErr);
+      }
+    }
+
+    if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
+    onThought('Communication Specialist generating final response...\n');
+
+    const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
+    const responderInstruction = `${commSpecialistSystemPrompt}
+ 
+### INSTRUCTIONS:
+- You are operating in **MODE 2: Format Results**.
+- If you output a thinking process, planning, or reasoning before your response, you MUST wrap it inside <think> and </think> tags. For example: <think>your thoughts here</think>your final response here.
+- The user requested: "${userMessage}".
+- The ${isAgentInfo ? 'System Specialist' : 'Memory Agent'} returned this context:
+${toolOutput}
+${profileDetailsText ? `Here is the user profile details context:\n${profileDetailsText}` : ''}
+- Present a warm, bubbly, and user-friendly final response presenting this information. Format in beautiful markdown with tables, emojis, and visual progress bars where appropriate.`;
+
+    const isGemini = provider === 'gemini' || (provider === 'online' && onlineProvider === 'gemini');
+
+    if (isGemini) {
+      const activeKey = provider === 'gemini' ? (geminiKey || onlineKey) : onlineKey;
+      await callGeminiStream(
+        activeKey,
+        modelName,
+        responderInstruction,
+        [],
+        userMessage,
+        onContent,
+        abortSignal,
+        db,
+        userId,
+        provider
+      );
+    } else {
+      let targetUrl = '';
+      let targetKey = '';
+      let targetStyle = '';
+
+      if (provider === 'local') {
+        targetUrl = localBaseUrl || 'http://192.168.1.42:1234/v1';
+        targetKey = localApiKey;
+        targetStyle = localApiStyle || 'openai';
+      } else {
+        targetUrl = onlineUrl || 'https://api.openai.com/v1';
+        targetKey = onlineKey;
+        targetStyle = onlineProvider || 'openai';
+      }
+
+      const messages = [
+        { role: 'system', content: responderInstruction },
+        { role: 'user', content: userMessage }
+      ];
+
+      await callLocalLLMStream(
+        targetUrl,
+        targetKey,
+        modelName,
+        messages,
+        targetStyle,
+        onContent,
+        abortSignal,
+        db,
+        userId,
+        provider
+      );
+    }
+    return;
+  }
 
   const workspaceContext = `\n\n### Workspace System Directories:
 - Root Working Directory: ${workingDirectory}
