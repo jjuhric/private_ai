@@ -1,4 +1,4 @@
-# Private AI Assistant — Enterprise Suite (v5.0.0)
+# Private AI Assistant — Enterprise Suite (v5.1.0)
 
 <p align="center">
   <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
@@ -139,6 +139,18 @@ Navigate to **System Control** -> **Field Nodes** tab to manage your smart home 
 * **Add Node**: Provide the node name, select the device type (RPi, ESP32, Windows), input its local IP address, and specify its bridge auth token.
 * **Status Monitoring**: Live green/red online dots automatically ping remote nodes to ensure they are online.
 * **Remove Node**: Cleanly delete nodes from your distributed registry.
+
+---
+
+## 🛡️ High-Performance Interceptors & Privacy Controls (v5.1.0)
+
+To maximize execution speed, reduce model token costs, and enforce strict security boundaries, Private AI coordinates key queries via high-performance interceptors before launching agent planning loops:
+
+* **Google Assistant SDK Bypass Interceptor**: Direct smart-home command queries (e.g. `Turn Office Light Dark Blue`, `dim living room tv`) containing valid locations (`office`, `living room`, `bedroom`, `faith's room`, `jeffery's room`, `all`) and devices are parsed via a regex interceptor. If matched, it bypasses the LLM supervisor loop entirely. A successful execution returns a programmatic `Action Complete` response immediately, skipping LLM output formatting for maximum speed.
+* **Single-Message Memory Isolation**: To protect user privacy and eliminate context bloat, the conversation history is cleared for LLM turns (`cleanedHistory = []` in production). Each message is treated as a standalone query, relying purely on the database profile and LanceDB vector DB memories retrieved programmatically.
+* **Personal & Identity Info Routing**: Queries asking for user details (`my name`, `my age`, `my location`, etc.) or agent/host details (`your specs`, `who are you`, etc.) bypass the supervisor and route directly to the `memory_agent` or `system_specialist` respectively, with responses formatted by the Communication Specialist.
+* **Environment-Gated Nodes Dashboard**: To prevent unauthorized remote network edits, the Field Nodes interface detects its build environment. In development mode, the LAN scanner and registry are fully interactive; in production mode, it displays a secure, glassmorphic "Coming Soon / Under Construction" telemetry dashboard.
+* **Tailscale Funnel Smart-Deployment**: Remote Raspberry Pi nodes run automatic background update routines routed via **Tailscale Funnel** tunnels. Future versions will support transitions to **Cloudflare Tunnels** when migrating to custom domains.
 
 ---
 
