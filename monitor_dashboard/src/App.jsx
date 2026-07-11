@@ -1173,8 +1173,104 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       )}
 
       {activeSubTab === 'nodes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div className="memory-card" style={{ padding: '20px' }}>
+        !import.meta.env.DEV ? (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            minHeight: '60vh', 
+            padding: '40px',
+            background: 'var(--bg-glass)', 
+            border: '1px solid var(--border-glass)', 
+            borderRadius: '24px', 
+            boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
+            textAlign: 'center',
+            gap: '24px',
+            marginTop: '20px'
+          }}>
+            <div style={{
+              position: 'relative',
+              width: '120px',
+              height: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0) 70%)',
+              borderRadius: '50%'
+            }}>
+              {/* Outer pulsing ring */}
+              <div style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                border: '2px solid var(--accent-primary)',
+                borderRadius: '50%',
+                animation: 'pulse-ring 2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite',
+                opacity: 0.7
+              }} />
+              <Server size={48} style={{ color: 'var(--accent-primary)', filter: 'drop-shadow(0 0 10px rgba(139, 92, 246, 0.6))', animation: 'bounce-light 2s ease-in-out infinite' }} />
+            </div>
+
+            <div style={{ maxWidth: '600px' }}>
+              <h2 style={{ 
+                fontSize: '2.2rem', 
+                fontWeight: 800, 
+                marginBottom: '12px', 
+                background: 'linear-gradient(135deg, #fff 30%, var(--accent-secondary) 100%)', 
+                WebkitBackgroundClip: 'text', 
+                WebkitTextFillColor: 'transparent' 
+              }}>
+                Field Node Cluster
+              </h2>
+              <h4 style={{ 
+                color: 'var(--accent-secondary)', 
+                fontSize: '0.9rem', 
+                fontWeight: 600, 
+                textTransform: 'uppercase', 
+                letterSpacing: '2px',
+                marginBottom: '20px'
+              }}>
+                [ System Mesh Under Construction ]
+              </h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, margin: 0 }}>
+                We are actively integrating distributed edge-node orchestration. Secure connection interfaces via Tailscale and Cloudflare Tunnel protocols are being configured. Real-time telemetry monitoring for RPi/ESP32 devices will be online soon.
+              </p>
+            </div>
+
+            {/* Glowing progress line */}
+            <div style={{ width: '80%', maxWidth: '400px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{
+                position: 'absolute',
+                height: '100%',
+                width: '60%',
+                background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))',
+                borderRadius: '3px',
+                boxShadow: '0 0 8px var(--accent-primary)',
+                animation: 'loading-slide 2s ease-in-out infinite'
+              }} />
+            </div>
+
+            <style>{`
+              @keyframes pulse-ring {
+                0% { transform: scale(0.6); opacity: 0; }
+                50% { opacity: 0.5; }
+                100% { transform: scale(1.2); opacity: 0; }
+              }
+              @keyframes loading-slide {
+                0% { left: -60%; }
+                50% { left: 100%; }
+                100% { left: -60%; }
+              }
+              @keyframes bounce-light {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-8px); }
+              }
+            `}</style>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="memory-card" style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ fontSize: '1.1rem', color: '#fff', margin: 0 }}>Distributed Field Nodes</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -1395,7 +1491,8 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
             )}
           </div>
         </div>
-      )}
+      )
+    )}
 
       {activeSubTab === 'host' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
