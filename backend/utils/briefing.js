@@ -91,7 +91,7 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
       db,
       userId,
       provider: activeSettings.provider || 'local',
-      modelName: activeSettings.model_name || 'qwen2.5-coder-3b-instruct',
+      modelName: activeSettings.model_name || 'google/gemma-4-e4b',
       onlineProvider: activeSettings.online_provider || 'gemini',
       onlineKey: decrypt(activeSettings.online_key),
       geminiKey: decrypt(activeSettings.gemini_key),
@@ -104,7 +104,7 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
     // Use supervisor model if override is present
     let actualModel = activeSettings.model_name;
     if (activeSettings.provider === 'local') {
-      actualModel = 'qwen2.5-coder-3b-instruct';
+      actualModel = 'google/gemma-4-e4b';
     } else if (activeSettings.provider !== 'local' && activeSettings.preferred_online_model) {
       actualModel = activeSettings.preferred_online_model;
     }

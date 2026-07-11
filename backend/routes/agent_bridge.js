@@ -312,7 +312,7 @@ router.post('/supervisor-handoff', authenticateBridge, async (req, res) => {
       db,
       userId: req.user.id,
       provider: userSettings.provider || 'local',
-      modelName: userSettings.model_name || 'qwen2.5-coder-3b-instruct',
+      modelName: userSettings.model_name || 'google/gemma-4-e4b',
       onlineProvider: userSettings.online_provider || 'gemini',
       onlineKey: decrypt(userSettings.online_key),
       geminiKey: decrypt(userSettings.gemini_key),

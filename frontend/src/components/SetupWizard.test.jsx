@@ -61,9 +61,9 @@ describe('SetupWizard Component Tests', () => {
       expect(screen.getByText('Local connection successful')).toBeInTheDocument();
     });
 
-    // Verify local model input is rendered as read-only qwen2.5-coder-3b-instruct
+    // Verify local model input is rendered as read-only google/gemma-4-e4b
     await waitFor(() => {
-      const input = screen.getByDisplayValue('qwen2.5-coder-3b-instruct');
+      const input = screen.getByDisplayValue('google/gemma-4-e4b');
       expect(input).toBeInTheDocument();
       expect(input).toHaveAttribute('readonly');
     });

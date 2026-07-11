@@ -46,7 +46,7 @@ export default function SetupWizard({ token, onComplete }) {
     if (llmForm.provider === 'local') {
       setLlmForm(prev => ({
         ...prev,
-        model_name: localModels[0] || 'qwen2.5-coder-3b-instruct'
+        model_name: localModels[0] || 'google/gemma-4-e4b'
       }));
     } else {
       const currentProvider = llmForm.online_provider;
@@ -155,8 +155,8 @@ export default function SetupWizard({ token, onComplete }) {
             online_key: llmForm.online_key,
             device_type: deviceForm.device_type,
             is_main_host: deviceForm.is_main_host,
-            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'qwen2.5-coder-3b-instruct',
-            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'qwen2.5-coder-3b-instruct'
+            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'google/gemma-4-e4b',
+            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'google/gemma-4-e4b'
           })
         });
       if (!settingsRes.ok) {
@@ -518,7 +518,7 @@ export default function SetupWizard({ token, onComplete }) {
                     <input 
                       type="text" 
                       className="form-control"
-                      value="qwen2.5-coder-3b-instruct"
+                      value="google/gemma-4-e4b"
                       disabled
                       readOnly
                     />

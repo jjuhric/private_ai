@@ -253,7 +253,7 @@ export default function ProfileModal({
                   <input
                     type="text"
                     className="form-control"
-                    value="qwen2.5-coder-3b-instruct"
+                    value="google/gemma-4-e4b"
                     disabled
                     readOnly
                   />

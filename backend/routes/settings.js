@@ -52,9 +52,9 @@ router.get('/', authenticateToken, async (req, res) => {
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
-      preferred_local_model: 'qwen2.5-coder-3b-instruct',
+      preferred_local_model: 'google/gemma-4-e4b',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
-      supervisor_model: 'qwen2.5-coder-3b-instruct',
+      supervisor_model: 'google/gemma-4-e4b',
       working_directory: settings.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir,
       is_setup_complete: isSetupComplete
     };
@@ -116,7 +116,7 @@ router.put('/', authenticateToken, async (req, res) => {
          google_home_ip = excluded.google_home_ip,
          google_home_name = excluded.google_home_name`,
       [
-        req.user.id, provider || 'local', model_name || 'qwen2.5-coder-3b-instruct', finalGithub, finalGemini, finalLocal,
+        req.user.id, provider || 'local', model_name || 'google/gemma-4-e4b', finalGithub, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         preferred_local_model, preferred_online_model, supervisor_model,
         device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir,
@@ -195,8 +195,8 @@ router.get('/local-models', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch local models:', err.message);
     const fallbackModels = [
-      process.env.PREFERRED_LOCAL_MODEL || 'qwen2.5-coder-3b-instruct',
-      'qwen2.5-coder-3b-instruct'
+      process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b',
+      'google/gemma-4-e4b'
     ];
     res.json([...new Set(fallbackModels)]);
   }

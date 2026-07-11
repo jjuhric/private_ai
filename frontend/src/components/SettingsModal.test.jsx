@@ -145,8 +145,8 @@ describe('SettingsModal Component Tests', () => {
       />
     );
 
-    // Should render local model input as read-only qwen2.5-coder-3b-instruct
-    const modelTextInput = screen.getByDisplayValue('qwen2.5-coder-3b-instruct');
+    // Should render local model input as read-only google/gemma-4-e4b
+    const modelTextInput = screen.getByDisplayValue('google/gemma-4-e4b');
     expect(modelTextInput).toBeInTheDocument();
     expect(modelTextInput).toHaveAttribute('readonly');
   });

@@ -80,7 +80,7 @@ async function main(argv = process.argv) {
     // Determine default provider (Rule: always default to local LLM first unless explicitly changed in settings)
     const provider = 'local';
     
-    let modelName = process.env.PREFERRED_LOCAL_MODEL || 'qwen2.5-coder-3b-instruct';
+    let modelName = process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b';
     const path = require('path');
     const defaultWorkingDir = path.resolve(path.join(__dirname, '../..'));
     const workingDir = args.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir;
@@ -118,9 +118,9 @@ async function main(argv = process.argv) {
       args.local_api_style || 'openai',
       encryptedOnlineKey,
       onlineProvider,
-      args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen2.5-coder-3b-instruct',
-      args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'qwen2.5-coder-3b-instruct',
-      args.supervisor_model || process.env.SUPERVISOR_MODEL || 'qwen2.5-coder-3b-instruct',
+      args.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'google/gemma-4-e4b',
+      args.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'google/gemma-4-e4b',
+      args.supervisor_model || process.env.SUPERVISOR_MODEL || 'google/gemma-4-e4b',
       deviceType,
       isMainHost,
       workingDir
