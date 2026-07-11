@@ -29,7 +29,7 @@ describe('ChatPane Component Tests', () => {
 
   test('renders welcome message and fires logo image onError fallback', () => {
     const { container, rerender } = render(<ChatPane {...defaultProps} messages={[]} />);
-    expect(screen.getByText('Welcome to P.A.T.T.I.')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to PATTI')).toBeInTheDocument();
     
     let img = container.querySelector('img');
     fireEvent.error(img);

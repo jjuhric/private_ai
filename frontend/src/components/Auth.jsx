@@ -22,7 +22,7 @@ export default function Auth({
             className="app-logo" 
             onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
           />
-          <h1 className="app-title">P.A.T.T.I.</h1>
+          <h1 className="app-title">PATTI</h1>
         </div>
         <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
         

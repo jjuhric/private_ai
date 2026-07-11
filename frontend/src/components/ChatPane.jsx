@@ -251,9 +251,9 @@ export default function ChatPane({
                 style={{ width: 72, height: 72, marginBottom: 16 }} 
                 onError={(e) => e.target.src = 'https://placehold.co/100x100?text=AG'} 
               />
-              <h3 className="starter-title">Welcome to P.A.T.T.I.</h3>
-              <p className="starter-subtitle">
-                Your private multi-agent assistant with web search, persistent memory storage, hardware sensors, and document vault.
+              <h3 className="starter-title">Welcome to PATTI</h3>
+              <p className="starter-subtitle" style={{ fontSize: '1.1rem', letterSpacing: '0.5px', opacity: 0.9 }}>
+                Professional Assistant Text and Type Intelligence
               </p>
               <div className="starter-chips-grid">
                 {starterPrompts.map((chip, idx) => (

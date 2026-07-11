@@ -112,7 +112,7 @@ describe('SetupWizard Component Tests', () => {
       .mockResolvedValueOnce({ ok: true }) // Profile save
       .mockResolvedValueOnce({ ok: true }); // Settings save
 
-    fireEvent.click(screen.getByText('Launch P.A.T.T.I. 🚀'));
+    fireEvent.click(screen.getByText('Launch PATTI 🚀'));
 
     await waitFor(() => {
       expect(mockOnComplete).toHaveBeenCalled();
@@ -272,7 +272,7 @@ describe('SetupWizard Component Tests', () => {
       .mockResolvedValueOnce({ ok: true }) // Profile save ok
       .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'Database locked' }) }); // Settings save fail
 
-    fireEvent.click(screen.getByText('Launch P.A.T.T.I. 🚀'));
+    fireEvent.click(screen.getByText('Launch PATTI 🚀'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Database locked'));
@@ -306,7 +306,7 @@ describe('SetupWizard Component Tests', () => {
       json: async () => ({ error: 'Profile DB error' })
     });
 
-    fireEvent.click(screen.getByText('Launch P.A.T.T.I. 🚀'));
+    fireEvent.click(screen.getByText('Launch PATTI 🚀'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Profile DB error'));
