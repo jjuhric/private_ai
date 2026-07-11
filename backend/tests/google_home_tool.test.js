@@ -28,7 +28,7 @@ describe('Google Home Tool Tests', () => {
     dbMock = {
       get: jest.fn(() => Promise.resolve({
         google_home_ip: '192.168.1.199',
-        google_home_name: 'Office Speaker'
+        google_home_name: null
       })),
       run: jest.fn(() => Promise.resolve())
     };
