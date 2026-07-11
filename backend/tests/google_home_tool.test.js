@@ -32,7 +32,7 @@ jest.mock('google-assistant', () => {
       }),
       start: jest.fn((conversationConfig, callback) => {
         const conversation = {
-          on: jest.fn().mockImplementation(function(event, cb) {
+          on: jest.fn().mockImplementation(function (event, cb) {
             if (event === 'error') {
               setTimeout(() => cb(new Error('Mocked SDK failure')), 0);
             }
@@ -52,7 +52,7 @@ describe('Google Home Tool Tests', () => {
   beforeEach(() => {
     dbMock = {
       get: jest.fn(() => Promise.resolve({
-        google_home_ip: '192.168.1.199',
+        google_home_ip: '192.168.1.60',
         google_home_name: null
       })),
       run: jest.fn(() => Promise.resolve())
