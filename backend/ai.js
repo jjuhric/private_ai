@@ -317,13 +317,9 @@ async function runAgentLoop({
 
     if (!matchedLoc || !matchedDev) return false;
 
-    const hasTurnOn = /\bturn\b.*\bon\b/i.test(cleanMsg);
-    const hasTurnOff = /\bturn\b.*\boff\b/i.test(cleanMsg);
-    const hasPause = /\bpause\b/i.test(cleanMsg);
-    const hasResume = /\bresume\b/i.test(cleanMsg);
-    const hasStop = /\bstop\b/i.test(cleanMsg);
+    const hasAction = /\b(turn|make|set|dim|brighten|increase|decrease|pause|resume|stop|play)\b/i.test(cleanMsg);
 
-    return hasTurnOn || hasTurnOff || hasPause || hasResume || hasStop;
+    return hasAction;
   };
 
   if (isGoogleHomeDeviceRequest(userMessage)) {
