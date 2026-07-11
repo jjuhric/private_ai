@@ -1,4 +1,4 @@
-# Private AI Assistant — Enterprise Suite (v5.1.0)
+# PATTI — Enterprise Suite (v5.1.0)
 
 <p align="center">
   <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-success)](README.md)
 
-A highly secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). Private AI features a ReAct multi-agent orchestration coordinator, live deep web scraping, real-time Google News summaries, persistent SQLite memory storage, task scheduling, system telemetry, and a mobile-responsive layout.
+A highly secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). PATTI features a ReAct multi-agent orchestration coordinator, live deep web scraping, real-time Google News summaries, persistent SQLite memory storage, task scheduling, system telemetry, and a mobile-responsive layout.
 
 Version `4.3.0` introduces the **Multi-Device Hermes Network Architecture**, enabling a unified, local mesh network where a Windows main host coordinates and delegates hardware/control tasks to distributed Raspberry Pi and ESP32 field nodes.
 
@@ -16,7 +16,7 @@ Version `4.3.0` introduces the **Multi-Device Hermes Network Architecture**, ena
 
 ## 🏗️ System-Wide Architecture
 
-The Private AI Assistant splits functionality into a React frontend client, a Node.js backend supervisor, and distributed remote field nodes. The database (SQLite) holds user preferences, calendar events, messages, memories, and registered network nodes.
+The PATTI Assistant splits functionality into a React frontend client, a Node.js backend supervisor, and distributed remote field nodes. The database (SQLite) holds user preferences, calendar events, messages, memories, and registered network nodes.
 
 ```mermaid
 graph TB
@@ -51,7 +51,7 @@ graph TB
 
 ## ⚙️ Device Setup & Deployment
 
-Private AI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/jjuhric/private_ai/wiki/Installation).
+PATTI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/jjuhric/private_ai/wiki/Installation).
 
 ### 🔍 Core Setup Requirements
 - **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
@@ -115,10 +115,10 @@ ESP32 microcontrollers serve as low-power, cheap sensor nodes or relay controls 
 
 ---
 
-## 🚀 How to Interact with Private AI
+## 🚀 How to Interact with PATTI
 
 ### 1. Setup Wizard
-When launching Private AI for the first time, you are greeted by an automated setup wizard:
+When launching PATTI for the first time, you are greeted by an automated setup wizard:
 * **Step 1: Device Selection**: Identify the current device family (Windows, Raspberry Pi variants, ESP32 variants).
 * **Step 2: Profile Settings**: Configure personal settings, system name, and location.
 * **Step 3: Model Configuration**: Configure preferred online (Gemini/OpenAI/Claude) and local models.
@@ -144,7 +144,7 @@ Navigate to **System Control** -> **Field Nodes** tab to manage your smart home 
 
 ## 🛡️ High-Performance Interceptors & Privacy Controls (v5.1.0)
 
-To maximize execution speed, reduce model token costs, and enforce strict security boundaries, Private AI coordinates key queries via high-performance interceptors before launching agent planning loops:
+To maximize execution speed, reduce model token costs, and enforce strict security boundaries, PATTI coordinates key queries via high-performance interceptors before launching agent planning loops:
 
 * **Google Assistant SDK Bypass Interceptor**: Direct smart-home command queries (e.g. `Turn Office Light Dark Blue`, `dim living room tv`) containing valid locations (`office`, `living room`, `bedroom`, `faith's room`, `jeffery's room`, `all`) and devices are parsed via a regex interceptor. If matched, it bypasses the LLM supervisor loop entirely. A successful execution returns a programmatic `Action Complete` response immediately, skipping LLM output formatting for maximum speed.
 * **Single-Message Memory Isolation**: To protect user privacy and eliminate context bloat, the conversation history is cleared for LLM turns (`cleanedHistory = []` in production). Each message is treated as a standalone query, relying purely on the database profile and LanceDB vector DB memories retrieved programmatically.

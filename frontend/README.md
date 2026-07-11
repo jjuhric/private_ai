@@ -1,6 +1,6 @@
-# Private AI Assistant — Frontend Client (v3.0.0)
+# PATTI — Frontend Client (v3.0.0)
 
-The frontend of the Private AI Assistant is a high-performance, single-page application (SPA) built with React and Vite. It features a responsive, glassmorphic layout, a real-time SSE stream renderer, and state-synchronized configuration modals.
+The frontend of PATTI is a high-performance, single-page application (SPA) built with React and Vite. It features a responsive, glassmorphic layout, a real-time SSE stream renderer, and state-synchronized configuration modals.
 
 ---
 

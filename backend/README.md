@@ -1,6 +1,6 @@
-# Private AI Assistant — Backend System (v3.1.0)
+# PATTI — Backend System (v3.1.0)
 
-The backend of the Private AI Assistant is a high-performance, secure Node.js system powered by Express and SQLite. It coordinates a multi-agent ReAct intelligence loop, handles real-time Server-Sent Events (SSE) streaming, integrates hardware-level telemetry, and exposes a secure REST API.
+The backend of PATTI is a high-performance, secure Node.js system powered by Express and SQLite. It coordinates a multi-agent ReAct intelligence loop, handles real-time Server-Sent Events (SSE) streaming, integrates hardware-level telemetry, and exposes a secure REST API.
 
 ---
 
