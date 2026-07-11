@@ -253,12 +253,12 @@ export default function ChatPane({
               />
               <h3 className="starter-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 Welcome to&nbsp;
-                <span className="patti-logo-text">
-                  <span className="special-letter">P</span>
-                  <span className="special-letter">A</span>
-                  <span className="special-letter">T</span>
-                  <span className="special-letter">T</span>
-                  <span className="special-letter">I</span>
+                <span className="patti-word-gradient" style={{ fontSize: '2rem' }}>
+                  <span>P</span>
+                  <span>A</span>
+                  <span>T</span>
+                  <span>T</span>
+                  <span>I</span>
                 </span>
               </h3>
               <p className="starter-subtitle" style={{ fontSize: '1.1rem', letterSpacing: '0.5px', opacity: 0.9 }}>

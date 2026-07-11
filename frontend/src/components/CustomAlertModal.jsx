@@ -83,12 +83,12 @@ export default function CustomAlertModal({ alert, onClose }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src={logoUrl} alt="PATTI" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-            <span className="patti-logo-text" style={{ fontSize: '1rem' }}>
-              <span className="special-letter" style={{ fontSize: '1.2rem' }}>P</span>
-              <span className="special-letter" style={{ fontSize: '1.2rem' }}>A</span>
-              <span className="special-letter" style={{ fontSize: '1.2rem' }}>T</span>
-              <span className="special-letter" style={{ fontSize: '1.2rem' }}>T</span>
-              <span className="special-letter" style={{ fontSize: '1.2rem' }}>I</span>
+            <span className="patti-word-gradient" style={{ fontSize: '1.2rem' }}>
+              <span>P</span>
+              <span>A</span>
+              <span>T</span>
+              <span>T</span>
+              <span>I</span>
             </span>
           </div>
           <button 
