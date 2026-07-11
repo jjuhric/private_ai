@@ -1177,18 +1177,27 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            alignItems: 'center', 
             justifyContent: 'flex-start', 
-            minHeight: 'auto', 
-            padding: '40px 24px', 
-            background: 'var(--bg-glass)', 
-            border: '1px solid var(--border-glass)', 
-            borderRadius: '24px', 
-            boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
-            textAlign: 'center',
-            gap: '24px',
-            margin: '24px auto auto auto'
+            alignItems: 'center', 
+            height: '100%', 
+            width: '100%' 
           }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '40px 24px', 
+              background: 'var(--bg-glass)', 
+              border: '1px solid var(--border-glass)', 
+              borderRadius: '24px', 
+              boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
+              textAlign: 'center',
+              gap: '24px',
+              width: '100%',
+              maxWidth: '800px',
+              marginTop: '24px'
+            }}>
             <div style={{
               position: 'relative',
               width: '120px',
@@ -1267,6 +1276,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                 50% { transform: translateY(-8px); }
               }
             `}</style>
+            </div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -1489,10 +1499,10 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                 No remote nodes configured. Add an ESP32 or Raspberry Pi to distribute tasks.
               </div>
             )}
+            </div>
           </div>
-        </div>
-      )
-    )}
+        )
+      )}
 
       {activeSubTab === 'host' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
