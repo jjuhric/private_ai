@@ -21,31 +21,6 @@ jest.mock('chromecast-api/lib/device', () => {
   });
 });
 
-jest.mock('google-assistant', () => {
-  return jest.fn().mockImplementation(() => {
-    const assistant = {
-      on: jest.fn((event, callback) => {
-        if (event === 'ready') {
-          setTimeout(callback, 0);
-        }
-        return assistant;
-      }),
-      start: jest.fn((conversationConfig, callback) => {
-        const conversation = {
-          on: jest.fn().mockImplementation(function (event, cb) {
-            if (event === 'error') {
-              setTimeout(() => cb(new Error('Mocked SDK failure')), 0);
-            }
-            return this;
-          })
-        };
-        setTimeout(() => callback(conversation), 0);
-      })
-    };
-    return assistant;
-  });
-});
-
 jest.mock('node-dns-sd', () => ({
   discover: jest.fn(() => Promise.resolve([
     { fqdn: 'google-nest-mini.local', address: '192.168.1.150', modelName: 'Google Nest Mini' }
@@ -73,7 +48,7 @@ describe('Google Home Tool Tests', () => {
 
   test('returns error when command parameter is missing', async () => {
     const res = await handleGoogleHomeTool(dbMock, 1, 'send_command', {});
-    expect(JSON.parse(res).error).toContain('Command string is required');
+    expect(JSON.parse(res).error).toContain('required');
   });
 
   test('returns error when speaker integration is disabled', async () => {
@@ -88,11 +63,11 @@ describe('Google Home Tool Tests', () => {
     expect(parsed.error).toContain('disabled');
   });
 
-  test('successfully sends command and prepends Ok Google', async () => {
+  test('successfully speaks message on Google Home device', async () => {
     const res = await handleGoogleHomeTool(dbMock, 1, 'send_command', { command: 'turn off office lights' });
     const parsed = JSON.parse(res);
     expect(parsed.success).toBe(true);
-    expect(parsed.command_sent).toBe('Ok Google, turn off office lights');
+    expect(parsed.text_spoken).toBe('turn off office lights');
   });
 
   test('successfully lists discovered devices', async () => {

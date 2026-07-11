@@ -4,58 +4,6 @@ const { generateTTS } = require('../utils/tts');
 const path = require('path');
 const fs = require('fs');
 
-async function executeViaAssistantSDK(command) {
-  const credentialsPath = path.resolve(__dirname, '../credentials.json');
-  const tokensPath = path.resolve(__dirname, '../tokens.json');
-  
-  if (!fs.existsSync(credentialsPath) || !fs.existsSync(tokensPath)) {
-    return { success: false, reason: 'missing_credentials' };
-  }
-
-  const GoogleAssistant = require('google-assistant');
-  const config = {
-    auth: {
-      keyFilePath: credentialsPath,
-      savedTokensPath: tokensPath,
-    },
-    conversation: {
-      lang: 'en-US',
-      isNew: true,
-      textQuery: command,
-    },
-  };
-
-  return new Promise((resolve) => {
-    try {
-      const assistant = new GoogleAssistant(config.auth);
-      assistant.on('ready', () => {
-        assistant.start(config.conversation, (conversation) => {
-          let responseText = '';
-          conversation
-            .on('response', (text) => {
-              responseText += text + ' ';
-            })
-            .on('ended', (error, continueConversation) => {
-              if (error) {
-                resolve({ success: false, error: error.message || error });
-              } else {
-                resolve({ success: true, response: responseText.trim() });
-              }
-            })
-            .on('error', (error) => {
-              resolve({ success: false, error: error.message || error });
-            });
-        });
-      });
-      assistant.on('error', (err) => {
-        resolve({ success: false, error: err.message || err });
-      });
-    } catch (e) {
-      resolve({ success: false, error: e.message });
-    }
-  });
-}
-
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -71,7 +19,7 @@ function getLocalIpAddress() {
 }
 
 /**
- * Executes a home automation command via local Google Cast connection.
+ * Executes a text-to-speech broadcast command via local Google Cast connection.
  */
 async function handleGoogleHomeTool(db, userId, action, params) {
   if (action === 'list_devices') {
@@ -101,7 +49,7 @@ async function handleGoogleHomeTool(db, userId, action, params) {
 
   const { command } = params;
   if (!command) {
-    return JSON.stringify({ error: 'Command string is required' });
+    return JSON.stringify({ error: 'Command/message string is required' });
   }
 
   // 1. Fetch saved configuration settings and check if enabled
@@ -113,34 +61,9 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     });
   }
 
-  // 2. Try to execute via Assistant SDK first
-  const sdkResult = await executeViaAssistantSDK(command);
-  
-  let ttsText = '';
-  let commandExecuted = false;
-
-  if (sdkResult.success) {
-    // SDK execution worked. The command was actually executed!
-    // We will just cast a confirmation response to the Nest Mini.
-    ttsText = sdkResult.response || 'Action completed.';
-    commandExecuted = true;
-  } else {
-    // Fallback or failed. Use the old behavior of speaking the command.
-    if (sdkResult.reason === 'missing_credentials') {
-      console.warn('Google Assistant SDK credentials missing. Falling back to simple TTS broadcasting.');
-    } else {
-      console.error(`Google Assistant SDK error: ${sdkResult.error}. Falling back to simple TTS.`);
-    }
-    
-    // Prepend activation phrase if not already present
-    ttsText = command.trim();
-    if (!/^ok\s+google/i.test(ttsText) && !/^hey\s+google/i.test(ttsText)) {
-      ttsText = `Ok Google, ${ttsText}`;
-    }
-  }
-
   try {
-    // 3. Generate local TTS file path
+    // 2. Generate local TTS file path
+    const ttsText = command.trim();
     const ttsUrl = await generateTTS(ttsText);
     const localIp = getLocalIpAddress();
     const port = process.env.PORT || 3000;
@@ -187,7 +110,6 @@ async function handleGoogleHomeTool(db, userId, action, params) {
         await db.run('UPDATE user_settings SET google_home_ip = ? WHERE user_id = ?', [targetIp, userId]);
       }
     } else {
-      // Fallback to database configured IP or hardcoded default
       targetIp = targetIp || '192.168.1.60';
     }
 
@@ -215,17 +137,14 @@ async function handleGoogleHomeTool(db, userId, action, params) {
 
     return JSON.stringify({
       success: true,
-      message: commandExecuted 
-        ? `Successfully executed command via Assistant SDK and casted confirmation to speaker (${targetName || 'Default'}) at ${targetIp}.`
-        : `Successfully casted command to Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
-      command_sent: commandExecuted ? command : ttsText,
-      assistant_response: sdkResult.response || null
+      message: `Successfully spoke message on Google Home speaker (${targetName || 'Default'}) at ${targetIp}.`,
+      text_spoken: ttsText
     });
 
   } catch (error) {
     return JSON.stringify({
       success: false,
-      error: `Failed to cast command: ${error.message}`
+      error: `Failed to speak message: ${error.message}`
     });
   }
 }
