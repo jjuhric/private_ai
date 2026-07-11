@@ -897,11 +897,6 @@ function App() {
             >
                {activeTab === 'chat' ? (
                  <span className="patti-header-brand" style={{ display: 'inline-flex', alignItems: 'center' }}>
-                   <img 
-                     src="/patti_text.png" 
-                     alt="PATTI" 
-                     className="patti-logo-image header-patti-logo header-only-mobile" 
-                   />
                    <span className="patti-fullname">
                      <span className="special-letter">P</span>
                      <span className="normal-text">rofessional&nbsp;</span>
