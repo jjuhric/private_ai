@@ -4,7 +4,7 @@
   "description": "Local and Online AI Assistant with multi-agent orchestration and tools",
   "main": "backend/server.js",
   "scripts": {
-    "install:all": "npm install && npm audit fix --force && npm install --prefix backend && npm audit fix --force --prefix backend && npm install --prefix frontend --legacy-peer-deps && npm audit fix --force --prefix frontend --legacy-peer-deps",
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend --legacy-peer-deps",
     "dev:backend": "node backend/server.js",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
