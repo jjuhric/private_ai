@@ -141,7 +141,7 @@ describe('ProfileModal Component Tests', () => {
     const mockSettings = {
       local_url: 'http://localhost:1234/v1',
       online_key: 'test_online_key',
-      preferred_local_model: 'google/gemma-4-e4b',
+      preferred_local_model: 'qwen2.5-coder-7b-instruct',
       preferred_online_model: 'gemini-1.5-pro'
     };
 
@@ -153,7 +153,7 @@ describe('ProfileModal Component Tests', () => {
         saveProfile={mockSaveProfile} 
         settings={mockSettings}
         saveSettings={mockSaveSettings}
-        localModels={['google/gemma-4-e4b']}
+        localModels={['qwen2.5-coder-7b-instruct']}
         onlineModels={['gemini-1.5-pro', 'gemini-2.5-flash']}
       />
     );
@@ -163,7 +163,7 @@ describe('ProfileModal Component Tests', () => {
     expect(screen.getByText('Preferred Local Model')).toBeInTheDocument();
     expect(screen.getByText('Preferred Online Model')).toBeInTheDocument();
 
-    const localInput = screen.getByDisplayValue('google/gemma-4-e4b');
+    const localInput = screen.getByDisplayValue('qwen2.5-coder-7b-instruct');
     expect(localInput).toBeInTheDocument();
     expect(localInput).toHaveAttribute('readonly');
 
@@ -188,7 +188,7 @@ describe('ProfileModal Component Tests', () => {
     expect(mockSetIsProfileOpen).toHaveBeenCalledWith(false);
   });
 
-  test('renders preferred local model as read-only google/gemma-4-e4b', () => {
+  test('renders preferred local model as read-only qwen2.5-coder-7b-instruct', () => {
     const mockSettings = {
       local_url: 'http://localhost:1234/v1'
     };
@@ -208,7 +208,7 @@ describe('ProfileModal Component Tests', () => {
 
     fireEvent.click(screen.getByText('AI Models'));
 
-    const input = screen.getByDisplayValue('google/gemma-4-e4b');
+    const input = screen.getByDisplayValue('qwen2.5-coder-7b-instruct');
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute('readonly');
   });

@@ -30,7 +30,7 @@ describe('LM Studio Integration Tests', () => {
       expect(axios.post).toHaveBeenCalledWith(
         'http://localhost:1234/v1/chat/completions',
         {
-          model: 'google/gemma-4-e4b',
+          model: 'qwen2.5-coder-7b-instruct',
           messages: messages,
           temperature: 0.1,
           top_p: 0.9,

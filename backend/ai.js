@@ -48,7 +48,7 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     }
   }
 
-  const finalModel = (modelName === 'google/gemma-4-e4b') ? (process.env.OPENAI_API_MODEL || 'google/gemma-4-e4b') : modelName;
+  const finalModel = (modelName === 'qwen2.5-coder-7b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen2.5-coder-7b-instruct') : modelName;
 
   if (localStyle === 'anthropic') {
     // Anthropic style formatting

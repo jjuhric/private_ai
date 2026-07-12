@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id INTEGER PRIMARY KEY,
   provider TEXT DEFAULT 'local', -- 'local' or 'gemini' (or 'openai', 'anthropic')
-  model_name TEXT DEFAULT 'google/gemma-4-e4b',
+  model_name TEXT DEFAULT 'qwen2.5-coder-7b-instruct',
   github_token TEXT,
   gemini_key TEXT, -- legacy, replaced by online_key
   local_key TEXT,

@@ -144,7 +144,7 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
       }
     }
 
-    const finalModel = (modelName === 'google/gemma-4-e4b') ? (process.env.OPENAI_API_MODEL || 'google/gemma-4-e4b') : modelName;
+    const finalModel = (modelName === 'qwen2.5-coder-7b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen2.5-coder-7b-instruct') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
@@ -344,7 +344,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
       endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
     }
 
-    const finalModel = (modelName === 'google/gemma-4-e4b') ? (process.env.OPENAI_API_MODEL || 'google/gemma-4-e4b') : modelName;
+    const finalModel = (modelName === 'qwen2.5-coder-7b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen2.5-coder-7b-instruct') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {
@@ -811,7 +811,7 @@ async function runSupervisorTurn(systemPrompt, settings, userMessage) {
       endpoint = `${targetUrl.replace(/\/$/, '')}/chat/completions`;
     }
 
-    const finalModel = (modelName === 'google/gemma-4-e4b') ? (process.env.OPENAI_API_MODEL || 'google/gemma-4-e4b') : modelName;
+    const finalModel = (modelName === 'qwen2.5-coder-7b-instruct') ? (process.env.OPENAI_API_MODEL || 'qwen2.5-coder-7b-instruct') : modelName;
     let body = {};
     if (targetStyle === 'anthropic') {
       body = {

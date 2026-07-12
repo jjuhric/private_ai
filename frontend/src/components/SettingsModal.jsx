@@ -123,7 +123,7 @@ export default function SettingsModal({
               setSettings(prev => ({
                 ...prev,
                 provider: 'local',
-                model_name: isAlreadyLocal ? prev.model_name : (localModels.length > 0 ? localModels[0] : 'google/gemma-4-e4b')
+                model_name: isAlreadyLocal ? prev.model_name : (localModels.length > 0 ? localModels[0] : 'qwen2.5-coder-7b-instruct')
               }));
             }}
           >
@@ -195,7 +195,7 @@ export default function SettingsModal({
                 <input
                   type="text"
                   className="form-control"
-                  value="google/gemma-4-e4b"
+                  value="qwen2.5-coder-7b-instruct"
                   disabled
                   readOnly
                 />

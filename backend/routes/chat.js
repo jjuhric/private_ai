@@ -81,7 +81,7 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
   // Get user settings
   let settings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
   if (!settings) {
-    settings = { provider: 'local', model_name: 'google/gemma-4-e4b' };
+    settings = { provider: 'local', model_name: 'qwen2.5-coder-7b-instruct' };
   }
 
   // Get chat history
@@ -226,7 +226,7 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
     // Resolve preferred model names dynamically
     let actualModel = settings.model_name;
     if (settings.provider === 'local') {
-      actualModel = 'google/gemma-4-e4b';
+      actualModel = settings.preferred_local_model || settings.model_name || 'qwen2.5-coder-7b-instruct';
     } else if (settings.provider !== 'local' && settings.preferred_online_model) {
       actualModel = settings.preferred_online_model;
     }
