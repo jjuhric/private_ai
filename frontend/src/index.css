@@ -569,6 +569,14 @@ select.form-control option {
   box-shadow: 0 4px 15px var(--accent-glow);
 }
 
+.btn-send:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 .btn-stop {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   color: #fff;

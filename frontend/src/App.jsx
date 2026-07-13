@@ -865,9 +865,17 @@ function App() {
     }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+    }
+    try {
+      await fetch('/api/lmstudio/eject-model', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error('Failed to eject model:', err);
     }
   };
 
