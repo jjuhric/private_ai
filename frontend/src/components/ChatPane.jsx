@@ -43,6 +43,24 @@ export default function ChatPane({
   const [editedCommands, setEditedCommands] = useState({});
   const scrollerRef = useRef(null);
   const isAtBottomRef = useRef(true);
+  const textareaRef = useRef(null);
+
+  // Auto-grow textarea height
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [inputText]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputText.trim() && activeChatId && !isStreaming) {
+        handleSendMessage(e);
+      }
+    }
+  };
 
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
     try {
@@ -439,11 +457,13 @@ export default function ChatPane({
 
       <form onSubmit={handleSendMessage} className="input-pane">
         <div className="input-box">
-          <input 
-            type="text" 
+          <textarea
+            ref={textareaRef}
+            rows={1}
             placeholder={activeChatId ? (isStreaming ? "AI is thinking..." : "Send a message...") : "Select or create a chat to begin"}
             value={inputText}
             onChange={e => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
             disabled={!activeChatId || isStreaming}
           />
         </div>

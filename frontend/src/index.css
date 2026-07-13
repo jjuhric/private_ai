@@ -514,7 +514,7 @@ select.form-control option {
   border-top: 1px solid var(--border-glass);
   background: rgba(10, 15, 30, 0.3);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
 }
 
@@ -523,7 +523,7 @@ select.form-control option {
   position: relative;
 }
 
-.input-box input {
+.input-box input, .input-box textarea {
   width: 100%;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);
@@ -532,9 +532,19 @@ select.form-control option {
   color: var(--text-primary);
   font-size: 1.05rem;
   transition: var(--transition-smooth);
+  font-family: inherit;
 }
 
-.input-box input:focus {
+.input-box textarea {
+  resize: none;
+  min-height: 50px;
+  max-height: 200px;
+  display: block;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.input-box input:focus, .input-box textarea:focus {
   outline: none;
   border-color: var(--accent-secondary);
   box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
