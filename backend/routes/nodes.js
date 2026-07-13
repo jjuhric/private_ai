@@ -235,6 +235,176 @@ router.post('/:id/ping', authenticateToken, async (req, res) => {
   }
 });
 
+// Sync network nodes (scans subnet + MDNS Cast and updates network_nodes database table)
+router.post('/sync', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+
+    // 1. Ensure default seed nodes exist
+    const defaultSeeds = [
+      { ip_address: '192.168.1.117', node_name: 'Default ESP32', device_type: 'ESP32', port: 80 },
+      { ip_address: '192.168.1.60', node_name: 'Living Room Nest Mini', device_type: 'Google Assistant', port: 8009 },
+      { ip_address: '192.168.1.199', node_name: 'Bedroom Nest Mini', device_type: 'Google Assistant', port: 8009 }
+    ];
+
+    for (const seed of defaultSeeds) {
+      const exist = await db.get(
+        'SELECT id FROM network_nodes WHERE user_id = ? AND ip_address = ?',
+        [req.user.id, seed.ip_address]
+      );
+      if (!exist) {
+        await db.run(
+          'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online) VALUES (?, ?, ?, ?, ?, 0)',
+          [req.user.id, seed.node_name, seed.device_type, seed.ip_address, seed.port]
+        );
+      }
+    }
+
+    // 2. Scan network
+    const subnet = getLocalSubnet();
+    const localIps = getLocalIps();
+    const discoveredMap = new Map();
+
+    // 2a. Discover Google Cast devices via MDNS
+    try {
+      const mDnsSd = require('node-dns-sd');
+      const castDevices = await mDnsSd.discover({ name: '_googlecast._tcp.local', timeout: 1500 });
+      for (const d of castDevices) {
+        if (d && d.address) {
+          discoveredMap.set(d.address, {
+            node_name: d.friendlyName || d.modelName || 'Google Assistant',
+            device_type: 'Google Assistant',
+            port: 8009
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[Sync Network] MDNS discovery skipped/error:', err.message);
+    }
+
+    // 2b. TCP Port Scan on local subnet
+    const ipList = [];
+    for (let i = 1; i <= 254; i++) {
+      const ip = `${subnet}.${i}`;
+      if (!localIps.has(ip) && !discoveredMap.has(ip)) {
+        ipList.push(ip);
+      }
+    }
+
+    // Chunk size 50 to limit parallel sockets
+    const batchSize = 50;
+    for (let i = 0; i < ipList.length; i += batchSize) {
+      const batch = ipList.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map(async (ip) => {
+          // Check port 80 (ESP32)
+          const hasPort80 = await checkIpPort(ip, 80, 250);
+          if (hasPort80) {
+            // Verify /message endpoint or general availability
+            let hasMessageEndpoint = false;
+            try {
+              const controller = new AbortController();
+              const tId = setTimeout(() => controller.abort(), 350);
+              const testRes = await fetch(`http://${ip}/message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: '' }),
+                signal: controller.signal
+              });
+              clearTimeout(tId);
+              hasMessageEndpoint = true;
+            } catch (e) {}
+
+            if (hasMessageEndpoint) {
+              discoveredMap.set(ip, {
+                node_name: 'ESP32 Device',
+                device_type: 'ESP32',
+                port: 80
+              });
+              return;
+            }
+          }
+
+          // Check port 3000 (Private AI node)
+          const hasPort3000 = await checkIpPort(ip, 3000, 250);
+          if (hasPort3000) {
+            const info = await getDiscoveryPayload(ip, 3000);
+            if (info && info.success) {
+              discoveredMap.set(ip, {
+                node_name: info.device_type === 'windows' ? 'Windows Host' : (info.device_type === 'rpi' ? 'Raspberry Pi' : 'Private AI Node'),
+                device_type: info.device_type === 'windows' ? 'Windows' : (info.device_type === 'rpi' ? 'RPi' : 'Windows'),
+                port: 3000
+              });
+              return;
+            }
+          }
+
+          // Check port 8009 fallback (Google Cast speaker not found in MDNS)
+          const hasPort8009 = await checkIpPort(ip, 8009, 250);
+          if (hasPort8009) {
+            discoveredMap.set(ip, {
+              node_name: 'Google Assistant Speaker',
+              device_type: 'Google Assistant',
+              port: 8009
+            });
+          }
+        })
+      );
+    }
+
+    // 3. Update all DB entries and insert newly discovered ones
+    const registeredNodes = await db.all('SELECT * FROM network_nodes WHERE user_id = ?', [req.user.id]);
+    const registeredIps = new Set(registeredNodes.map(n => n.ip_address));
+
+    // Update existing nodes in database
+    for (const node of registeredNodes) {
+      let isOnline = 0;
+      let finalName = node.node_name;
+
+      if (discoveredMap.has(node.ip_address)) {
+        isOnline = 1;
+        const disc = discoveredMap.get(node.ip_address);
+        if (disc.node_name && disc.node_name !== 'Google Assistant Speaker' && disc.node_name !== 'ESP32 Device') {
+          finalName = disc.node_name;
+        }
+      } else {
+        // Double check specifically to avoid false offline status
+        const portToCheck = node.port || (node.device_type === 'Google Assistant' ? 8009 : 80);
+        const doubleCheck = await checkIpPort(node.ip_address, portToCheck, 300);
+        if (doubleCheck) {
+          isOnline = 1;
+        }
+      }
+
+      await db.run(
+        'UPDATE network_nodes SET is_online = ?, last_seen = CASE WHEN ? = 1 THEN datetime("now") ELSE last_seen END, node_name = ? WHERE id = ?',
+        [isOnline, isOnline, finalName, node.id]
+      );
+    }
+
+    // Insert newly discovered ones (if not already registered)
+    for (const [ip, disc] of discoveredMap.entries()) {
+      if (!registeredIps.has(ip) && !localIps.has(ip)) {
+        await db.run(
+          'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online, last_seen) VALUES (?, ?, ?, ?, ?, 1, datetime("now"))',
+          [req.user.id, disc.node_name, disc.device_type, ip, disc.port]
+        );
+      }
+    }
+
+    // 4. Return complete list of nodes from DB
+    const finalNodes = await db.all(
+      'SELECT id, node_name, device_type, ip_address, port, last_seen, is_online FROM network_nodes WHERE user_id = ? ORDER BY node_name ASC',
+      [req.user.id]
+    );
+
+    res.json({ success: true, nodes: finalNodes });
+  } catch (err) {
+    console.error('[Sync Network Error]:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Send a message to a network node / device (ESP32, Google Assistant, etc.)
 router.post('/send-message', authenticateToken, async (req, res) => {
   const { ip_address, device_type, message } = req.body;

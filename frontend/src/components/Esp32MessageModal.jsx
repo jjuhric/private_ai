@@ -2,61 +2,72 @@ import React, { useState, useEffect } from 'react';
 import { X, Send, Cpu } from 'lucide-react';
 
 export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = [] }) {
-  const defaultIps = ['192.168.1.117', '192.168.1.60', '192.168.1.199'];
-  const [ips, setIps] = useState(defaultIps);
-  const [selectedIp, setSelectedIp] = useState('192.168.1.117');
+  const [devices, setDevices] = useState([]);
+  const [selectedIp, setSelectedIp] = useState('');
   const [deviceType, setDeviceType] = useState('ESP32');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const handleIpChange = (ip) => {
     setSelectedIp(ip);
-    if (ip === '192.168.1.60' || ip === '192.168.1.199') {
-      setDeviceType('Google Assistant');
-    } else if (ip === '192.168.1.117') {
-      setDeviceType('ESP32');
+    const dev = devices.find(d => d.ip_address === ip);
+    if (dev) {
+      setDeviceType(dev.device_type);
     }
   };
 
   useEffect(() => {
     if (!isOpen) return;
+    
     // Reset state on open
     setMessage('');
     setError('');
     setSuccess('');
     setLoading(false);
+    setSelectedIp('');
 
-    // Fetch registered nodes to populate IP list
-    const fetchNodes = async () => {
+    const syncDevices = async () => {
+      setScanning(true);
       try {
-        const res = await fetch('/api/nodes', {
+        const res = await fetch('/api/nodes/sync', {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
+        
         const filterHostIp = (ip) => {
           return hostIps.includes(ip) || ip === '127.0.0.1' || ip === 'localhost';
         };
 
         if (res.ok) {
           const data = await res.json();
-          const registeredIps = data.map(node => node.ip_address);
-          const uniqueIps = Array.from(new Set([...defaultIps, ...registeredIps]));
-          setIps(uniqueIps.filter(ip => !filterHostIp(ip)));
+          const list = (data.nodes || []).filter(node => !filterHostIp(node.ip_address));
+          setDevices(list);
+
+          // Find first online device to auto-select
+          const firstOnline = list.find(d => d.is_online === 1);
+          if (firstOnline) {
+            setSelectedIp(firstOnline.ip_address);
+            setDeviceType(firstOnline.device_type);
+          } else if (list.length > 0) {
+            setSelectedIp(list[0].ip_address);
+            setDeviceType(list[0].device_type);
+          }
         } else {
-          setIps(defaultIps.filter(ip => !filterHostIp(ip)));
+          setError('Failed to scan and synchronize network devices.');
         }
       } catch (err) {
-        console.error('Failed to fetch network nodes:', err);
-        const filterHostIp = (ip) => {
-          return hostIps.includes(ip) || ip === '127.0.0.1' || ip === 'localhost';
-        };
-        setIps(defaultIps.filter(ip => !filterHostIp(ip)));
+        console.error('Failed to sync network nodes:', err);
+        setError('Network error while scanning for local devices.');
+      } finally {
+        setScanning(false);
       }
     };
-    fetchNodes();
+    syncDevices();
   }, [isOpen, token, hostIps]);
 
   if (!isOpen) return null;
@@ -69,6 +80,11 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!selectedIp) {
+      setError("Please select a valid device IP Address.");
+      return;
+    }
 
     if (isHostIp(selectedIp)) {
       setError("Cannot send messages to the host's own IP address.");
@@ -126,13 +142,19 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
           <div className="form-group">
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Select Device IP Address
+            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              <span>Select Device IP Address</span>
+              {scanning && (
+                <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', animation: 'pulse 1s infinite alternate' }}>
+                  Scanning Network...
+                </span>
+              )}
             </label>
             <select
               className="form-control"
               value={selectedIp}
               onChange={e => handleIpChange(e.target.value)}
+              disabled={scanning}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -140,28 +162,35 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
                 background: 'rgba(0,0,0,0.3)',
                 border: '1px solid var(--border-glass)',
                 color: '#fff',
-                outline: 'none'
+                outline: 'none',
+                opacity: scanning ? 0.6 : 1
               }}
             >
-              {ips.map(ip => {
-                let label = ip;
-                if (ip === '192.168.1.117') label = `${ip} (Default ESP32)`;
-                else if (ip === '192.168.1.60') label = `${ip} (Living Room Nest Mini)`;
-                else if (ip === '192.168.1.199') label = `${ip} (Bedroom Nest Mini)`;
+              {scanning ? (
+                <option value="" disabled>Scanning local subnet for active devices...</option>
+              ) : devices.length === 0 ? (
+                <option value="" disabled>No devices found on the network</option>
+              ) : (
+                devices.map(dev => {
+                  const isOnline = dev.is_online === 1;
+                  const statusLabel = isOnline ? ' [Online]' : ' [Offline]';
+                  const label = `${dev.node_name} (${dev.ip_address}) - ${dev.device_type}${statusLabel}`;
 
-                return (
-                  <option 
-                    key={ip} 
-                    value={ip} 
-                    style={{ 
-                      background: '#0f172a',
-                      color: '#fff'
-                    }}
-                  >
-                    {label}
-                  </option>
-                );
-              })}
+                  return (
+                    <option 
+                      key={dev.id || dev.ip_address} 
+                      value={dev.ip_address} 
+                      disabled={!isOnline}
+                      style={{ 
+                        background: '#0f172a',
+                        color: isOnline ? '#fff' : '#6b7280'
+                      }}
+                    >
+                      {label}
+                    </option>
+                  );
+                })
+              )}
             </select>
           </div>
 
