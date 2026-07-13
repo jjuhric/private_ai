@@ -40,7 +40,7 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
         });
         
         const filterHostIp = (ip) => {
-          return hostIps.includes(ip) || ip === '127.0.0.1' || ip === 'localhost';
+          return hostIps.includes(ip) || ip === '127.0.0.1' || ip === 'localhost' || ip === '192.168.1.1' || ip.endsWith('.1');
         };
 
         if (res.ok) {

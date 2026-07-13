@@ -112,8 +112,11 @@ router.post('/scan', authenticateToken, async (req, res) => {
     const discovered = [];
     const ipList = [];
     
-    for (let i = 1; i <= 254; i++) {
-      ipList.push(`${subnet}.${i}`);
+    for (let i = 2; i <= 254; i++) {
+      const ip = `${subnet}.${i}`;
+      if (ip !== '192.168.1.1') {
+        ipList.push(ip);
+      }
     }
     
     // Batch in chunks of 40 to avoid high connection overhead
@@ -282,11 +285,11 @@ router.post('/sync', authenticateToken, async (req, res) => {
       console.warn('[Sync Network] MDNS discovery skipped/error:', err.message);
     }
 
-    // 2b. TCP Port Scan on local subnet
+    // 2b. TCP Port Scan on local subnet (skipping gateway/router .1)
     const ipList = [];
-    for (let i = 1; i <= 254; i++) {
+    for (let i = 2; i <= 254; i++) {
       const ip = `${subnet}.${i}`;
-      if (!localIps.has(ip) && !discoveredMap.has(ip)) {
+      if (!localIps.has(ip) && !discoveredMap.has(ip) && ip !== '192.168.1.1') {
         ipList.push(ip);
       }
     }
