@@ -408,8 +408,8 @@ export default function SettingsModal({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Google Home Smart Speaker</h4>
               <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', gap: '8px', fontSize: '0.85rem' }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={!!(settings.google_home_enabled === 1 || settings.google_home_enabled === true)}
                   onChange={e => setSettings(prev => ({ ...prev, google_home_enabled: e.target.checked ? 1 : 0 }))}
                   style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
@@ -417,7 +417,7 @@ export default function SettingsModal({
                 Enable Integration
               </label>
             </div>
-            
+
             {(settings.google_home_enabled === 1 || settings.google_home_enabled === true) ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

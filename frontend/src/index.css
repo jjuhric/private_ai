@@ -423,6 +423,9 @@ select.form-control option {
   line-height: 1.5;
   font-size: 1.05rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .user .message-bubble {

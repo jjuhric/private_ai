@@ -657,6 +657,14 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
         userId,
         settings
       });
+    } else if (decision.tool === 'esp32_tool') {
+      const { handleEsp32Tool } = require('../tools/esp32_tool');
+      output = await handleEsp32Tool(
+        decision.params?.ipAddress || decision.params?.ip_address,
+        decision.params?.port || null,
+        decision.action,
+        decision.params
+      );
     } else if (decision.tool === 'tool_manager') {
       const { handleToolManagerTool } = require('../tools/tool_manager_tool');
       output = await handleToolManagerTool(decision.action, decision.params);

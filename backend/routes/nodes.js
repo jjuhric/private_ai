@@ -235,4 +235,62 @@ router.post('/:id/ping', authenticateToken, async (req, res) => {
   }
 });
 
+// Send a message to a network node / device (ESP32, Google Assistant, etc.)
+router.post('/send-message', authenticateToken, async (req, res) => {
+  const { ip_address, device_type, message } = req.body;
+  
+  if (!ip_address || !device_type || !message) {
+    return res.status(400).json({ error: 'ip_address, device_type, and message are required' });
+  }
+
+  // Enforce 240 character limit locally
+  if (message.length > 240) {
+    const diff = message.length - 240;
+    return res.status(400).json({
+      ok: false,
+      error: `message exceeds max length 240 by ${diff} characters`
+    });
+  }
+
+  try {
+    if (device_type === 'Google Assistant') {
+      const db = await getDb();
+      const { handleGoogleHomeTool } = require('../tools/google_home_tool');
+      const toolResult = await handleGoogleHomeTool(db, req.user.id, 'speak_text', { text: message, device_ip: ip_address });
+      
+      try {
+        const parsed = JSON.parse(toolResult);
+        if (parsed.success) {
+          return res.json({ ok: true, message: 'Message spoken successfully' });
+        } else {
+          return res.status(500).json({ ok: false, error: parsed.error || toolResult });
+        }
+      } catch (e) {
+        return res.json({ ok: true, output: toolResult });
+      }
+    } else {
+      // Treat other devices (ESP32, RPi, Windows) using the handleEsp32Tool message endpoint
+      const { handleEsp32Tool } = require('../tools/esp32_tool');
+      const toolResult = await handleEsp32Tool(ip_address, null, 'send_message', { message });
+      
+      if (toolResult.startsWith('Error:')) {
+        return res.status(500).json({ ok: false, error: toolResult });
+      }
+
+      try {
+        const parsed = JSON.parse(toolResult);
+        if (parsed.ok !== false && parsed.success !== false) {
+          return res.json({ ok: true, data: parsed });
+        } else {
+          return res.status(500).json({ ok: false, error: parsed.error || toolResult });
+        }
+      } catch (e) {
+        return res.json({ ok: true, output: toolResult });
+      }
+    }
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

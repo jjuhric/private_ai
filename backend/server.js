@@ -41,8 +41,8 @@ const isLocalOrigin = (origin) => {
 };
 
 // Restrict CORS origins in production
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
 app.use(cors({
@@ -71,7 +71,7 @@ getDb().then(async (db) => {
   try {
     // Initialize MQTT client
     mqttService.init();
-    
+
     // Probe and log node identity
     const nodeIdentity = require('./services/node_identity');
     const identity = await nodeIdentity.getIdentity();
@@ -82,10 +82,10 @@ getDb().then(async (db) => {
       const systemMachineName = identity.node_name || 'Windows-Host';
       initializeCentralizedToolSynchronizationDaemon(db, systemMachineName);
     }
-    
+
     const { runDailyMemoryCheck } = require('./tools/memory_tool');
     await runDailyMemoryCheck(db);
-    
+
     // Set 24 hour interval check
     setInterval(async () => {
       await runDailyMemoryCheck(db);
@@ -124,9 +124,19 @@ app.use('/api', chatRouter); // Routes handle their own prefixing (e.g. /chats, 
 app.get('/api/version', (req, res) => {
   try {
     const pkg = require('../package.json');
-    res.json({ version: pkg.version });
+    const os = require('os');
+    const host_ips = [];
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const netObj of interfaces[name]) {
+        if (netObj.family === 'IPv4') {
+          host_ips.push(netObj.address);
+        }
+      }
+    }
+    res.json({ version: pkg.version, host_ips });
   } catch (e) {
-    res.json({ version: '1.0.0' });
+    res.json({ version: '1.0.0', host_ips: [] });
   }
 });
 
@@ -233,7 +243,7 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
 const gracefulShutdown = () => {
   logger.info('SIGTERM/SIGINT received. Shutting down gracefully...');
   mqttService.disconnect();
-  
+
   // Force exit after 3 seconds if connections don't close cleanly
   setTimeout(() => {
     logger.warn('Forcing exit after timeout during graceful shutdown.');
@@ -289,7 +299,7 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
     if (fs.existsSync(LOCAL_STAGING_DIR)) {
       try {
         fs.rmSync(LOCAL_STAGING_DIR, { recursive: true, force: true });
-      } catch (err) {}
+      } catch (err) { }
     }
 
     exec(`git clone ${authenticatedUrl} ${LOCAL_STAGING_DIR}`, async (err) => {
@@ -304,9 +314,9 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
         if (!fs.existsSync(manifestIndexPath)) return;
 
         const registryIndex = JSON.parse(fs.readFileSync(manifestIndexPath, 'utf-8'));
-        
+
         // Filter elements explicitly based on your local system identity configs
-        const applicableTools = registryIndex.tools.filter(tool => 
+        const applicableTools = registryIndex.tools.filter(tool =>
           tool.target_machine_name === systemMachineName || (tool.compatibility_tags && tool.compatibility_tags.includes(process.arch))
         );
 
@@ -339,7 +349,7 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
         if (fs.existsSync(LOCAL_STAGING_DIR)) {
           try {
             fs.rmSync(LOCAL_STAGING_DIR, { recursive: true, force: true });
-          } catch (err) {}
+          } catch (err) { }
         }
       }
     });

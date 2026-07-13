@@ -13,6 +13,7 @@ import SetupWizard from './components/SetupWizard';
 import SudoModal from './components/SudoModal';
 import PopoutWindow from './components/PopoutWindow';
 import CustomAlertModal from './components/CustomAlertModal';
+import Esp32MessageModal from './components/Esp32MessageModal';
 
 function App() {
   // Auth state
@@ -71,6 +72,8 @@ function App() {
   // Settings
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSetupComplete, setIsSetupComplete] = useState(true);
+  const [isEsp32ModalOpen, setIsEsp32ModalOpen] = useState(false);
+  const [hostIps, setHostIps] = useState([]);
   const [sudoPrompt, setSudoPrompt] = useState(null); // { commandId, approved, editedCmd, commandText }
   const [settings, setSettings] = useState({
     provider: 'local',
@@ -189,6 +192,9 @@ function App() {
         if (res.ok) {
           const data = await res.json();
           setAppVersion(data.version);
+          if (Array.isArray(data.host_ips)) {
+            setHostIps(data.host_ips);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -916,6 +922,7 @@ function App() {
         handleLogout={handleLogout}
         setIsSettingsOpen={setIsSettingsOpen}
         setIsProfileOpen={setIsProfileOpen}
+        setIsEsp32ModalOpen={setIsEsp32ModalOpen}
         appVersion={appVersion}
       />
 
@@ -1102,6 +1109,13 @@ function App() {
           />
         </PopoutWindow>
       )}
+
+      <Esp32MessageModal
+        isOpen={isEsp32ModalOpen}
+        onClose={() => setIsEsp32ModalOpen(false)}
+        token={token}
+        hostIps={hostIps}
+      />
 
       <CustomAlertModal
         alert={popupAlert}

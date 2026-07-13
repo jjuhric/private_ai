@@ -301,7 +301,7 @@ async function runAgentLoop({
 
   // --- Direct Send Message to Device Interceptor ---
   const cleanMsgForSend = userMessage.trim().toLowerCase();
-  const isSendMsgPattern = /^\s*send\s+(?:a\s+)?message\s+to\s+device/i.test(cleanMsgForSend);
+  const isSendMsgPattern = /^\s*send\s+(?:a\s+)?message\s+to\s+(?:device|esp32|esp)\b/i.test(cleanMsgForSend);
   const isIpOnlyPattern = /^\s*(?:\d{1,3}\.){3}\d{1,3}\s*$/i.test(cleanMsgForSend);
 
   if (isIpOnlyPattern && chatId) {
@@ -317,12 +317,55 @@ async function runAgentLoop({
 
     const lastAssistantMsg = lastMsgs.find(m => m.role === 'assistant');
     if (lastAssistantMsg && lastAssistantMsg.content.includes('Which device would you like to send this message to?')) {
-      const originalUserMsgObj = lastMsgs.find(m => m.role === 'user' && /^\s*send\s+(?:a\s+)?message\s+to\s+device/i.test(m.content));
+      const originalUserMsgObj = lastMsgs.find(m => m.role === 'user' && /^\s*send\s+(?:a\s+)?message\s+to\s+(?:device|esp32|esp)\b/i.test(m.content));
       if (originalUserMsgObj) {
         const ip = userMessage.trim();
-        let temp = originalUserMsgObj.content.replace(/^\s*send\s+(?:a\s+)?message\s+to\s+device/i, '');
+        let temp = originalUserMsgObj.content.replace(/^\s*send\s+(?:a\s+)?message\s+to\s+(?:device|esp32|esp)\b/i, '');
         temp = temp.replace(/^\s*saying/i, '');
         const text = temp.trim();
+
+        // Check if this is the ESP32 device
+        let isEsp32 = (ip === '192.168.1.117');
+        if (!isEsp32) {
+          try {
+            const espNode = await db.get(
+              'SELECT device_type, node_name FROM network_nodes WHERE ip_address = ? AND user_id = ?',
+              [ip, userId]
+            );
+            if (espNode && (
+              (espNode.device_type && espNode.device_type.toLowerCase().includes('esp32')) ||
+              (espNode.node_name && espNode.node_name.toLowerCase().includes('esp32'))
+            )) {
+              isEsp32 = true;
+            }
+          } catch (dbErr) {
+            console.error('Failed to query network nodes in ESP32 check:', dbErr);
+          }
+        }
+        if (!isEsp32 && (originalUserMsgObj.content.toLowerCase().includes('esp32') || originalUserMsgObj.content.toLowerCase().includes('esp-32'))) {
+          isEsp32 = true;
+        }
+
+        if (isEsp32) {
+          onThought(`[ESP32 Intercept] Executing send_message on ESP32 at ${ip}: "${text}"\n`);
+          const { handleEsp32Tool } = require('./tools/esp32_tool');
+          const toolOutput = await handleEsp32Tool(ip, null, 'send_message', { message: text });
+          
+          if (toolOutput.startsWith('Error:')) {
+            onContent(toolOutput);
+            await db.run(
+              'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+              [chatId, 'assistant', toolOutput]
+            );
+          } else {
+            onContent("Action Complete");
+            await db.run(
+              'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+              [chatId, 'assistant', 'Action Complete']
+            );
+          }
+          return;
+        }
 
         onThought(`[Google Home Intercept] Executing speak_text on device ${ip}: "${text}"\n`);
         const { handleGoogleHomeTool } = require('./tools/google_home_tool');
@@ -357,14 +400,63 @@ async function runAgentLoop({
   }
 
   if (isSendMsgPattern) {
-    onThought("[Google Home Intercept] Direct Send Message to Device command detected.\n");
+    onThought("[Send Message Intercept] Direct Send Message command detected.\n");
     const ipMatch = userMessage.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
-    if (ipMatch) {
-      const ip = ipMatch[0];
-      let temp = userMessage.replace(new RegExp(`\\b${ip}\\b`, 'g'), '');
-      temp = temp.replace(/^\s*send\s+(?:a\s+)?message\s+to\s+device/i, '');
+    let ip = ipMatch ? ipMatch[0] : null;
+
+    const hasEspKeyword = cleanMsgForSend.includes('esp32') || cleanMsgForSend.includes('esp-32');
+    if (!ip && hasEspKeyword) {
+      ip = '192.168.1.117';
+    }
+
+    if (ip) {
+      let temp = userMessage;
+      if (ipMatch) {
+        temp = temp.replace(new RegExp(`\\b${ip}\\b`, 'g'), '');
+      }
+      temp = temp.replace(/^\s*send\s+(?:a\s+)?message\s+to\s+(?:device|esp32|esp)\b/i, '');
       temp = temp.replace(/^\s*saying/i, '');
       const text = temp.trim();
+
+      // Check if this is the ESP32 device
+      let isEsp32 = (ip === '192.168.1.117') || hasEspKeyword;
+      if (!isEsp32) {
+        try {
+          const espNode = await db.get(
+            'SELECT device_type, node_name FROM network_nodes WHERE ip_address = ? AND user_id = ?',
+            [ip, userId]
+          );
+          if (espNode && (
+            (espNode.device_type && espNode.device_type.toLowerCase().includes('esp32')) ||
+            (espNode.node_name && espNode.node_name.toLowerCase().includes('esp32'))
+          )) {
+            isEsp32 = true;
+          }
+        } catch (dbErr) {
+          console.error('Failed to query network nodes in ESP32 check:', dbErr);
+        }
+      }
+
+      if (isEsp32) {
+        onThought(`[ESP32 Intercept] Executing send_message on ESP32 at ${ip}: "${text}"\n`);
+        const { handleEsp32Tool } = require('./tools/esp32_tool');
+        const toolOutput = await handleEsp32Tool(ip, null, 'send_message', { message: text });
+        
+        if (toolOutput.startsWith('Error:')) {
+          onContent(toolOutput);
+          await db.run(
+            'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+            [chatId, 'assistant', toolOutput]
+          );
+        } else {
+          onContent("Action Complete");
+          await db.run(
+            'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+            [chatId, 'assistant', 'Action Complete']
+          );
+        }
+        return;
+      }
 
       onThought(`[Google Home Intercept] Executing speak_text on device ${ip}: "${text}"\n`);
       const { handleGoogleHomeTool } = require('./tools/google_home_tool');
@@ -1264,6 +1356,14 @@ If no changes are required and you can proceed without executing the code, then 
       } else if (decision.tool === 'google_home') {
         const { handleGoogleHomeTool } = require('./tools/google_home_tool');
         toolOutput = await handleGoogleHomeTool(db, userId, decision.action, decision.params);
+      } else if (decision.tool === 'esp32_tool') {
+        const { handleEsp32Tool } = require('./tools/esp32_tool');
+        toolOutput = await handleEsp32Tool(
+          decision.params?.ipAddress || decision.params?.ip_address,
+          decision.params?.port || null,
+          decision.action,
+          decision.params
+        );
       } else if (decision.tool === 'delegate_to_remote_node') {
         try {
           const { nodeId, command } = decision.params;
