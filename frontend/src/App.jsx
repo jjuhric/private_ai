@@ -133,6 +133,58 @@ function App() {
     }
   }, [token]);
 
+  // Sync active tab and switch LM Studio models dynamically
+  useEffect(() => {
+    const switchTabModel = async () => {
+      try {
+        await fetch('/api/settings/active-tab', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ tab: activeTab })
+        });
+      } catch (err) {
+        console.error('[Active Tab Sync] Failed:', err);
+      }
+
+      if (activeTab === 'academy') {
+        try {
+          await fetch('/api/settings/switch-model', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ modelId: 'google/gemma-4-e4b' })
+          });
+          showToast('Loaded Academy Model (google/gemma-4-e4b) in LM Studio', 'success');
+        } catch (err) {
+          console.error('[Model Switch] Failed to load gemma-4-e4b:', err);
+        }
+      } else if (activeTab === 'chat') {
+        try {
+          await fetch('/api/settings/switch-model', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ modelId: 'qwen2.5-coder-7b-instruct' })
+          });
+          showToast('Loaded Chat Model (qwen2.5-coder-7b-instruct) in LM Studio', 'success');
+        } catch (err) {
+          console.error('[Model Switch] Failed to load qwen2.5-coder-7b-instruct:', err);
+        }
+      }
+    };
+
+    if (token) {
+      switchTabModel();
+    }
+  }, [activeTab, token]);
+
   // Connect to Alert Broadcast SSE stream
   useEffect(() => {
     if (!token) return;

@@ -100,8 +100,15 @@ function cleanAndRepairJSON(str) {
   return result;
 }
 
+function checkAcademyTab(req, res, next) {
+  if (global.activeTab && global.activeTab !== 'academy') {
+    return res.status(403).json({ error: 'Academy is disabled while on another tab.' });
+  }
+  next();
+}
+
 // Start a new lesson (asynchronously in background)
-router.post('/start', authenticateToken, async (req, res) => {
+router.post('/start', authenticateToken, checkAcademyTab, async (req, res) => {
   const { language, topic } = req.body;
   if (!language || !topic) {
     return res.status(400).json({ error: 'language and topic are required' });
@@ -234,7 +241,7 @@ router.get('/lessons/:id', authenticateToken, async (req, res) => {
 });
 
 // Pause a lesson
-router.post('/lessons/:id/pause', authenticateToken, async (req, res) => {
+router.post('/lessons/:id/pause', authenticateToken, checkAcademyTab, async (req, res) => {
   try {
     const db = await getDb();
     await db.run(
@@ -248,7 +255,7 @@ router.post('/lessons/:id/pause', authenticateToken, async (req, res) => {
 });
 
 // Resume a lesson
-router.post('/lessons/:id/resume', authenticateToken, async (req, res) => {
+router.post('/lessons/:id/resume', authenticateToken, checkAcademyTab, async (req, res) => {
   try {
     const db = await getDb();
     await db.run(
@@ -262,7 +269,7 @@ router.post('/lessons/:id/resume', authenticateToken, async (req, res) => {
 });
 
 // Submit code answer for the current step
-router.post('/lessons/:id/submit', authenticateToken, async (req, res) => {
+router.post('/lessons/:id/submit', authenticateToken, checkAcademyTab, async (req, res) => {
   const { student_answer } = req.body;
   if (!student_answer) {
     return res.status(400).json({ error: 'student_answer is required' });
@@ -397,8 +404,8 @@ Language Updates/Breaking Changes: ${breakingChangesText}`;
 });
 
 // POST /api/academy/lessons/:id/chat: Q&A discussion with the Teacher
-router.post('/lessons/:id/chat', authenticateToken, async (req, res) => {
-  const { message } = req.body;
+router.post('/lessons/:id/chat', authenticateToken, checkAcademyTab, async (req, res) => {
+  const { message, images } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'message is required' });
   }
@@ -432,7 +439,8 @@ router.post('/lessons/:id/chat', authenticateToken, async (req, res) => {
       onlineUrl: dbSettings.online_url,
       workingDirectory: dbSettings.working_directory,
       db,
-      userId: req.user.id
+      userId: req.user.id,
+      images: images || []
     };
 
     logger.info(`[Academy] Chat turn with Teacher for lesson ${lesson.id}...`);
@@ -463,7 +471,7 @@ Discussion History: ${JSON.stringify(chatHistory)}`;
     }
 
     // Append to chat history
-    chatHistory.push({ role: 'student', content: message, created_at: new Date().toISOString() });
+    chatHistory.push({ role: 'student', content: message, images: images || [], created_at: new Date().toISOString() });
     chatHistory.push({ role: 'teacher', content: discussData.reply || 'Let me think about that.', created_at: new Date().toISOString() });
 
     await db.run(
@@ -484,7 +492,7 @@ Discussion History: ${JSON.stringify(chatHistory)}`;
 });
 
 // Delete a lesson
-router.delete('/lessons/:id', authenticateToken, async (req, res) => {
+router.delete('/lessons/:id', authenticateToken, checkAcademyTab, async (req, res) => {
   try {
     const db = await getDb();
     await db.run(

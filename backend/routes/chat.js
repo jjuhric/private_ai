@@ -69,6 +69,10 @@ router.get('/chats/:id/messages', authenticateToken, async (req, res) => {
 
 // Agent SSE Stream endpoint
 router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
+  if (global.activeTab && global.activeTab !== 'chat') {
+    return res.status(403).json({ error: 'Chat is disabled while on another tab.' });
+  }
+
   const { chatId, message } = req.body;
   if (!chatId || !message) return res.status(400).json({ error: 'chatId and message are required.' });
 

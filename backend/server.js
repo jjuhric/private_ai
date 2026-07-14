@@ -30,6 +30,7 @@ const tokenUsageRouter = require('./routes/token_usage');
 const lmstudioRouter = require('./routes/lmstudio');
 const alertsRouter = require('./routes/alerts');
 const academyRouter = require('./routes/academy');
+const lmstudioSwitchRouter = require('./routes/lmstudio_switch');
 const mqttService = require('./services/mqtt_service');
 
 const app = express();
@@ -114,6 +115,7 @@ getDb().then(async (db) => {
 app.use('/api/auth', authRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/settings', lmstudioSwitchRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/memories', memoryRouter);
 app.use('/api/vault', vaultRouter);

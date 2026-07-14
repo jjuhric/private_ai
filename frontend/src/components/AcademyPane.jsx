@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Trophy, Code, Play, Pause, Send, ArrowRight, RotateCcw, AlertTriangle } from 'lucide-react';
+import { BookOpen, Trophy, Code, Play, Pause, Send, ArrowRight, RotateCcw, AlertTriangle, Image, Paperclip, X } from 'lucide-react';
 
 export default function AcademyPane({ token }) {
   const [lessons, setLessons] = useState([]);
@@ -18,6 +18,7 @@ export default function AcademyPane({ token }) {
   // Q&A Chat State
   const [chatMessage, setChatMessage] = useState('');
   const [sendingChat, setSendingChat] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
   const chatBottomRef = useRef(null);
 
   const fetchLessons = async (autoSelectGenerating = true) => {
@@ -208,13 +209,32 @@ export default function AcademyPane({ token }) {
     }
   };
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImages(prev => [...prev, { name: file.name, base64: reader.result }]);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  };
+
+  const removeSelectedImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const sendTeacherMessage = async (e) => {
     e.preventDefault();
-    if (!chatMessage.trim() || !activeLesson || sendingChat) return;
+    if ((!chatMessage.trim() && selectedImages.length === 0) || !activeLesson || sendingChat) return;
 
     setSendingChat(true);
     const msg = chatMessage;
+    const imgs = selectedImages.map(img => img.base64);
     setChatMessage('');
+    setSelectedImages([]);
     try {
       const res = await fetch(`/api/academy/lessons/${activeLesson.id}/chat`, {
         method: 'POST',
@@ -222,7 +242,7 @@ export default function AcademyPane({ token }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ message: msg })
+        body: JSON.stringify({ message: msg, images: imgs })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -620,6 +640,15 @@ export default function AcademyPane({ token }) {
                                       {isTeacher ? 'Teacher Agent' : 'You (Student)'}
                                     </div>
                                     {msg.content}
+                                    {msg.images && msg.images.map((img, imgIdx) => (
+                                      <div key={imgIdx} style={{ marginTop: '8px' }}>
+                                        <img 
+                                          src={img} 
+                                          alt="Attachment" 
+                                          style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px', border: '1px solid var(--border-glass)' }} 
+                                        />
+                                      </div>
+                                    ))}
                                   </div>
                                 );
                               })
@@ -639,40 +668,103 @@ export default function AcademyPane({ token }) {
                           {/* Message input */}
                           <form onSubmit={sendTeacherMessage} style={{
                             display: 'flex',
+                            flexDirection: 'column',
                             borderTop: '1px solid var(--border-glass)',
-                            padding: '8px'
+                            padding: 0
                           }}>
-                            <input
-                              type="text"
-                              placeholder="Ask the Teacher a question about this lesson..."
-                              value={chatMessage}
-                              onChange={e => setChatMessage(e.target.value)}
-                              disabled={sendingChat || activeLesson.status !== 'active'}
-                              style={{
-                                flex: 1,
-                                background: 'transparent',
-                                border: 'none',
-                                padding: '8px 12px',
-                                color: '#fff',
-                                fontSize: '0.85rem',
-                                outline: 'none'
-                              }}
-                            />
-                            <button
-                              type="submit"
-                              disabled={sendingChat || !chatMessage.trim() || activeLesson.status !== 'active'}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--accent-primary)',
-                                padding: '4px 12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <Send size={16} />
-                            </button>
+                            {selectedImages.length > 0 && (
+                              <div style={{ display: 'flex', gap: '8px', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', borderBottom: '1px solid var(--border-glass)', flexWrap: 'wrap' }}>
+                                {selectedImages.map((img, idx) => (
+                                  <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                                    <img 
+                                      src={img.base64} 
+                                      alt="Thumbnail" 
+                                      style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-glass)' }} 
+                                    />
+                                    <button 
+                                      type="button" 
+                                      onClick={() => removeSelectedImage(idx)}
+                                      style={{
+                                        position: 'absolute',
+                                        top: '-6px',
+                                        right: '-6px',
+                                        background: 'rgba(239, 68, 68, 0.9)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '18px',
+                                        height: '18px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        padding: 0
+                                      }}
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', padding: '8px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => document.getElementById('academy-image-upload').click()}
+                                disabled={sendingChat || activeLesson.status !== 'active'}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--text-secondary)',
+                                  padding: '4px 12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                                title="Attach Image"
+                              >
+                                <Paperclip size={16} />
+                              </button>
+                              <input 
+                                type="file"
+                                id="academy-image-upload"
+                                accept="image/*"
+                                multiple
+                                onChange={handleImageChange}
+                                style={{ display: 'none' }}
+                              />
+                              <input
+                                type="text"
+                                placeholder="Ask the Teacher a question about this lesson..."
+                                value={chatMessage}
+                                onChange={e => setChatMessage(e.target.value)}
+                                disabled={sendingChat || activeLesson.status !== 'active'}
+                                style={{
+                                  flex: 1,
+                                  background: 'transparent',
+                                  border: 'none',
+                                  padding: '8px 12px',
+                                  color: '#fff',
+                                  fontSize: '0.85rem',
+                                  outline: 'none'
+                                }}
+                              />
+                              <button
+                                type="submit"
+                                disabled={sendingChat || (!chatMessage.trim() && selectedImages.length === 0) || activeLesson.status !== 'active'}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--accent-primary)',
+                                  padding: '4px 12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <Send size={16} />
+                              </button>
+                            </div>
                           </form>
                         </div>
 

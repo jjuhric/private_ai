@@ -160,11 +160,27 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
         input: instructions
       };
     } else {
+      let userContent = instructions;
+      if (settings.images && Array.isArray(settings.images) && settings.images.length > 0) {
+        userContent = [
+          { type: 'text', text: instructions }
+        ];
+        for (const base64Img of settings.images) {
+          const cleanBase64 = base64Img.replace(/^data:image\/\w+;base64,/, '');
+          userContent.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:image/jpeg;base64,${cleanBase64}`
+            }
+          });
+        }
+      }
+
       body = {
         model: finalModel,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: instructions }
+          { role: 'user', content: userContent }
         ],
         temperature: 0.1,
         response_format: { type: "json_object" },
@@ -354,11 +370,27 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
         ...(provider === 'local' ? {} : { max_tokens: 1024 })
       };
     } else {
+      let userContent = responderInstruction;
+      if (settings.images && Array.isArray(settings.images) && settings.images.length > 0) {
+        userContent = [
+          { type: 'text', text: responderInstruction }
+        ];
+        for (const base64Img of settings.images) {
+          const cleanBase64 = base64Img.replace(/^data:image\/\w+;base64,/, '');
+          userContent.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:image/jpeg;base64,${cleanBase64}`
+            }
+          });
+        }
+      }
+
       body = {
         model: finalModel,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: responderInstruction }
+          { role: 'user', content: userContent }
         ],
         temperature: 0.2,
         response_format: { type: "json_object" },

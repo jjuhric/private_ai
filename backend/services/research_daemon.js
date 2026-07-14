@@ -46,16 +46,34 @@ async function checkAndRunResearch() {
   try {
     const db = await getDb();
     
-    // Check last update timestamp
+    // Check if current hour is between 12 AM and 5 AM local time
+    const currentHour = new Date().getHours();
+    const isTimeWindow = currentHour >= 0 && currentHour < 5;
+    if (!isTimeWindow) {
+      logger.info(`[Research Daemon] Outside of 12 AM - 5 AM research window (current hour: ${currentHour}). Skipping.`);
+      isRunning = false;
+      timerId = setTimeout(checkAndRunResearch, 30 * 60 * 1000);
+      return;
+    }
+
+    // Check if the model is currently active/processing
+    const isModelIdle = (global.activeAgentOps || 0) === 0;
+    if (!isModelIdle) {
+      logger.info('[Research Daemon] Model is actively processing another operation. Deferring research run.');
+      isRunning = false;
+      timerId = setTimeout(checkAndRunResearch, 5 * 60 * 1000);
+      return;
+    }
+    
+    // Check last update timestamp to ensure we only run once per day
     const lastUpdate = await db.get('SELECT MAX(query_date) as last_run FROM coding_language_updates');
-    const sixHoursAgo = Date.now() - (6 * 60 * 60 * 1000);
+    const eighteenHoursAgo = Date.now() - (18 * 60 * 60 * 1000);
     
     if (lastUpdate && lastUpdate.last_run) {
       const lastRunMs = new Date(lastUpdate.last_run + 'Z').getTime();
-      if (lastRunMs > sixHoursAgo) {
-        logger.info(`[Research Daemon] Language updates are fresh (last run: ${lastUpdate.last_run}). Skipping check.`);
+      if (lastRunMs > eighteenHoursAgo) {
+        logger.info(`[Research Daemon] Already ran daily research recently (last run: ${lastUpdate.last_run}). Skipping check.`);
         isRunning = false;
-        // Schedule next check in 30 minutes
         timerId = setTimeout(checkAndRunResearch, 30 * 60 * 1000);
         return;
       }
