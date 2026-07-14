@@ -468,19 +468,18 @@ else
     if [ "$SKIP_UPDATE" = false ]; then
         log "Installing minimal Node Client dependencies..."
         mkdir -p node_client
-        if [ ! -f "node_client/package.json" ]; then
-            cat << 'EOF' > node_client/package.json
+        cat << 'EOF' > node_client/package.json
 {
   "name": "private-ai-node-client",
   "version": "1.0.0",
   "dependencies": {
     "mqtt": "^5.5.0",
     "dotenv": "^16.4.5",
-    "macaddress": "^0.2.9"
+    "macaddress": "^0.2.9",
+    "express": "^4.19.2"
   }
 }
 EOF
-        fi
         npm install --prefix node_client
     else
         log "Skipping Node Client dependency install."

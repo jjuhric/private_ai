@@ -198,6 +198,32 @@ async function handleNetworkScanner(action, params = {}) {
     );
   }
 
+  // 4b. Sync active devices to DB
+  try {
+    const { getDb } = require('../db');
+    const db = await getDb();
+    for (const dev of activeDevices) {
+      const portVal = dev.ports.includes('8009') ? 8009 : (dev.ports.includes('3000') ? 3000 : 80);
+      const exist = await db.get(
+        'SELECT id FROM network_nodes WHERE ip_address = ?',
+        [dev.ip]
+      );
+      if (!exist) {
+        await db.run(
+          'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online, last_seen) VALUES (1, ?, ?, ?, ?, 1, datetime("now"))',
+          [dev.name, dev.deviceType, dev.ip, portVal]
+        );
+      } else {
+        await db.run(
+          'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ? WHERE id = ?',
+          [dev.name, exist.id]
+        );
+      }
+    }
+  } catch (dbErr) {
+    console.error('[Network Scanner] DB Sync failed:', dbErr.message);
+  }
+
   // 5. Generate Markdown Report
   if (activeDevices.length === 0) {
     return `### 🔍 Network Scan Report: \`${subnet}.0/24\`\nNo active devices were discovered on the network.`;

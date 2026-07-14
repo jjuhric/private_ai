@@ -154,6 +154,110 @@ async function start() {
   const nodeId = await getOrInitNodeId();
   console.log(`Starting Node Edge Client for Node ID: ${nodeId}`);
 
+  // Setup Express server
+  const express = require('express');
+  const app = express();
+  app.use(express.json());
+
+  const publicDir = path.join(__dirname, 'public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+  app.use(express.static(publicDir));
+
+  const messagesDir = path.join(__dirname, 'messages');
+  if (!fs.existsSync(messagesDir)) {
+    fs.mkdirSync(messagesDir, { recursive: true });
+  }
+
+  // POST /message stores text inside nested Year/Month/Day folders
+  app.post('/message', (req, res) => {
+    const { message } = req.body;
+    if (message === undefined) {
+      return res.status(400).json({ error: 'message body is required' });
+    }
+
+    const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+
+    const targetDir = path.join(messagesDir, String(yyyy), mm, dd);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    let files = [];
+    try {
+      files = fs.readdirSync(targetDir).filter(f => f.endsWith('.txt'));
+    } catch (e) {}
+
+    let targetFile;
+    if (files.length === 0) {
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      targetFile = path.join(targetDir, `${hh}-${min}-${ss}.txt`);
+    } else {
+      files.sort();
+      targetFile = path.join(targetDir, files[0]);
+    }
+
+    const timestampPrefix = `[${now.toISOString()}]`;
+    fs.appendFileSync(targetFile, `${timestampPrefix} ${messageStr}\n`, 'utf8');
+
+    res.json({ success: true, file: path.basename(targetFile), path: path.relative(messagesDir, targetFile).replace(/\\/g, '/') });
+  });
+
+  // GET /api/files lists folders and .txt files under specified subpath
+  app.get('/api/files', (req, res) => {
+    const relativePath = req.query.path || '';
+    const safeSubPath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
+    const searchDir = path.join(messagesDir, safeSubPath);
+
+    if (!fs.existsSync(searchDir)) {
+      return res.json({ success: true, files: [] });
+    }
+
+    try {
+      const entries = fs.readdirSync(searchDir, { withFileTypes: true });
+      const files = entries
+        .filter(entry => entry.isDirectory() || (entry.isFile() && entry.name.endsWith('.txt')))
+        .map(entry => ({
+          name: entry.name,
+          isDirectory: entry.isDirectory(),
+          path: path.join(safeSubPath, entry.name).replace(/\\/g, '/')
+        }));
+      res.json({ success: true, files });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/files/content returns text content of a specified .txt file
+  app.get('/api/files/content', (req, res) => {
+    const relativePath = req.query.path || '';
+    const safeSubPath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
+    const filePath = path.join(messagesDir, safeSubPath);
+
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile() || !filePath.endsWith('.txt')) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      res.json({ success: true, content });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`[Node Client] Express Web Server running on port ${port}`);
+  });
+
   const brokerUrl = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
   const username = process.env.MQTT_USERNAME || '';
   const password = process.env.MQTT_PASSWORD || '';

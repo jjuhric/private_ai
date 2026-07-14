@@ -103,12 +103,8 @@ router.get('/discovery', async (req, res) => {
 router.post('/scan', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
-    const existingNodes = (await db.all('SELECT ip_address, port FROM network_nodes WHERE user_id = ?', [req.user.id])) || [];
-    const existingSet = new Set(existingNodes.map(n => `${n.ip_address}:${n.port}`));
-
     const subnet = getLocalSubnet();
     const localIps = getLocalIps();
-    const port = process.env.PORT || 3000;
     const discovered = [];
     const ipList = [];
     
@@ -119,28 +115,82 @@ router.post('/scan', authenticateToken, async (req, res) => {
       }
     }
     
-    // Batch in chunks of 40 to avoid high connection overhead
+    const portsToProbe = [3000, 80, 8009];
     const batchSize = 40;
+    
     for (let i = 0; i < ipList.length; i += batchSize) {
       const batch = ipList.slice(i, i + batchSize);
       await Promise.all(
         batch.map(async (ip) => {
-          if (localIps.has(ip) || existingSet.has(`${ip}:${port}`)) {
+          if (localIps.has(ip)) {
             return;
           }
-          const isOpen = await checkIpPort(ip, port);
-          if (isOpen) {
-            const info = await getDiscoveryPayload(ip, port);
-            if (info && info.success) {
-              if (info.is_main_host) {
-                return;
+          
+          for (const targetPort of portsToProbe) {
+            const isOpen = await checkIpPort(ip, targetPort, 200);
+            if (isOpen) {
+              let name = 'Unknown Device';
+              let deviceType = 'Generic Node';
+              
+              if (targetPort === 8009) {
+                name = 'Google Assistant Speaker';
+                deviceType = 'Google Assistant';
+              } else if (targetPort === 3000) {
+                const info = await getDiscoveryPayload(ip, 3000);
+                if (info && info.success) {
+                  if (info.is_main_host) {
+                    return;
+                  }
+                  name = info.device_type === 'windows' ? 'Windows Host' : (info.device_type === 'rpi' ? 'Raspberry Pi' : 'Private AI Node');
+                  deviceType = info.device_type === 'windows' ? 'Windows' : (info.device_type === 'rpi' ? 'RPi' : 'Windows');
+                }
+              } else if (targetPort === 80) {
+                let isEsp = false;
+                try {
+                  const controller = new AbortController();
+                  const tId = setTimeout(() => controller.abort(), 350);
+                  const testRes = await fetch(`http://${ip}/message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: '' }),
+                    signal: controller.signal
+                  });
+                  clearTimeout(tId);
+                  isEsp = true;
+                } catch (e) {}
+                
+                if (isEsp) {
+                  name = 'ESP32 Device';
+                  deviceType = 'ESP32';
+                } else {
+                  continue;
+                }
               }
+              
+              const exist = await db.get(
+                'SELECT id FROM network_nodes WHERE user_id = ? AND ip_address = ?',
+                [req.user.id, ip]
+              );
+              
+              if (!exist) {
+                await db.run(
+                  'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online, last_seen) VALUES (?, ?, ?, ?, ?, 1, datetime("now"))',
+                  [req.user.id, name, deviceType, ip, targetPort]
+                );
+              } else {
+                await db.run(
+                  'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ? WHERE id = ?',
+                  [name, exist.id]
+                );
+              }
+              
               discovered.push({
                 ip_address: ip,
-                port: port,
-                device_type: info.device_type,
-                is_main_host: info.is_main_host
+                port: targetPort,
+                device_type: deviceType,
+                node_name: name
               });
+              break;
             }
           }
         })
