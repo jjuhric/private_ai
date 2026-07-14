@@ -1378,6 +1378,9 @@ If no changes are required and you can proceed without executing the code, then 
         } catch (err) {
           toolOutput = `Remote node execution error: ${err.message}`;
         }
+      } else if (decision.tool === 'network_scanner') {
+        const { handleNetworkScanner } = require('./tools/network_scanner');
+        toolOutput = await handleNetworkScanner(decision.action, decision.params);
       } else {
         toolOutput = `Error: Tool "${decision.tool}" is unrecognized by Supervisor.`;
       }

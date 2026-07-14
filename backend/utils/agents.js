@@ -677,6 +677,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
         onCommandApprovalRequired: settings.onCommandApprovalRequired,
         abortSignal: settings.abortSignal
       });
+    } else if (decision.tool === 'network_scanner') {
+      const { handleNetworkScanner } = require('../tools/network_scanner');
+      output = await handleNetworkScanner(decision.action, decision.params);
     } else {
       // Check if it is a dynamically installed custom tool
       try {
