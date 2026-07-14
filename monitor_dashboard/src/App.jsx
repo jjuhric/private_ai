@@ -1531,7 +1531,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                     <th style={{ padding: '8px' }}>Name</th>
                     <th style={{ padding: '8px' }}>Type</th>
                     <th style={{ padding: '8px' }}>IP:Port</th>
-                    <th style={{ padding: '8px' }}>Subsystems Health</th>
+                    <th style={{ padding: '8px' }}>Health Status</th>
                     <th style={{ padding: '8px' }}>Last Seen</th>
                     <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
                   </tr>
@@ -1555,23 +1555,23 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                         <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.device_type}</td>
                         <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.ip_address}:{node.port}</td>
                         <td style={{ padding: '10px 8px' }}>
-                          {health && health.dependencies ? (
-                            <div style={{ display: 'flex', gap: '6px', fontSize: '0.75rem' }}>
-                              <span className="badge" style={{ padding: '2px 6px', borderRadius: '4px', background: health.dependencies.llm_provider === 'stable' ? '#059669' : '#dc2626', color: '#fff' }}>
-                                LLM: {health.dependencies.llm_provider === 'stable' ? 'OK' : 'ERR'}
-                              </span>
-                              <span className="badge" style={{ padding: '2px 6px', borderRadius: '4px', background: health.dependencies.database === 'stable' ? '#059669' : '#dc2626', color: '#fff' }}>
-                                DB: {health.dependencies.database === 'stable' ? 'OK' : 'ERR'}
-                              </span>
-                              <span className="badge" style={{ padding: '2px 6px', borderRadius: '4px', background: health.dependencies.mqtt_broker === 'stable' ? '#059669' : '#dc2626', color: '#fff' }}>
-                                MQTT: {health.dependencies.mqtt_broker === 'stable' ? 'OK' : 'ERR'}
-                              </span>
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
-                              Awaiting telemetry sync...
-                            </span>
-                          )}
+                          <span className="badge" style={{ 
+                            padding: '4px 10px', 
+                            borderRadius: '6px', 
+                            background: isOnline ? '#059669' : '#dc2626', 
+                            color: '#fff', 
+                            fontWeight: 600, 
+                            fontSize: '0.8rem',
+                            display: 'inline-block',
+                            textAlign: 'center',
+                            minWidth: '80px',
+                            boxShadow: isOnline ? '0 0 6px rgba(5,150,105,0.4)' : '0 0 6px rgba(220,38,38,0.4)'
+                          }}>
+                            {isOnline ? 'ONLINE' : 'OFFLINE'}
+                          </span>
+                          <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                            {isOnline ? 'Ready for tasks' : 'Unreachable'}
+                          </span>
                         </td>
                         <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{new Date(node.last_seen).toLocaleString()}</td>
                         <td style={{ padding: '10px 8px', textAlign: 'right' }}>
