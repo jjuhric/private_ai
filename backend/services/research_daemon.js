@@ -9,7 +9,26 @@ function extractWorkerOutput(rawOutput) {
   try {
     const parsed = JSON.parse(trimmed);
     if (parsed && (parsed.status === 'success' || parsed.status === 'error')) {
-      return parsed.summary || JSON.stringify(parsed.data || {});
+      if (parsed.data && typeof parsed.data === 'object' && Object.keys(parsed.data).length > 0) {
+        return JSON.stringify(parsed.data);
+      }
+      if (parsed.data && typeof parsed.data === 'string' && parsed.data.trim().length > 0) {
+        return parsed.data;
+      }
+      if (parsed.summary && typeof parsed.summary === 'string') {
+        const s = parsed.summary.trim();
+        let cleanS = s;
+        if (cleanS.startsWith('```')) {
+          cleanS = cleanS.replace(/^```(json)?\n/, '').replace(/\n```$/, '').trim();
+        }
+        if (cleanS.startsWith('{') || cleanS.startsWith('[')) {
+          return cleanS;
+        }
+      }
+      if (parsed.summary) {
+        return parsed.summary;
+      }
+      return JSON.stringify(parsed.data || {});
     }
     return trimmed;
   } catch (e) {
