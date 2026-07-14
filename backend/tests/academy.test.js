@@ -176,4 +176,38 @@ describe('Academy API', () => {
       ['1', 1]
     );
   });
+
+  test('POST /api/academy/lessons/:id/chat handles and repairs malformed JSON', async () => {
+    mockDb.get
+      .mockResolvedValueOnce({
+        id: 1,
+        user_id: 1,
+        language: 'rust',
+        topic: 'Learn variables',
+        curriculum: JSON.stringify([{ title: 'Lesson 1' }]),
+        current_step_index: 0,
+        chat_history: '[]'
+      })
+      .mockResolvedValueOnce({ provider: 'gemini' });
+
+    // String with unescaped double quotes and trailing comma
+    const rawLLMOutput = `{
+      "reply": "Here is some "code" for you.",
+    }`;
+    runWorkerAgent.mockResolvedValueOnce(JSON.stringify({
+      status: "success",
+      summary: rawLLMOutput,
+      data: {}
+    }));
+
+    mockDb.run.mockResolvedValueOnce({});
+
+    const res = await request(app).post('/api/academy/lessons/1/chat').send({
+      message: 'Explain borrowing'
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.reply).toBe('Here is some "code" for you.');
+  });
 });

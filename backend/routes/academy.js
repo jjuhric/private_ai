@@ -21,6 +21,66 @@ function extractWorkerOutput(rawOutput) {
   }
 }
 
+function cleanAndRepairJSON(str) {
+  if (!str) return '';
+  let result = '';
+  let insideString = false;
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    
+    if (char === '\\') {
+      result += char;
+      if (i + 1 < str.length) {
+        result += str[i + 1];
+        i++;
+      }
+      continue;
+    }
+    
+    if (char === '"') {
+      if (!insideString) {
+        insideString = true;
+        result += char;
+      } else {
+        let isEnd = false;
+        let j = i + 1;
+        while (j < str.length) {
+          const nextChar = str[j];
+          if (nextChar === ' ' || nextChar === '\t' || nextChar === '\n' || nextChar === '\r') {
+            j++;
+            continue;
+          }
+          if (nextChar === ':' || nextChar === ',' || nextChar === '}' || nextChar === ']') {
+            isEnd = true;
+          }
+          break;
+        }
+        
+        if (isEnd) {
+          insideString = false;
+          result += char;
+        } else {
+          result += '\\"';
+        }
+      }
+      continue;
+    }
+    
+    if (insideString && (char === '\n' || char === '\r')) {
+      if (char === '\n') {
+        result += '\\n';
+      }
+      continue;
+    }
+    
+    result += char;
+  }
+  
+  result = result.replace(/,\s*([\]}])/g, '$1');
+  return result;
+}
+
 // Start a new lesson (asynchronously in background)
 router.post('/start', authenticateToken, async (req, res) => {
   const { language, topic } = req.body;
@@ -77,7 +137,13 @@ Topic: "${topic}"`;
           cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
         }
 
-        const parsed = JSON.parse(cleanedText);
+        const repaired = cleanAndRepairJSON(cleanedText);
+        let parsed;
+        try {
+          parsed = JSON.parse(repaired);
+        } catch (jsonErr) {
+          throw new Error(`${jsonErr.message}\nRaw Cleaned Text: ${cleanedText}\nRepaired Text: ${repaired}`);
+        }
         const curriculumData = parsed.curriculum;
         if (!Array.isArray(curriculumData) || curriculumData.length === 0) {
           throw new Error('Curriculum must be a non-empty array.');
@@ -250,7 +316,8 @@ Language Updates/Breaking Changes: ${breakingChangesText}`;
 
     let gradeData;
     try {
-      gradeData = JSON.parse(cleanedText);
+      const repaired = cleanAndRepairJSON(cleanedText);
+      gradeData = JSON.parse(repaired);
     } catch (e) {
       logger.error('[Academy] Failed to parse grading response: ' + e.message + '\nRaw Output: ' + gradingResult);
       return res.status(500).json({ error: 'AI failed to grade your answer. Please resubmit.' });
@@ -369,7 +436,8 @@ Discussion History: ${JSON.stringify(chatHistory)}`;
 
     let discussData;
     try {
-      discussData = JSON.parse(cleanedText);
+      const repaired = cleanAndRepairJSON(cleanedText);
+      discussData = JSON.parse(repaired);
     } catch (e) {
       logger.error('[Academy] Failed to parse Teacher discussion response: ' + e.message + '\nRaw Output: ' + responseText);
       return res.status(500).json({ error: 'AI failed to reply. Please try again.' });
