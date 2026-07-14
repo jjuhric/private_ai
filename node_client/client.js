@@ -210,6 +210,16 @@ async function start() {
     res.json({ success: true, file: path.basename(targetFile), path: path.relative(messagesDir, targetFile).replace(/\\/g, '/') });
   });
 
+  // GET /api/nodes/discovery returns device metadata for discovery scan
+  app.get('/api/nodes/discovery', (req, res) => {
+    res.json({
+      success: true,
+      device_type: process.env.DEVICE_TYPE || 'rpi',
+      is_main_host: false,
+      port: process.env.PORT || 3000
+    });
+  });
+
   // GET /api/files lists folders and .txt files under specified subpath
   app.get('/api/files', (req, res) => {
     const relativePath = req.query.path || '';

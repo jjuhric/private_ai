@@ -131,6 +131,7 @@ router.post('/scan', authenticateToken, async (req, res) => {
             if (isOpen) {
               let name = 'Unknown Device';
               let deviceType = 'Generic Node';
+              let rawDeviceType = null;
               
               if (targetPort === 8009) {
                 name = 'Google Assistant Speaker';
@@ -141,8 +142,10 @@ router.post('/scan', authenticateToken, async (req, res) => {
                   if (info.is_main_host) {
                     return;
                   }
-                  name = info.device_type === 'windows' ? 'Windows Host' : (info.device_type === 'rpi' ? 'Raspberry Pi' : 'Private AI Node');
-                  deviceType = info.device_type === 'windows' ? 'Windows' : (info.device_type === 'rpi' ? 'RPi' : 'Windows');
+                  rawDeviceType = info.device_type;
+                  const isRpi = info.device_type && info.device_type.toLowerCase().includes('rpi');
+                  name = info.device_type === 'windows' ? 'Windows Host' : (isRpi ? 'Raspberry Pi' : 'Private AI Node');
+                  deviceType = info.device_type === 'windows' ? 'Windows' : (isRpi ? 'RPi' : 'Windows');
                 }
               } else if (targetPort === 80) {
                 let isEsp = false;
@@ -187,7 +190,7 @@ router.post('/scan', authenticateToken, async (req, res) => {
               discovered.push({
                 ip_address: ip,
                 port: targetPort,
-                device_type: deviceType,
+                device_type: rawDeviceType || deviceType,
                 node_name: name
               });
               break;
@@ -383,9 +386,10 @@ router.post('/sync', authenticateToken, async (req, res) => {
           if (hasPort3000) {
             const info = await getDiscoveryPayload(ip, 3000);
             if (info && info.success) {
+              const isRpi = info.device_type && info.device_type.toLowerCase().includes('rpi');
               discoveredMap.set(ip, {
-                node_name: info.device_type === 'windows' ? 'Windows Host' : (info.device_type === 'rpi' ? 'Raspberry Pi' : 'Private AI Node'),
-                device_type: info.device_type === 'windows' ? 'Windows' : (info.device_type === 'rpi' ? 'RPi' : 'Windows'),
+                node_name: info.device_type === 'windows' ? 'Windows Host' : (isRpi ? 'Raspberry Pi' : 'Private AI Node'),
+                device_type: info.device_type === 'windows' ? 'Windows' : (isRpi ? 'RPi' : 'Windows'),
                 port: 3000
               });
               return;
