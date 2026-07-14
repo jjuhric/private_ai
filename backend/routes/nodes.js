@@ -304,6 +304,71 @@ router.post('/:id/ping', authenticateToken, async (req, res) => {
   }
 });
 
+// Check health of all registered nodes from the backend (avoiding CORS and JWT issues)
+router.get('/health-check', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const nodes = await db.all('SELECT id, ip_address, port, device_type FROM network_nodes WHERE user_id = ?', [req.user.id]);
+    
+    const results = {};
+    await Promise.all(
+      nodes.map(async (node) => {
+        let isOnline = false;
+        
+        // 1. Try health endpoint check
+        try {
+          const controller = new AbortController();
+          const tId = setTimeout(() => controller.abort(), 600);
+          const targetUrl = `http://${node.ip_address}:${node.port}/health`;
+          const fetchRes = await fetch(targetUrl, { signal: controller.signal });
+          clearTimeout(tId);
+          if (fetchRes.ok) {
+            const data = await fetchRes.json();
+            if (data.ok === true || data.status === 'online') {
+              isOnline = true;
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        
+        // 2. Fallback to /api/bridge/health for older configurations or setups
+        if (!isOnline && node.device_type !== 'ESP32' && node.device_type !== 'Google Assistant') {
+          try {
+            const controller = new AbortController();
+            const tId = setTimeout(() => controller.abort(), 600);
+            const targetUrl = `http://${node.ip_address}:${node.port}/api/bridge/health`;
+            const fetchRes = await fetch(targetUrl, { signal: controller.signal });
+            clearTimeout(tId);
+            if (fetchRes.ok) {
+              isOnline = true;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        
+        // 3. Fallback to raw TCP port check
+        if (!isOnline) {
+          isOnline = await checkIpPort(node.ip_address, node.port, 400);
+        }
+        
+        const isOnlineVal = isOnline ? 1 : 0;
+        await db.run(
+          'UPDATE network_nodes SET is_online = ?, last_seen = CASE WHEN ? = 1 THEN datetime("now") ELSE last_seen END WHERE id = ?',
+          [isOnlineVal, isOnlineVal, node.id]
+        );
+        
+        results[node.id] = { status: isOnline ? 'online' : 'offline' };
+      })
+    );
+    
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Sync network nodes (scans subnet + MDNS Cast and updates network_nodes database table)
 router.post('/sync', authenticateToken, async (req, res) => {
   try {

@@ -292,34 +292,17 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
 
 
   const performNodeHealthPoll = async (configuredNodes) => {
-    const results = await Promise.all(
-      configuredNodes.map(async (node) => {
-        try {
-          const targetUrl = `http://${node.ip_address}:${node.port}/health`;
-          const res = await fetch(targetUrl);
-          if (res.ok) {
-            const data = await res.json();
-            const isOnline = data.ok === true || data.status === 'online';
-            return { 
-              id: node.id, 
-              health: { 
-                status: isOnline ? 'online' : 'offline',
-                ...data
-              } 
-            };
-          }
-        } catch (err) {}
-        return { id: node.id, health: { status: 'offline' } };
-      })
-    );
-
-    setNodeHealthMap(prev => {
-      const nextHealth = { ...prev };
-      for (const res of results) {
-        nextHealth[res.id] = res.health;
+    try {
+      const res = await fetch('/api/nodes/health-check', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNodeHealthMap(data);
       }
-      return nextHealth;
-    });
+    } catch (err) {
+      console.error('Failed to poll node health:', err);
+    }
   };
 
 
@@ -743,8 +726,9 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       padding: '16px 20px',
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
-      overflow: 'hidden',
+      height: activeSubTab === 'network' ? '100vh' : 'auto',
+      minHeight: '100vh',
+      overflowY: activeSubTab === 'network' ? 'hidden' : 'auto',
       boxSizing: 'border-box'
     }}>
       <div className="section-header" style={{
