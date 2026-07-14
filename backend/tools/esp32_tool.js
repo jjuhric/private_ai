@@ -12,9 +12,14 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
     try {
       const { getDb } = require('../db');
       const db = await getDb();
-      const nodeRecord = await db.get('SELECT port FROM network_nodes WHERE ip_address = ?', [ip]);
+      const nodeRecord = await db.get('SELECT port, device_type FROM network_nodes WHERE ip_address = ?', [ip]);
       if (nodeRecord) {
-        portVal = nodeRecord.port;
+        const devType = nodeRecord.device_type ? nodeRecord.device_type.toLowerCase() : '';
+        if (devType.includes('rpi') || devType.includes('windows') || devType.includes('linux')) {
+          portVal = 3000;
+        } else {
+          portVal = nodeRecord.port;
+        }
       }
     } catch (e) {
       // ignore and fallback
