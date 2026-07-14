@@ -182,3 +182,29 @@ CREATE TABLE IF NOT EXISTS shown_articles (
   UNIQUE(user_id, article_link)
 );
 
+CREATE TABLE IF NOT EXISTS coding_language_updates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  language TEXT NOT NULL, -- 'rust', 'cpp', 'python', 'javascript'
+  update_summary TEXT NOT NULL,
+  breaking_changes TEXT, -- JSON array of strings
+  query_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+  source_urls TEXT
+);
+
+CREATE TABLE IF NOT EXISTS academy_lessons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  language TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  curriculum JSON NOT NULL, -- JSON array of steps: [{title, explanation, code_example, exercise, test_instructions}]
+  current_step_index INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'active', -- 'active', 'paused', 'completed'
+  grades JSON DEFAULT '{}', -- JSON object: step_index -> { score, feedback, student_answer }
+  overall_rating TEXT,
+  overall_grade REAL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+

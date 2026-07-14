@@ -1,0 +1,282 @@
+const express = require('express');
+const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
+const { getDb } = require('../db');
+const { runWorkerAgent } = require('../utils/agents');
+const logger = require('../utils/logger');
+
+// Start a new lesson
+router.post('/start', authenticateToken, async (req, res) => {
+  const { language, topic } = req.body;
+  if (!language || !topic) {
+    return res.status(400).json({ error: 'language and topic are required' });
+  }
+
+  try {
+    const db = await getDb();
+    
+    // Load settings for LLM execution
+    const dbSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
+    if (!dbSettings) {
+      return res.status(400).json({ error: 'User settings not configured.' });
+    }
+
+    const settings = {
+      provider: dbSettings.provider,
+      modelName: dbSettings.preferred_online_model || dbSettings.model_name,
+      onlineProvider: dbSettings.online_provider,
+      onlineKey: dbSettings.online_key,
+      geminiKey: dbSettings.gemini_key,
+      localBaseUrl: dbSettings.local_url,
+      localApiKey: dbSettings.local_key,
+      localApiStyle: dbSettings.local_api_style,
+      onlineUrl: dbSettings.online_url,
+      workingDirectory: dbSettings.working_directory,
+      db,
+      userId: req.user.id
+    };
+
+    logger.info(`[Academy] Generating curriculum for ${language} - ${topic}...`);
+
+    const promptTask = `Action: "generate_curriculum"
+Language: "${language}"
+Topic: "${topic}"`;
+
+    const resultText = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
+    
+    // Clean response
+    let cleanedText = resultText.trim();
+    if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
+    }
+
+    let curriculumData;
+    try {
+      const parsed = JSON.parse(cleanedText);
+      curriculumData = parsed.curriculum;
+      if (!Array.isArray(curriculumData) || curriculumData.length === 0) {
+        throw new Error('Curriculum must be a non-empty array.');
+      }
+    } catch (e) {
+      logger.error('[Academy] Failed to parse curriculum JSON: ' + e.message + '\nRaw Output: ' + resultText);
+      return res.status(500).json({ error: 'AI failed to generate a structured curriculum. Please try again.' });
+    }
+
+    const result = await db.run(
+      'INSERT INTO academy_lessons (user_id, language, topic, curriculum, current_step_index, status, grades) VALUES (?, ?, ?, ?, 0, "active", "{}")',
+      [req.user.id, language, topic, JSON.stringify(curriculumData)]
+    );
+
+    res.json({
+      success: true,
+      lessonId: result.lastID,
+      language,
+      topic,
+      curriculum: curriculumData
+    });
+
+  } catch (err) {
+    logger.error('[Academy] Error starting lesson: ' + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List all lessons
+router.get('/lessons', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const rows = await db.all(
+      'SELECT id, language, topic, current_step_index, status, overall_rating, overall_grade, created_at, updated_at FROM academy_lessons WHERE user_id = ? ORDER BY updated_at DESC',
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a single lesson's full details
+router.get('/lessons/:id', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    const row = await db.get(
+      'SELECT * FROM academy_lessons WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!row) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+    
+    // Parse JSON fields
+    row.curriculum = JSON.parse(row.curriculum);
+    row.grades = JSON.parse(row.grades);
+    
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Pause a lesson
+router.post('/lessons/:id/pause', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.run(
+      'UPDATE academy_lessons SET status = "paused", updated_at = datetime("now") WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    res.json({ success: true, message: 'Lesson paused' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Resume a lesson
+router.post('/lessons/:id/resume', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.run(
+      'UPDATE academy_lessons SET status = "active", updated_at = datetime("now") WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    res.json({ success: true, message: 'Lesson resumed' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Submit code answer for the current step
+router.post('/lessons/:id/submit', authenticateToken, async (req, res) => {
+  const { student_answer } = req.body;
+  if (!student_answer) {
+    return res.status(400).json({ error: 'student_answer is required' });
+  }
+
+  try {
+    const db = await getDb();
+    const lesson = await db.get(
+      'SELECT * FROM academy_lessons WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    if (lesson.status === 'completed') {
+      return res.status(400).json({ error: 'Lesson is already completed.' });
+    }
+
+    const curriculum = JSON.parse(lesson.curriculum);
+    const stepIdx = lesson.current_step_index;
+    const currentStep = curriculum[stepIdx];
+
+    if (!currentStep) {
+      return res.status(400).json({ error: 'Invalid step state.' });
+    }
+
+    // Fetch latest research updates for this language
+    const updatesRow = await db.get(
+      'SELECT update_summary, breaking_changes FROM coding_language_updates WHERE language = ? ORDER BY query_date DESC LIMIT 1',
+      [lesson.language.toLowerCase()]
+    );
+
+    const breakingChangesText = updatesRow ? updatesRow.breaking_changes : '[]';
+
+    // Load settings for LLM execution
+    const dbSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
+    const settings = {
+      provider: dbSettings.provider,
+      modelName: dbSettings.preferred_online_model || dbSettings.model_name,
+      onlineProvider: dbSettings.online_provider,
+      onlineKey: dbSettings.online_key,
+      geminiKey: dbSettings.gemini_key,
+      localBaseUrl: dbSettings.local_url,
+      localApiKey: dbSettings.local_key,
+      localApiStyle: dbSettings.local_api_style,
+      onlineUrl: dbSettings.online_url,
+      workingDirectory: dbSettings.working_directory,
+      db,
+      userId: req.user.id
+    };
+
+    logger.info(`[Academy] Grading submission for step ${stepIdx} in ${lesson.language}...`);
+
+    const promptTask = `Action: "grade_answer"
+Language: "${lesson.language}"
+Lesson Title: "${currentStep.title}"
+Lesson Explanation: "${currentStep.explanation}"
+Code Example: "${currentStep.code_example}"
+Test Instructions: "${currentStep.test_instructions}"
+Student Answer: "${student_answer}"
+Language Updates/Breaking Changes: ${breakingChangesText}`;
+
+    const gradingResult = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
+
+    let cleanedText = gradingResult.trim();
+    if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
+    }
+
+    let gradeData;
+    try {
+      gradeData = JSON.parse(cleanedText);
+    } catch (e) {
+      logger.error('[Academy] Failed to parse grading response: ' + e.message + '\nRaw Output: ' + gradingResult);
+      return res.status(500).json({ error: 'AI failed to grade your answer. Please resubmit.' });
+    }
+
+    // Update grades in DB
+    const grades = JSON.parse(lesson.grades || '{}');
+    grades[stepIdx] = {
+      score: gradeData.score || 0,
+      feedback: gradeData.feedback || 'No feedback provided.',
+      student_answer
+    };
+
+    let nextStepIdx = stepIdx;
+    let nextStatus = lesson.status;
+    let overallRating = lesson.overall_rating;
+    let overallGrade = lesson.overall_grade;
+
+    if (gradeData.is_correct) {
+      nextStepIdx += 1;
+      
+      // If we finished the last step, mark as completed
+      if (nextStepIdx >= curriculum.length) {
+        nextStatus = 'completed';
+        
+        // Calculate average grade
+        const scores = Object.values(grades).map(g => g.score);
+        const total = scores.reduce((sum, val) => sum + val, 0);
+        overallGrade = scores.length > 0 ? parseFloat((total / scores.length).toFixed(1)) : 0;
+        
+        // Determine overall rating
+        if (overallGrade >= 90) overallRating = 'Outstanding (A+)';
+        else if (overallGrade >= 80) overallRating = 'Excellent (A)';
+        else if (overallGrade >= 70) overallRating = 'Competent (B)';
+        else if (overallGrade >= 50) overallRating = 'Passing (C)';
+        else overallRating = 'Needs Improvement (F)';
+      }
+    }
+
+    await db.run(
+      'UPDATE academy_lessons SET current_step_index = ?, status = ?, grades = ?, overall_rating = ?, overall_grade = ?, updated_at = datetime("now") WHERE id = ?',
+      [nextStepIdx, nextStatus, JSON.stringify(grades), overallRating, overallGrade, lesson.id]
+    );
+
+    res.json({
+      success: true,
+      grade: gradeData,
+      currentStepIndex: nextStepIdx,
+      status: nextStatus,
+      overallRating,
+      overallGrade
+    });
+
+  } catch (err) {
+    logger.error('[Academy] Error grading submission: ' + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

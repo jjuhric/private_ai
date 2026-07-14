@@ -29,6 +29,7 @@ const nodesRouter = require('./routes/nodes');
 const tokenUsageRouter = require('./routes/token_usage');
 const lmstudioRouter = require('./routes/lmstudio');
 const alertsRouter = require('./routes/alerts');
+const academyRouter = require('./routes/academy');
 const mqttService = require('./services/mqtt_service');
 
 const app = express();
@@ -97,6 +98,9 @@ getDb().then(async (db) => {
 
       const nodeHealthService = require('./services/node_health_service');
       nodeHealthService.startDaemon();
+
+      const researchDaemon = require('./services/research_daemon');
+      researchDaemon.startDaemon();
     }
   } catch (err) {
     logger.error('Error starting daily memory maintenance check:', err);
@@ -118,6 +122,7 @@ app.use('/api/host', hostRouter);
 app.use('/api/bridge', agentBridgeRouter);
 app.use('/api/agent-bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
+app.use('/api/academy', academyRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
 app.use('/api/alerts', alertsRouter);
