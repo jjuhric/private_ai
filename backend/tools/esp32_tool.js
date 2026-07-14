@@ -7,23 +7,24 @@
 async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecret) {
   const ip = nodeIp || '192.168.1.117';
   let portVal = nodePort;
+  let devType = '';
 
-  if (!portVal) {
-    try {
-      const { getDb } = require('../db');
-      const db = await getDb();
-      const nodeRecord = await db.get('SELECT port, device_type FROM network_nodes WHERE ip_address = ?', [ip]);
-      if (nodeRecord) {
-        const devType = nodeRecord.device_type ? nodeRecord.device_type.toLowerCase() : '';
+  try {
+    const { getDb } = require('../db');
+    const db = await getDb();
+    const nodeRecord = await db.get('SELECT port, device_type FROM network_nodes WHERE ip_address = ?', [ip]);
+    if (nodeRecord) {
+      devType = nodeRecord.device_type ? nodeRecord.device_type.toLowerCase() : '';
+      if (!portVal) {
         if (devType.includes('rpi') || devType.includes('windows') || devType.includes('linux')) {
           portVal = 3000;
         } else {
           portVal = nodeRecord.port;
         }
       }
-    } catch (e) {
-      // ignore and fallback
     }
+  } catch (e) {
+    // ignore and fallback
   }
 
   if (!portVal) {
@@ -131,10 +132,12 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
 
     return JSON.stringify(data || { success: true });
   } catch (err) {
+    const isEsp32 = !devType || devType.includes('esp32');
+    const deviceName = isEsp32 ? 'ESP32' : 'device';
     if (action === 'send_message') {
-      return `Error: Failed to communicate with ESP32 at ${ip}. The /message endpoint is unreachable. Please verify if the device is online and try again with the updated/corrected IP address. (Details: ${err.message})`;
+      return `Error: Failed to communicate with ${deviceName} at ${ip}. The /message endpoint is unreachable. Please verify if the device is online and try again with the updated/corrected IP address. (Details: ${err.message})`;
     }
-    return `Failed to communicate with ESP32 at ${ip}: ${err.message}`;
+    return `Failed to communicate with ${deviceName} at ${ip}: ${err.message}`;
   }
 }
 

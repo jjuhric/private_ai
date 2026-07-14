@@ -182,6 +182,7 @@ DEFAULT_TOOL_REGISTRY_LOCAL_PATH="./tool_registry"
 DEFAULT_USER_NAME=""
 DEFAULT_USER_ZIPCODE=""
 DEFAULT_WEATHER_KEY=""
+DEFAULT_IS_HOST="false"
 
 if [ -f ".env" ]; then
     DEFAULT_PORT=$(grep -E "^PORT=" .env | cut -d'=' -f2 || echo "3000")
@@ -199,6 +200,7 @@ if [ -f ".env" ]; then
     DEFAULT_MQTT_PASSWORD=$(grep -E "^MQTT_PASSWORD=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_TOOL_REGISTRY_REPO=$(grep -E "^TOOL_REGISTRY_REPO=" .env | cut -d'=' -f2 || echo "https://github.com/jjuhric/private_ai_tools.git")
     DEFAULT_TOOL_REGISTRY_LOCAL_PATH=$(grep -E "^TOOL_REGISTRY_LOCAL_PATH=" .env | cut -d'=' -f2 || echo "./tool_registry")
+    DEFAULT_IS_HOST=$(grep -E "^IS_HOST=" .env | cut -d'=' -f2 || echo "true")
     
     # Try to load existing settings from database using read_settings.js helper (to override .env defaults if DB is populated)
     if [ -d "backend/node_modules" ]; then
@@ -228,6 +230,7 @@ fi
 if [ "$NON_INTERACTIVE" = true ]; then
     log "Running in non-interactive mode. Utilizing existing configuration defaults."
     DEVICE_TYPE="$DEFAULT_DEVICE_TYPE"
+    IS_HOST="$DEFAULT_IS_HOST"
     if [ "$DEFAULT_IS_MAIN_HOST" = "y" ]; then
         IS_MAIN_HOST="1"
     else
@@ -250,8 +253,13 @@ else
     echo "  Configuration Settings"
     echo "===================================================="
 
-    read -p "Is this machine the host? (y/n) [y]: " IS_HOST_YN
-    IS_HOST_YN=${IS_HOST_YN:-y}
+    if [ "$DEFAULT_IS_HOST" = "false" ]; then
+        DEFAULT_IS_HOST_YN="n"
+    else
+        DEFAULT_IS_HOST_YN="y"
+    fi
+    read -p "Is this machine the host? (y/n) [${DEFAULT_IS_HOST_YN}]: " IS_HOST_YN
+    IS_HOST_YN=${IS_HOST_YN:-$DEFAULT_IS_HOST_YN}
     if [[ "$IS_HOST_YN" =~ ^[Yy]$ ]]; then
         IS_HOST="true"
     else
