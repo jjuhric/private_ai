@@ -1,5 +1,6 @@
 const { getDb } = require('../db');
 const logger = require('../utils/logger');
+const { decrypt } = require('../utils/crypto');
 const { runWorkerAgent } = require('../utils/agents');
 
 let isRunning = false;
@@ -51,10 +52,10 @@ async function checkAndRunResearch() {
       provider: dbSettings.provider,
       modelName: dbSettings.preferred_online_model || dbSettings.model_name,
       onlineProvider: dbSettings.online_provider,
-      onlineKey: dbSettings.online_key,
-      geminiKey: dbSettings.gemini_key,
+      onlineKey: decrypt(dbSettings.online_key),
+      geminiKey: decrypt(dbSettings.gemini_key),
       localBaseUrl: dbSettings.local_url,
-      localApiKey: dbSettings.local_key,
+      localApiKey: decrypt(dbSettings.local_key),
       localApiStyle: dbSettings.local_api_style,
       onlineUrl: dbSettings.online_url,
       workingDirectory: dbSettings.working_directory,

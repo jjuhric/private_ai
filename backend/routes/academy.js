@@ -5,6 +5,8 @@ const { getDb } = require('../db');
 const { runWorkerAgent } = require('../utils/agents');
 const logger = require('../utils/logger');
 
+const { decrypt } = require('../utils/crypto');
+
 // Start a new lesson
 router.post('/start', authenticateToken, async (req, res) => {
   const { language, topic } = req.body;
@@ -25,10 +27,10 @@ router.post('/start', authenticateToken, async (req, res) => {
       provider: dbSettings.provider,
       modelName: dbSettings.preferred_online_model || dbSettings.model_name,
       onlineProvider: dbSettings.online_provider,
-      onlineKey: dbSettings.online_key,
-      geminiKey: dbSettings.gemini_key,
+      onlineKey: decrypt(dbSettings.online_key),
+      geminiKey: decrypt(dbSettings.gemini_key),
       localBaseUrl: dbSettings.local_url,
-      localApiKey: dbSettings.local_key,
+      localApiKey: decrypt(dbSettings.local_key),
       localApiStyle: dbSettings.local_api_style,
       onlineUrl: dbSettings.online_url,
       workingDirectory: dbSettings.working_directory,
@@ -188,10 +190,10 @@ router.post('/lessons/:id/submit', authenticateToken, async (req, res) => {
       provider: dbSettings.provider,
       modelName: dbSettings.preferred_online_model || dbSettings.model_name,
       onlineProvider: dbSettings.online_provider,
-      onlineKey: dbSettings.online_key,
-      geminiKey: dbSettings.gemini_key,
+      onlineKey: decrypt(dbSettings.online_key),
+      geminiKey: decrypt(dbSettings.gemini_key),
       localBaseUrl: dbSettings.local_url,
-      localApiKey: dbSettings.local_key,
+      localApiKey: decrypt(dbSettings.local_key),
       localApiStyle: dbSettings.local_api_style,
       onlineUrl: dbSettings.online_url,
       workingDirectory: dbSettings.working_directory,
@@ -307,10 +309,10 @@ router.post('/lessons/:id/chat', authenticateToken, async (req, res) => {
       provider: dbSettings.provider,
       modelName: dbSettings.preferred_online_model || dbSettings.model_name,
       onlineProvider: dbSettings.online_provider,
-      onlineKey: dbSettings.online_key,
-      geminiKey: dbSettings.gemini_key,
+      onlineKey: decrypt(dbSettings.online_key),
+      geminiKey: decrypt(dbSettings.gemini_key),
       localBaseUrl: dbSettings.local_url,
-      localApiKey: dbSettings.local_key,
+      localApiKey: decrypt(dbSettings.local_key),
       localApiStyle: dbSettings.local_api_style,
       onlineUrl: dbSettings.online_url,
       workingDirectory: dbSettings.working_directory,
