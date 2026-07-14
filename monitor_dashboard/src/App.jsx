@@ -413,6 +413,11 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
               if (data.toolCall && prev.some(log => log.id === data.toolCall.id)) return prev;
               return [...prev, data.toolCall];
             });
+          } else if (data && data.type === 'node_status_change') {
+            setNodeHealthMap(prev => ({
+              ...prev,
+              [data.nodeId]: { status: data.status }
+            }));
           } else if (data && (data.type === 'error' || data.type === 'warning')) {
             setPopupAlert({
               type: data.type,

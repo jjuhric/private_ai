@@ -94,6 +94,9 @@ getDb().then(async (db) => {
     if (process.env.NODE_ENV !== 'test') {
       const safeUpdateService = require('./services/safe_update_service');
       safeUpdateService.startDaemon();
+
+      const nodeHealthService = require('./services/node_health_service');
+      nodeHealthService.startDaemon();
     }
   } catch (err) {
     logger.error('Error starting daily memory maintenance check:', err);
