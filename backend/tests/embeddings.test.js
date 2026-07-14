@@ -8,7 +8,7 @@ jest.mock('@xenova/transformers', () => {
   };
 });
 
-// Mock vectordb
+// Mock @lancedb/lancedb
 const mockAdd = jest.fn();
 const mockDelete = jest.fn();
 const mockExecute = jest.fn().mockResolvedValue([
@@ -37,7 +37,7 @@ const mockDb = {
   createTable: jest.fn().mockResolvedValue(mockTable)
 };
 
-jest.mock('vectordb', () => {
+jest.mock('@lancedb/lancedb', () => {
   return {
     connect: jest.fn().mockResolvedValue(mockDb)
   };

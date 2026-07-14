@@ -82,7 +82,7 @@ async function handleMemoryTool(db, userId, action, params = {}) {
 
             // Update in LanceDB: delete old text and store new
             try {
-              const lance = require('vectordb');
+              const lance = require('@lancedb/lancedb');
               const path = require('path');
               const dbPath = path.resolve(__dirname, '../../data/vector-store');
               const lConnection = await lance.connect(dbPath);

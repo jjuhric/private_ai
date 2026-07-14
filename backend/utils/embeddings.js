@@ -225,7 +225,7 @@ async function getLanceDb() {
     };
   }
   if (!lancedbConnection) {
-    const lance = require('vectordb');
+    const lance = require('@lancedb/lancedb');
     if (!fs.existsSync(vectorStorePath)) {
       fs.mkdirSync(vectorStorePath, { recursive: true });
     }

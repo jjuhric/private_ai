@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar, ChevronLeft, ChevronRight, Trophy, Newspaper } from 'lucide-react';
 import TokenCountView from './TokenCountView';
+import RpiTerminalModal from './RpiTerminalModal';
 import LMStudioLogsView from './LMStudioLogsView';
 import CustomAlertModal from './CustomAlertModal';
 
@@ -178,6 +179,8 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [selectedGuideDevice, setSelectedGuideDevice] = useState('rpi-5-8gb');
   const [registeringNode, setRegisteringNode] = useState(null);
+  const [selectedTerminalNode, setSelectedTerminalNode] = useState(null);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   const checkScrollArrows = () => {
     const el = tabScrollRef.current;
@@ -369,7 +372,16 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       }
     }
     if (activeSubTab === 'nodes') {
-      fetchNodes();
+      const lastScanTime = localStorage.getItem('last_nodes_scan_time');
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      const needsScan = !lastScanTime || (Date.now() - parseInt(lastScanTime, 10) > oneDayMs);
+      
+      if (needsScan) {
+        fetchNodes(true);
+        localStorage.setItem('last_nodes_scan_time', Date.now().toString());
+      } else {
+        fetchNodes(false);
+      }
     }
   }, [activeSubTab]);
 
@@ -432,11 +444,27 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
 
 
 
-  const fetchNodes = async () => {
+  const fetchNodes = async (runScan = false) => {
+    if (runScan) setScanning(true);
     try {
-      const res = await fetch('/api/nodes', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) setNodes(await res.json());
-    } catch (err) { console.error('Failed to fetch nodes:', err); }
+      let res;
+      if (runScan) {
+        res = await fetch('/api/nodes/sync', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } else {
+        res = await fetch('/api/nodes', { headers: { 'Authorization': `Bearer ${token}` } });
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setNodes(Array.isArray(data) ? data : (data.nodes || []));
+      }
+    } catch (err) {
+      console.error('Failed to fetch nodes:', err);
+    } finally {
+      if (runScan) setScanning(false);
+    }
   };
 
   const handleAddNode = async (e) => {
@@ -1173,119 +1201,181 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       )}
 
       {activeSubTab === 'nodes' && (
-        !import.meta.env.DEV ? (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            justifyContent: 'flex-start', 
-            alignItems: 'center', 
-            height: '100%', 
-            width: '100%' 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Active Field Node Topology SVG Graph */}
+          <div style={{
+            background: 'var(--bg-glass)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '16px',
+            padding: '20px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
           }}>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              padding: '40px 24px', 
-              background: 'var(--bg-glass)', 
-              border: '1px solid var(--border-glass)', 
-              borderRadius: '24px', 
-              boxShadow: '0 8px 32px 0 rgba(139, 92, 246, 0.15)',
-              textAlign: 'center',
-              gap: '24px',
-              width: '100%',
-              maxWidth: '800px',
-              marginTop: '24px'
-            }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Network size={20} style={{ color: 'var(--accent-primary)' }} />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Active Field Node Topology
+                </h3>
+              </div>
+              <button 
+                onClick={() => { fetchNodes(true); localStorage.setItem('last_nodes_scan_time', Date.now().toString()); }} 
+                disabled={scanning}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.85rem'
+                }}
+              >
+                <RefreshCw size={14} className={scanning ? 'spin' : ''} style={{ animation: scanning ? 'spin 1.5s linear infinite' : 'none' }} />
+                <span>{scanning ? 'Scanning...' : 'Refresh'}</span>
+              </button>
+            </div>
+
             <div style={{
+              width: '100%',
+              height: '320px',
+              background: 'rgba(15, 23, 42, 0.4)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.05)',
+              overflow: 'hidden',
               position: 'relative',
-              width: '120px',
-              height: '120px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0) 70%)',
-              borderRadius: '50%'
+              justifyContent: 'center'
             }}>
-              {/* Outer pulsing ring */}
-              <div style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                border: '2px solid var(--accent-primary)',
-                borderRadius: '50%',
-                animation: 'pulse-ring 2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite',
-                opacity: 0.7
-              }} />
-              <Server size={48} style={{ color: 'var(--accent-primary)', filter: 'drop-shadow(0 0 10px rgba(139, 92, 246, 0.6))', animation: 'bounce-light 2s ease-in-out infinite' }} />
-            </div>
+              <svg width="100%" height="100%" viewBox="0 0 800 320" style={{ pointerEvents: 'auto' }}>
+                <defs>
+                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+                  </pattern>
+                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
 
-            <div style={{ maxWidth: '600px' }}>
-              <h2 style={{ 
-                fontSize: '2.2rem', 
-                fontWeight: 800, 
-                marginBottom: '12px', 
-                background: 'linear-gradient(135deg, #fff 30%, var(--accent-secondary) 100%)', 
-                WebkitBackgroundClip: 'text', 
-                WebkitTextFillColor: 'transparent' 
-              }}>
-                Field Node Cluster
-              </h2>
-              <h4 style={{ 
-                color: 'var(--accent-secondary)', 
-                fontSize: '0.9rem', 
-                fontWeight: 600, 
-                textTransform: 'uppercase', 
-                letterSpacing: '2px',
-                marginBottom: '20px'
-              }}>
-                [ System Mesh Under Construction ]
-              </h4>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, margin: 0 }}>
-                We are actively integrating distributed edge-node orchestration. Secure connection interfaces via Tailscale and Cloudflare Tunnel protocols are being configured. Real-time telemetry monitoring for RPi/ESP32 devices will be online soon.
-              </p>
-            </div>
+                {/* Radar Wave Pulse */}
+                {(nodes.filter(n => {
+                  const health = nodeHealthMap[n.id];
+                  const isOnline = health ? health.status === 'online' : n.is_online;
+                  return (isOnline === 1 || isOnline === true || isOnline === '1') && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1');
+                }).length === 0 || scanning) && (
+                  <>
+                    <circle cx="400" cy="160" r="30" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity="0.6">
+                      <animate attributeName="r" values="30;160" dur="4s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.6;0" dur="4s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="400" cy="160" r="30" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity="0.3">
+                      <animate attributeName="r" values="30;160" dur="4s" begin="2s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.3;0" dur="4s" begin="2s" repeatCount="indefinite" />
+                    </circle>
+                  </>
+                )}
 
-            {/* Glowing progress line */}
-            <div style={{ width: '80%', maxWidth: '400px', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden', position: 'relative' }}>
-              <div style={{
-                position: 'absolute',
-                height: '100%',
-                width: '60%',
-                background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))',
-                borderRadius: '3px',
-                boxShadow: '0 0 8px var(--accent-primary)',
-                animation: 'loading-slide 2s ease-in-out infinite'
-              }} />
-            </div>
+                {/* Link lines */}
+                {nodes.filter(n => {
+                  const health = nodeHealthMap[n.id];
+                  const isOnline = health ? health.status === 'online' : n.is_online;
+                  return (isOnline === 1 || isOnline === true || isOnline === '1') && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1');
+                }).map((node, i, arr) => {
+                  const angle = (i * 2 * Math.PI) / arr.length;
+                  const radius = 120;
+                  const x = 400 + radius * Math.cos(angle);
+                  const y = 160 + radius * Math.sin(angle);
 
-            <style>{`
-              @keyframes pulse-ring {
-                0% { transform: scale(0.6); opacity: 0; }
-                50% { opacity: 0.5; }
-                100% { transform: scale(1.2); opacity: 0; }
-              }
-              @keyframes loading-slide {
-                0% { left: -60%; }
-                50% { left: 100%; }
-                100% { left: -60%; }
-              }
-              @keyframes bounce-light {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-8px); }
-              }
-            `}</style>
+                  return (
+                    <g key={`link-${node.id || node.ip_address}`}>
+                      <line 
+                        x1="400" 
+                        y1="160" 
+                        x2={x} 
+                        y2={y} 
+                        stroke="#22c55e" 
+                        strokeWidth="2.5" 
+                        strokeDasharray="6,4" 
+                        opacity="0.8"
+                        filter="url(#glow)"
+                      />
+                      <circle r="4.5" fill="#4ade80">
+                        <animateMotion dur="2.5s" repeatCount="indefinite" path={`M 400 160 L ${x} ${y}`} />
+                      </circle>
+                    </g>
+                  );
+                })}
+
+                {/* Main Host */}
+                <g transform="translate(400, 160)">
+                  <circle r="34" fill="#1e1b4b" stroke="var(--accent-primary)" strokeWidth="3" filter="url(#glow)" />
+                  <text y="5" textAnchor="middle" fill="#fff" fontSize="18" fontWeight="bold">💻</text>
+                  <text y="52" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="600">Main Host</text>
+                  <text y="66" textAnchor="middle" fill="var(--text-secondary)" fontSize="10">127.0.0.1</text>
+                </g>
+
+                {/* Orbiting Discovered Active Nodes */}
+                {nodes.filter(n => {
+                  const health = nodeHealthMap[n.id];
+                  const isOnline = health ? health.status === 'online' : n.is_online;
+                  return (isOnline === 1 || isOnline === true || isOnline === '1') && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1');
+                }).map((node, i, arr) => {
+                  const angle = (i * 2 * Math.PI) / arr.length;
+                  const radius = 120;
+                  const x = 400 + radius * Math.cos(angle);
+                  const y = 160 + radius * Math.sin(angle);
+
+                  let deviceSymbol = '📱';
+                  const devType = node.device_type ? node.device_type.toLowerCase() : '';
+                  if (devType.includes('rpi')) deviceSymbol = '🍓';
+                  else if (devType.includes('esp32')) deviceSymbol = '🔌';
+                  else if (devType.includes('assistant')) deviceSymbol = '🔊';
+
+                  const isRpiOrLinux = devType.includes('rpi') || devType.includes('linux');
+
+                  return (
+                    <g 
+                      key={`node-${node.id || node.ip_address}`} 
+                      transform={`translate(${x}, ${y})`}
+                      style={{ cursor: isRpiOrLinux ? 'pointer' : 'default' }}
+                      onClick={() => {
+                        if (isRpiOrLinux) {
+                          setSelectedTerminalNode(node);
+                          setIsTerminalOpen(true);
+                        }
+                      }}
+                    >
+                      <circle r="24" fill="#0f172a" stroke="#22c55e" strokeWidth="2.5" filter="url(#glow)" />
+                      <text y="5" textAnchor="middle" fill="#fff" fontSize="14">{deviceSymbol}</text>
+                      <text y="38" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="600">
+                        {node.node_name}
+                      </text>
+                      <text y="50" textAnchor="middle" fill="#22c55e" fontSize="9.5" fontWeight="bold">
+                        {node.ip_address}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
             </div>
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="memory-card" style={{ padding: '20px' }}>
+
+          {/* Table of Nodes and Management Actions */}
+          <div className="memory-card" style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ fontSize: '1.1rem', color: '#fff', margin: 0 }}>Distributed Field Nodes</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button className="btn btn-secondary" onClick={() => setShowInstallGuide(!showInstallGuide)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
                   <BookOpen size={14} /> Install Guide
+                </button>
+                <button className="btn btn-secondary" onClick={() => { fetchNodes(true); localStorage.setItem('last_nodes_scan_time', Date.now().toString()); }} disabled={scanning} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
+                  <RefreshCw size={14} className={scanning ? 'spin' : ''} style={{ animation: scanning ? 'spin 1.5s linear infinite' : 'none' }} /> {scanning ? 'Refreshing...' : 'Refresh'}
                 </button>
                 <button className="btn btn-secondary" onClick={handleScanNodes} disabled={scanning} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}>
                   <Search size={14} /> {scanning ? 'Scanning...' : 'Scan LAN'}
@@ -1499,9 +1589,8 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                 No remote nodes configured. Add an ESP32 or Raspberry Pi to distribute tasks.
               </div>
             )}
-            </div>
           </div>
-        )
+        </div>
       )}
 
       {activeSubTab === 'host' && (
@@ -1684,6 +1773,14 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
           </div>
         </div>
       )}
+
+      <RpiTerminalModal
+        isOpen={isTerminalOpen}
+        onClose={() => { setIsTerminalOpen(false); setSelectedTerminalNode(null); }}
+        node={selectedTerminalNode}
+        token={token}
+        onNodeUpdated={fetchNodes}
+      />
 
       <CustomAlertModal
         alert={popupAlert}

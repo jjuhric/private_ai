@@ -1,486 +1,120 @@
 import React from 'react';
-import RpiTerminalModal from './RpiTerminalModal';
-import { 
-  Network, Cpu, Server, BookOpen, Calendar, Search, 
-  FileText, GitBranch, Shield, Wrench, UserPlus, 
-  Layers, Cloud, RefreshCw, Trophy, Newspaper, ExternalLink 
-} from 'lucide-react';
+import { ExternalLink, Monitor, Network } from 'lucide-react';
 
-const allAgents = [
-  {
-    type: 'communication_specialist',
-    name: 'Communication Specialist',
-    icon: RefreshCw,
-    desc: 'Primary contact for the user. Bubbly, warm, and welcomes the user. Translates requests into project ideas and formats final reports beautifully.'
-  },
-  {
-    type: 'supervisor',
-    name: 'Supervisor Agent',
-    icon: Network,
-    desc: 'Master orchestrator. Reads the full agent capability registry and routes every task to the best-suited specialist agent.'
-  },
-  {
-    type: 'weather',
-    name: 'Weather Expert',
-    icon: Cloud,
-    desc: 'Fetches current conditions, hourly forecasts, and daily weather data using your zipcode.'
-  },
-  {
-    type: 'system',
-    name: 'System Agent',
-    icon: Cpu,
-    desc: 'Queries local host: CPU, RAM, disk, temperature, processes, services, security scans, and scripting on the current machine only.'
-  },
-  {
-    type: 'node',
-    name: 'Node Agent',
-    icon: Server,
-    desc: 'Routes commands and queries to remote RPi or ESP32 field nodes. Cannot query Main Host from a remote context.'
-  },
-  {
-    type: 'memory',
-    name: 'Memory Agent',
-    icon: BookOpen,
-    desc: 'Stores, recalls, and forgets long-term and short-term memories about the user.'
-  },
-  {
-    type: 'calendar',
-    name: 'Calendar Agent',
-    icon: Calendar,
-    desc: 'Manages calendar events: listing, adding, or deleting scheduled events.'
-  },
-  {
-    type: 'crawler',
-    name: 'Web Searcher',
-    icon: Search,
-    desc: 'Performs live web searches and Google News lookups, aligning results with stored user interests.'
-  },
-  {
-    type: 'rag',
-    name: 'Document Vault Agent',
-    icon: FileText,
-    desc: 'Performs semantic vector search over uploaded private documents using cosine similarity.'
-  },
-  {
-    type: 'github',
-    name: 'GitHub Agent',
-    icon: GitBranch,
-    desc: 'Performs GitHub operations: branching, committing, PRs. Cannot push to main/master or create repos.'
-  },
-  {
-    type: 'qa',
-    name: 'QA Engineer',
-    icon: Shield,
-    desc: 'Reviews code for bugs, vulnerabilities, and test coverage. Issues APPROVE or REJECT verdicts.'
-  },
-  {
-    type: 'tool_creator',
-    name: 'Tool Creation Agent',
-    icon: Wrench,
-    desc: 'Coordinates dynamic tool creation: designs plan, requests HITL approval, then implements and deploys.'
-  },
-  {
-    type: 'agent_creator',
-    name: 'Agent Creation Agent',
-    icon: UserPlus,
-    desc: 'Dynamically designs and integrates new specialist agents into the multi-agent loop.'
-  },
-  {
-    type: 'developer',
-    name: 'Developer Agent',
-    icon: Layers,
-    desc: 'Orchestrates software development pipelines, manages workspace files, writes source code, and deploys new custom tools.'
-  },
-  {
-    type: 'sports',
-    name: 'Sports Agent',
-    icon: Trophy,
-    desc: 'Gathers and tracks sports news, scores, highlights, or team articles from Bleacher Report, ensuring unseen stories are shown first.'
-  },
-  {
-    type: 'news',
-    name: 'News Agent',
-    icon: Newspaper,
-    desc: 'Gathers general news briefs from TMZ and performs randomized searches on user preference topics, evaluating accuracy results.'
-  }
-];
-
-const matchesAgent = (agentType, activeAgentName) => {
-  if (!activeAgentName) return false;
-  const active = activeAgentName.toLowerCase();
-  const type = agentType.toLowerCase();
-  
-  if (type === active) return true;
-  if (active === 'weather_expert' && type === 'weather') return true;
-  if (active === 'system_specialist' && type === 'system') return true;
-  if (active === 'node_agent' && type === 'node') return true;
-  if (active === 'memory_agent' && type === 'memory') return true;
-  if (active === 'calendar_handler' && type === 'calendar') return true;
-  if (active === 'web_searcher' && type === 'crawler') return true;
-  if (active === 'document_vault' && type === 'rag') return true;
-  if (active === 'github_agent' && type === 'github') return true;
-  if (active === 'qa_engineer' && type === 'qa') return true;
-  if (active === 'tool_creator_agent' && type === 'tool_creator') return true;
-  if (active === 'agent_creator_agent' && type === 'agent_creator') return true;
-  if (active === 'developer_agent' && type === 'developer') return true;
-  if (active === 'sports_agent' && type === 'sports') return true;
-  if (active === 'news_agent' && type === 'news') return true;
-
-  return false;
-};
-
-export default function AgentDashboard({ activeAgent }) {
+export default function AgentDashboard() {
   const token = (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.getItem === 'function')
     ? (localStorage.getItem('token') || '')
     : '';
   const monitorDashboardUrl = `http://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/monitor/?token=${encodeURIComponent(token)}`;
   const displayAddress = `${window.location.host}/monitor`;
 
-  const [nodes, setNodes] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
-  const [selectedTerminalNode, setSelectedTerminalNode] = React.useState(null);
-  const [isTerminalOpen, setIsTerminalOpen] = React.useState(false);
-
-  const fetchNodes = async (runScan = false) => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      let res;
-      if (runScan) {
-        res = await fetch('/api/nodes/sync', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } else {
-        res = await fetch('/api/nodes', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      }
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : (data.nodes || []);
-        const activeList = list.filter(n => n.is_online === 1 && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1'));
-        setNodes(activeList);
-      }
-    } catch (e) {
-      console.error('Failed to load topology:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    fetchNodes(false);
-  }, [token]);
-
-  const sortedAgents = [...allAgents].sort((a, b) => {
-    const aActive = matchesAgent(a.type, activeAgent);
-    const bActive = matchesAgent(b.type, activeAgent);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    return 0;
-  });
-
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', background: 'var(--bg-primary)' }}>
-      {/* Network Topology Graph */}
+    <div style={{
+      padding: '40px 24px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      background: 'var(--bg-primary)',
+      overflowY: 'auto'
+    }}>
       <div style={{
+        maxWidth: '640px',
+        width: '100%',
         background: 'var(--bg-glass)',
         border: '1px solid var(--border-glass)',
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '24px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        borderRadius: '24px',
+        padding: '40px 32px',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.25)',
+        backdropFilter: 'blur(16px)',
+        textAlign: 'center',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px'
+        alignItems: 'center',
+        gap: '24px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Network size={20} style={{ color: 'var(--accent-primary)' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-              Active Field Node Topology
-            </h3>
-          </div>
-          <button 
-            onClick={() => fetchNodes(true)} 
-            disabled={loading}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.85rem'
-            }}
-          >
-            <RefreshCw size={14} className={loading ? 'spin-anim' : ''} style={{ animation: loading ? 'spin 1.5s linear infinite' : 'none' }} />
-            <span>{loading ? 'Scanning...' : 'Refresh'}</span>
-          </button>
-        </div>
-
+        {/* Pulsing visual element */}
         <div style={{
-          width: '100%',
-          height: '320px',
-          background: 'rgba(15, 23, 42, 0.4)',
-          borderRadius: '12px',
-          border: '1px solid rgba(255,255,255,0.05)',
-          overflow: 'hidden',
           position: 'relative',
+          width: '100px',
+          height: '100px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0) 70%)',
+          borderRadius: '50%'
         }}>
-          <svg width="100%" height="100%" viewBox="0 0 800 320" style={{ pointerEvents: 'auto' }}>
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
-              </pattern>
-              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-
-            {/* Radar Wave Pulse */}
-            {(nodes.length === 0 || loading) && (
-              <>
-                <circle cx="400" cy="160" r="30" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity="0.6">
-                  <animate attributeName="r" values="30;160" dur="4s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.6;0" dur="4s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="400" cy="160" r="30" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity="0.3">
-                  <animate attributeName="r" values="30;160" dur="4s" begin="2s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.3;0" dur="4s" begin="2s" repeatCount="indefinite" />
-                </circle>
-              </>
-            )}
-
-            {/* Link lines */}
-            {nodes.map((node, i) => {
-              const angle = (i * 2 * Math.PI) / nodes.length;
-              const radius = 120;
-              const x = 400 + radius * Math.cos(angle);
-              const y = 160 + radius * Math.sin(angle);
-
-              return (
-                <g key={`link-${node.id || node.ip_address}`}>
-                  <line 
-                    x1="400" 
-                    y1="160" 
-                    x2={x} 
-                    y2={y} 
-                    stroke="#22c55e" 
-                    strokeWidth="2.5" 
-                    strokeDasharray="6,4" 
-                    opacity="0.8"
-                    filter="url(#glow)"
-                  />
-                  <circle r="4.5" fill="#4ade80">
-                    <animateMotion dur="2.5s" repeatCount="indefinite" path={`M 400 160 L ${x} ${y}`} />
-                  </circle>
-                </g>
-              );
-            })}
-
-            {/* Main Host */}
-            <g transform="translate(400, 160)">
-              <circle r="34" fill="#1e1b4b" stroke="var(--accent-primary)" strokeWidth="3" filter="url(#glow)" />
-              <text y="5" textAnchor="middle" fill="#fff" fontSize="18" fontWeight="bold">💻</text>
-              <text y="52" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="600">Main Host</text>
-              <text y="66" textAnchor="middle" fill="var(--text-secondary)" fontSize="10">127.0.0.1</text>
-            </g>
-
-            {/* Orbiting Discovered Active Nodes */}
-            {nodes.map((node, i) => {
-              const angle = (i * 2 * Math.PI) / nodes.length;
-              const radius = 120;
-              const x = 400 + radius * Math.cos(angle);
-              const y = 160 + radius * Math.sin(angle);
-
-              let deviceSymbol = '📱';
-              const devType = node.device_type ? node.device_type.toLowerCase() : '';
-              if (devType.includes('rpi')) deviceSymbol = '🍓';
-              else if (devType.includes('esp32')) deviceSymbol = '🔌';
-              else if (devType.includes('assistant')) deviceSymbol = '🔊';
-
-              const isRpiOrLinux = devType.includes('rpi') || devType.includes('linux');
-
-              return (
-                <g 
-                  key={`node-${node.id || node.ip_address}`} 
-                  transform={`translate(${x}, ${y})`}
-                  style={{ cursor: isRpiOrLinux ? 'pointer' : 'default' }}
-                  onClick={() => {
-                    if (isRpiOrLinux) {
-                      setSelectedTerminalNode(node);
-                      setIsTerminalOpen(true);
-                    }
-                  }}
-                >
-                  <circle r="24" fill="#0f172a" stroke="#22c55e" strokeWidth="2.5" filter="url(#glow)" />
-                  <text y="5" textAnchor="middle" fill="#fff" fontSize="14">{deviceSymbol}</text>
-                  <text y="38" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="600">
-                    {node.node_name}
-                  </text>
-                  <text y="50" textAnchor="middle" fill="#22c55e" fontSize="9.5" fontWeight="bold">
-                    {node.ip_address}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
+          <div style={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            border: '2px solid var(--accent-primary)',
+            borderRadius: '50%',
+            animation: 'pulse-ring 2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite',
+            opacity: 0.7
+          }} />
+          <Monitor size={44} style={{ color: 'var(--accent-primary)', filter: 'drop-shadow(0 0 10px rgba(139, 92, 246, 0.6))' }} />
         </div>
-      </div>
 
-      {/* Header section with title and Standalone Monitor button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0, background: 'linear-gradient(135deg, var(--text-primary) 30%, var(--accent-secondary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Agent Dashboard
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px', margin: 0 }}>
-            Real-time status and telemetry of all specialized AI agents in the network.
+          <h2 style={{
+            fontSize: '1.8rem',
+            fontWeight: 800,
+            marginBottom: '12px',
+            color: 'var(--text-primary)',
+            background: 'linear-gradient(135deg, #fff 30%, var(--accent-secondary) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            Standalone Agent Monitor
+          </h2>
+          <p style={{
+            color: 'var(--text-secondary)',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            margin: '0 auto',
+            maxWidth: '500px'
+          }}>
+            The Live Agent & Concurrency Dashboard has been decoupled into a lightweight standalone monitor application. You can launch it on a dedicated display or secondary monitor for real-time edge telemetry and agent pipeline visibility.
           </p>
         </div>
-        <a 
-          href={monitorDashboardUrl} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="btn btn-primary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.9rem', textDecoration: 'none', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', borderRadius: '8px', color: '#fff', fontWeight: 600, boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)' }}
-        >
-          <ExternalLink size={16} /> Launch Standalone Monitor
-        </a>
-      </div>
 
-      {/* Grid container for agent cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        {sortedAgents.map((agent) => {
-          const isActive = matchesAgent(agent.type, activeAgent);
-          const IconComponent = agent.icon;
-          return (
-            <div 
-              key={agent.type} 
-              style={{
-                padding: '20px',
-                background: isActive ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-glass)',
-                border: isActive ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-glass)',
-                borderRadius: '16px',
-                boxShadow: isActive ? '0 0 20px rgba(139, 92, 246, 0.4)' : '0 4px 6px rgba(0,0,0,0.1)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Highlight active agent tag */}
-              {isActive && (
-                <div style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'var(--accent-primary)',
-                  color: '#fff',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)'
-                }}>
-                  <span style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    background: '#fff',
-                    display: 'inline-block',
-                    animation: 'pulse 1.5s infinite'
-                  }} />
-                  ACTIVE
-                </div>
-              )}
+        <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
+          <a
+            href={monitorDashboardUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 28px',
+              fontSize: '0.95rem',
+              textDecoration: 'none',
+              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+              borderRadius: '12px',
+              color: '#fff',
+              fontWeight: 600,
+              boxShadow: '0 4px 20px rgba(139, 92, 246, 0.35)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+          >
+            <ExternalLink size={18} /> Launch Standalone Monitor
+          </a>
+        </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  background: isActive ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: isActive ? '#fff' : 'var(--text-secondary)',
-                  boxShadow: isActive ? '0 0 10px rgba(139, 92, 246, 0.5)' : 'none'
-                }}>
-                  <IconComponent size={20} />
-                </div>
-                <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                  {agent.name}
-                </div>
-              </div>
-
-              <div style={{
-                fontSize: '0.82rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.4,
-                flexGrow: 1
-              }}>
-                {agent.desc}
-              </div>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: '0.75rem',
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
-                fontWeight: isActive ? 600 : 400,
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-                paddingTop: '10px',
-                marginTop: '4px'
-              }}>
-                <span>Status:</span>
-                <span>{isActive ? 'Processing...' : 'Idle'}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Standalone Agent Monitor Card for compatibility & Vitest tests */}
-      <div className="memory-card" style={{ padding: '24px', background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', borderRadius: '16px', marginTop: 'auto' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
-          Standalone Agent Monitor
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>
-          The Live Agent & Concurrency Dashboard has been decoupled into a lightweight standalone monitor application. You can launch it on a dedicated display or secondary monitor for real-time edge telemetry and agent pipeline visibility.
-        </p>
-        <div style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          Running on: <code style={{ color: 'var(--accent-secondary)' }}>{displayAddress}</code>
+        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          Running on: <code style={{ color: 'var(--accent-secondary)', padding: '2px 6px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>{displayAddress}</code>
         </div>
       </div>
-      
-      <RpiTerminalModal
-        isOpen={isTerminalOpen}
-        onClose={() => { setIsTerminalOpen(false); setSelectedTerminalNode(null); }}
-        node={selectedTerminalNode}
-        token={token}
-        onNodeUpdated={fetchNodes}
-      />
 
       <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.3); opacity: 0.5; }
-          100% { transform: scale(1); opacity: 1; }
+        @keyframes pulse-ring {
+          0% { transform: scale(0.65); opacity: 0; }
+          50% { opacity: 0.5; }
+          100% { transform: scale(1.15); opacity: 0; }
         }
       `}</style>
     </div>
