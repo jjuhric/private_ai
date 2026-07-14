@@ -43,11 +43,6 @@ describe('Academy API', () => {
   test('POST /api/academy/start starts a new lesson', async () => {
     mockDb.get.mockResolvedValueOnce({ provider: 'gemini', model_name: 'test-model' }); // user settings
     mockDb.run.mockResolvedValueOnce({ lastID: 10 }); // insert lesson
-    runWorkerAgent.mockResolvedValueOnce(JSON.stringify({
-      curriculum: [
-        { title: 'Rust Setup', explanation: 'Setting up Rust compiler...', code_example: 'fn main() {}', exercise: 'Run rustc', test_instructions: 'Print Hello' }
-      ]
-    }));
 
     const res = await request(app).post('/api/academy/start').send({
       language: 'rust',
@@ -57,7 +52,8 @@ describe('Academy API', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.lessonId).toBe(10);
-    expect(res.body.curriculum).toHaveLength(1);
+    expect(res.body.status).toBe('generating');
+    expect(res.body.curriculum).toHaveLength(0);
     expect(mockDb.run).toHaveBeenCalled();
   });
 
@@ -168,5 +164,16 @@ describe('Academy API', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.reply).toBe('Ownership determines memory safety in Rust.');
     expect(res.body.chatHistory).toHaveLength(2);
+  });
+
+  test('DELETE /api/academy/lessons/:id deletes a lesson', async () => {
+    mockDb.run.mockResolvedValueOnce({});
+    const res = await request(app).delete('/api/academy/lessons/1');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(mockDb.run).toHaveBeenCalledWith(
+      'DELETE FROM academy_lessons WHERE id = ? AND user_id = ?',
+      ['1', 1]
+    );
   });
 });

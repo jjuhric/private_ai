@@ -20,7 +20,7 @@ export default function AcademyPane({ token }) {
   const [sendingChat, setSendingChat] = useState(false);
   const chatBottomRef = useRef(null);
 
-  const fetchLessons = async () => {
+  const fetchLessons = async (autoSelectGenerating = true) => {
     setLoading(true);
     setError(null);
     try {
@@ -30,6 +30,11 @@ export default function AcademyPane({ token }) {
       if (res.ok) {
         const data = await res.json();
         setLessons(data);
+        
+        // Auto-select generating lesson if any exists as the latest one and no active lesson is selected
+        if (autoSelectGenerating && data.length > 0 && data[0].status === 'generating' && !activeLesson) {
+          fetchLessonDetails(data[0].id);
+        }
       } else {
         const err = await res.json();
         setError(err.error || 'Failed to load lessons.');
@@ -70,9 +75,43 @@ export default function AcademyPane({ token }) {
     }
   };
 
+  const deleteLesson = async (id) => {
+    setError(null);
+    try {
+      const res = await fetch(`/api/academy/lessons/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        if (activeLesson && activeLesson.id === id) {
+          setActiveLesson(null);
+        }
+        fetchLessons(false);
+      } else {
+        const err = await res.json();
+        setError(err.error || 'Failed to delete course.');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   useEffect(() => {
-    fetchLessons();
+    fetchLessons(true);
   }, []);
+
+  useEffect(() => {
+    let intervalId;
+    if (activeLesson && activeLesson.status === 'generating') {
+      intervalId = setInterval(() => {
+        fetchLessonDetails(activeLesson.id);
+        fetchLessons(false);
+      }, 3000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activeLesson?.id, activeLesson?.status]);
 
   useEffect(() => {
     if (chatBottomRef.current) {
@@ -98,7 +137,7 @@ export default function AcademyPane({ token }) {
       const data = await res.json();
       if (res.ok && data.success) {
         setTopic('');
-        fetchLessons();
+        fetchLessons(false);
         fetchLessonDetails(data.lessonId);
       } else {
         setError(data.error || 'Failed to generate curriculum.');
@@ -410,7 +449,57 @@ export default function AcademyPane({ token }) {
                   </div>
                 </div>
 
-                {activeLesson.status === 'completed' ? (
+                {activeLesson.status === 'generating' ? (
+                  /* Generating Loader */
+                  <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                      border: '4px solid rgba(255, 255, 255, 0.1)',
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      borderLeftColor: 'var(--accent-primary)',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
+                    <style>{`
+                      @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                      }
+                    `}</style>
+                    <h3 style={{ color: '#fff', margin: 0, fontSize: '1.35rem', fontWeight: 650 }}>Designing Curriculum...</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '480px', margin: 0, lineHeight: 1.6 }}>
+                      The Teacher Agent is organizing lessons, writing code examples, and crafting exercises for:
+                    </p>
+                    <div style={{ fontStyle: 'italic', color: 'var(--accent-secondary)', fontSize: '1.05rem', fontWeight: 600 }}>
+                      "{activeLesson.topic}" ({activeLesson.language})
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', maxWidth: '400px', margin: '10px 0 0 0', lineHeight: 1.5, background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-glass)' }}>
+                      ℹ️ You can safely navigate away from this page or close the window. The Agent will continue building your curriculum in the background.
+                    </p>
+                  </div>
+                ) : activeLesson.status === 'failed' ? (
+                  /* Failed view */
+                  <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ fontSize: '3rem', color: '#ef4444' }}>⚠️</div>
+                    <h3 style={{ color: '#fff', margin: 0, fontSize: '1.35rem', fontWeight: 650 }}>Curriculum Generation Failed</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', maxWidth: '480px', margin: 0, lineHeight: 1.6 }}>
+                      The Teacher Agent encountered an error while designing the learning route for:
+                    </p>
+                    <div style={{ fontStyle: 'italic', color: '#fca5a5', fontSize: '1.05rem', fontWeight: 600 }}>
+                      "{activeLesson.topic}"
+                    </div>
+                    <p style={{ color: 'rgba(239,68,68,0.8)', fontSize: '0.85rem' }}>
+                      Please delete this course and try another topic or check your LLM configuration.
+                    </p>
+                    <button
+                      className="btn"
+                      onClick={() => deleteLesson(activeLesson.id)}
+                      style={{ marginTop: '10px', background: '#ef4444', color: '#fff', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                    >
+                      Delete and Retry
+                    </button>
+                  </div>
+                ) : activeLesson.status === 'completed' ? (
                   /* Completed Course Summary */
                   <div style={{ textAlign: 'center', padding: '40px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                     <div style={{ fontSize: '3.5rem' }}>🏆</div>

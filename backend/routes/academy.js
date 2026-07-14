@@ -21,7 +21,7 @@ function extractWorkerOutput(rawOutput) {
   }
 }
 
-// Start a new lesson
+// Start a new lesson (asynchronously in background)
 router.post('/start', authenticateToken, async (req, res) => {
   const { language, topic } = req.body;
   if (!language || !topic) {
@@ -52,43 +52,58 @@ router.post('/start', authenticateToken, async (req, res) => {
       userId: req.user.id
     };
 
-    logger.info(`[Academy] Generating curriculum for ${language} - ${topic}...`);
+    logger.info(`[Academy] Pre-registering generating lesson for ${language} - ${topic}...`);
 
+    // Insert initial generating record
+    const result = await db.run(
+      'INSERT INTO academy_lessons (user_id, language, topic, curriculum, current_step_index, status, grades) VALUES (?, ?, ?, "[]", 0, "generating", "{}")',
+      [req.user.id, language, topic]
+    );
+
+    const lessonId = result.lastID;
+
+    // Trigger AI curriculum generation in the background
     const promptTask = `Action: "generate_curriculum"
 Language: "${language}"
 Topic: "${topic}"`;
 
-    const resultText = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
-    
-    // Clean response
-    let cleanedText = extractWorkerOutput(resultText);
-    if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
-    }
+    (async () => {
+      try {
+        logger.info(`[Academy Background Worker] Generating curriculum for lesson ${lessonId}...`);
+        const resultText = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
+        
+        let cleanedText = extractWorkerOutput(resultText);
+        if (cleanedText.startsWith('```')) {
+          cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
+        }
 
-    let curriculumData;
-    try {
-      const parsed = JSON.parse(cleanedText);
-      curriculumData = parsed.curriculum;
-      if (!Array.isArray(curriculumData) || curriculumData.length === 0) {
-        throw new Error('Curriculum must be a non-empty array.');
+        const parsed = JSON.parse(cleanedText);
+        const curriculumData = parsed.curriculum;
+        if (!Array.isArray(curriculumData) || curriculumData.length === 0) {
+          throw new Error('Curriculum must be a non-empty array.');
+        }
+
+        await db.run(
+          'UPDATE academy_lessons SET curriculum = ?, status = "active", updated_at = datetime("now") WHERE id = ?',
+          [JSON.stringify(curriculumData), lessonId]
+        );
+        logger.info(`[Academy Background Worker] Curriculum generated successfully for lesson ${lessonId}`);
+      } catch (err) {
+        logger.error(`[Academy Background Worker] Failed to generate curriculum for lesson ${lessonId}: ${err.message}`);
+        await db.run(
+          'UPDATE academy_lessons SET status = "failed", updated_at = datetime("now") WHERE id = ?',
+          [lessonId]
+        );
       }
-    } catch (e) {
-      logger.error('[Academy] Failed to parse curriculum JSON: ' + e.message + '\nRaw Output: ' + resultText);
-      return res.status(500).json({ error: 'AI failed to generate a structured curriculum. Please try again.' });
-    }
-
-    const result = await db.run(
-      'INSERT INTO academy_lessons (user_id, language, topic, curriculum, current_step_index, status, grades) VALUES (?, ?, ?, ?, 0, "active", "{}")',
-      [req.user.id, language, topic, JSON.stringify(curriculumData)]
-    );
+    })();
 
     res.json({
       success: true,
-      lessonId: result.lastID,
+      lessonId,
       language,
       topic,
-      curriculum: curriculumData
+      status: 'generating',
+      curriculum: []
     });
 
   } catch (err) {
@@ -377,6 +392,20 @@ Discussion History: ${JSON.stringify(chatHistory)}`;
 
   } catch (err) {
     logger.error('[Academy] Error in Teacher Q&A: ' + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a lesson
+router.delete('/lessons/:id', authenticateToken, async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.run(
+      'DELETE FROM academy_lessons WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
