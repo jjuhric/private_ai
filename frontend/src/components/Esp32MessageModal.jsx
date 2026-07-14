@@ -20,20 +20,18 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
   };
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !token) return;
     
-    // Reset state on open
     setMessage('');
     setError('');
     setSuccess('');
     setLoading(false);
     setSelectedIp('');
 
-    const syncDevices = async () => {
-      setScanning(true);
+    const loadDevices = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/nodes/sync', {
-          method: 'POST',
+        const res = await fetch('/api/nodes', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -44,31 +42,69 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
         };
 
         if (res.ok) {
-          const data = await res.json();
-          const list = (data.nodes || []).filter(node => !filterHostIp(node.ip_address) && node.is_online === 1);
-          setDevices(list);
+          const list = await res.json();
+          const filtered = (list || []).filter(node => !filterHostIp(node.ip_address) && node.is_online === 1);
+          setDevices(filtered);
 
-          // Find first online device to auto-select
-          const firstOnline = list.find(d => d.is_online === 1);
+          const firstOnline = filtered.find(d => d.is_online === 1);
           if (firstOnline) {
             setSelectedIp(firstOnline.ip_address);
             setDeviceType(firstOnline.device_type);
-          } else if (list.length > 0) {
-            setSelectedIp(list[0].ip_address);
-            setDeviceType(list[0].device_type);
+          } else if (filtered.length > 0) {
+            setSelectedIp(filtered[0].ip_address);
+            setDeviceType(filtered[0].device_type);
           }
-        } else {
-          setError('Failed to scan and synchronize network devices.');
         }
       } catch (err) {
-        console.error('Failed to sync network nodes:', err);
-        setError('Network error while scanning for local devices.');
+        console.error('Failed to load network nodes:', err);
       } finally {
-        setScanning(false);
+        setLoading(false);
       }
     };
-    syncDevices();
+
+    loadDevices();
   }, [isOpen, token, hostIps]);
+
+  const triggerScan = async () => {
+    setScanning(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch('/api/nodes/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const filterHostIp = (ip) => {
+        return hostIps.includes(ip) || ip === '127.0.0.1' || ip === 'localhost' || ip === '192.168.1.1' || ip.endsWith('.1');
+      };
+
+      if (res.ok) {
+        const data = await res.json();
+        const list = (data.nodes || []).filter(node => !filterHostIp(node.ip_address) && node.is_online === 1);
+        setDevices(list);
+        setSuccess('Network scan completed and devices updated successfully.');
+
+        const firstOnline = list.find(d => d.is_online === 1);
+        if (firstOnline) {
+          setSelectedIp(firstOnline.ip_address);
+          setDeviceType(firstOnline.device_type);
+        } else if (list.length > 0) {
+          setSelectedIp(list[0].ip_address);
+          setDeviceType(list[0].device_type);
+        }
+      } else {
+        setError('Failed to scan and synchronize network devices.');
+      }
+    } catch (err) {
+      console.error('Failed to sync network nodes:', err);
+      setError('Network error while scanning for local devices.');
+    } finally {
+      setScanning(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -142,12 +178,29 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
           <div className="form-group">
-            <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
               <span>Select Device IP Address</span>
-              {scanning && (
-                <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', animation: 'pulse 1s infinite alternate' }}>
+              {scanning ? (
+                <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)' }}>
                   Scanning Network...
                 </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={triggerScan}
+                  disabled={loading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-primary)',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    padding: 0,
+                    fontWeight: 600
+                  }}
+                >
+                  {loading ? 'Loading...' : '[Scan Network]'}
+                </button>
               )}
             </label>
             <select

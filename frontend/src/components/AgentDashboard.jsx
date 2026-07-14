@@ -138,16 +138,25 @@ export default function AgentDashboard({ activeAgent }) {
   const [nodes, setNodes] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
 
-  const fetchNodes = async () => {
+  const fetchNodes = async (runScan = false) => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/nodes/sync', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      let res;
+      if (runScan) {
+        res = await fetch('/api/nodes/sync', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } else {
+        res = await fetch('/api/nodes', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
       if (res.ok) {
         const data = await res.json();
-        const activeList = (data.nodes || []).filter(n => n.is_online === 1 && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1'));
+        const list = Array.isArray(data) ? data : (data.nodes || []);
+        const activeList = list.filter(n => n.is_online === 1 && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1'));
         setNodes(activeList);
       }
     } catch (e) {
@@ -158,7 +167,7 @@ export default function AgentDashboard({ activeAgent }) {
   };
 
   React.useEffect(() => {
-    fetchNodes();
+    fetchNodes(false);
   }, [token]);
 
   const sortedAgents = [...allAgents].sort((a, b) => {
@@ -191,7 +200,7 @@ export default function AgentDashboard({ activeAgent }) {
             </h3>
           </div>
           <button 
-            onClick={fetchNodes} 
+            onClick={() => fetchNodes(true)} 
             disabled={loading}
             style={{
               background: 'none',
