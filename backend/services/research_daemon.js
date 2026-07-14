@@ -3,6 +3,20 @@ const logger = require('../utils/logger');
 const { decrypt } = require('../utils/crypto');
 const { runWorkerAgent } = require('../utils/agents');
 
+function extractWorkerOutput(rawOutput) {
+  if (!rawOutput) return '';
+  const trimmed = rawOutput.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && (parsed.status === 'success' || parsed.status === 'error')) {
+      return parsed.summary || JSON.stringify(parsed.data || {});
+    }
+    return trimmed;
+  } catch (e) {
+    return trimmed;
+  }
+}
+
 let isRunning = false;
 let timerId = null;
 
@@ -68,7 +82,7 @@ async function checkAndRunResearch() {
     const resultText = await runWorkerAgent('research_agent', settings, taskPrompt, db, firstUser.id);
     
     // Clean response
-    let cleanedText = resultText.trim();
+    let cleanedText = extractWorkerOutput(resultText);
     if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
     }

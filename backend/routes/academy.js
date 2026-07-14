@@ -7,6 +7,20 @@ const logger = require('../utils/logger');
 
 const { decrypt } = require('../utils/crypto');
 
+function extractWorkerOutput(rawOutput) {
+  if (!rawOutput) return '';
+  const trimmed = rawOutput.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && (parsed.status === 'success' || parsed.status === 'error')) {
+      return parsed.summary || JSON.stringify(parsed.data || {});
+    }
+    return trimmed;
+  } catch (e) {
+    return trimmed;
+  }
+}
+
 // Start a new lesson
 router.post('/start', authenticateToken, async (req, res) => {
   const { language, topic } = req.body;
@@ -47,7 +61,7 @@ Topic: "${topic}"`;
     const resultText = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
     
     // Clean response
-    let cleanedText = resultText.trim();
+    let cleanedText = extractWorkerOutput(resultText);
     if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
     }
@@ -214,7 +228,7 @@ Language Updates/Breaking Changes: ${breakingChangesText}`;
 
     const gradingResult = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
 
-    let cleanedText = gradingResult.trim();
+    let cleanedText = extractWorkerOutput(gradingResult);
     if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
     }
@@ -333,7 +347,7 @@ Discussion History: ${JSON.stringify(chatHistory)}`;
 
     const responseText = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
 
-    let cleanedText = responseText.trim();
+    let cleanedText = extractWorkerOutput(responseText);
     if (cleanedText.startsWith('```')) {
       cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
     }
