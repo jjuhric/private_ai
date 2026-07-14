@@ -6,6 +6,25 @@
  */
 async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecret) {
   const ip = nodeIp || '192.168.1.117';
+  let portVal = nodePort;
+
+  if (!portVal) {
+    try {
+      const { getDb } = require('../db');
+      const db = await getDb();
+      const nodeRecord = await db.get('SELECT port FROM network_nodes WHERE ip_address = ?', [ip]);
+      if (nodeRecord) {
+        portVal = nodeRecord.port;
+      }
+    } catch (e) {
+      // ignore and fallback
+    }
+  }
+
+  if (!portVal) {
+    portVal = (action === 'send_message') ? 80 : 3000;
+  }
+
   try {
     let url;
     let bodyData;
@@ -17,12 +36,11 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
 
     let bodyPayload;
     if (action === 'send_message') {
-      const portPart = nodePort ? `:${nodePort}` : '';
-      url = `http://${ip}${portPart}/message`;
+      url = `http://${ip}:${portVal}/message`;
       headers['Content-Type'] = 'application/json';
       bodyPayload = JSON.stringify({ message: params.message });
     } else {
-      url = `http://${ip}:${nodePort || 3000}/api/gpio/${action}`;
+      url = `http://${ip}:${portVal}/api/gpio/${action}`;
       headers['Content-Type'] = 'application/json';
       bodyPayload = JSON.stringify(params);
     }
@@ -32,7 +50,7 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
       const http = require('http');
       const res = await new Promise((resolve, reject) => {
         let targetIp = ip;
-        let targetPort = nodePort || 80;
+        let targetPort = portVal;
         if (ip.includes(':')) {
           const parts = ip.split(':');
           targetIp = parts[0];
