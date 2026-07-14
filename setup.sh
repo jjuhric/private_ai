@@ -465,7 +465,7 @@ if [ "$IS_HOST" = "true" ]; then
     fi
 else
     # Install Node Client dependencies
-    if [ "$SKIP_UPDATE" = false ]; then
+    if [ "$SKIP_UPDATE" = false ] || [ ! -d "node_client/node_modules/express" ]; then
         log "Installing minimal Node Client dependencies..."
         mkdir -p node_client
         cat << 'EOF' > node_client/package.json
