@@ -135,6 +135,32 @@ export default function AgentDashboard({ activeAgent }) {
   const monitorDashboardUrl = `http://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/monitor/?token=${encodeURIComponent(token)}`;
   const displayAddress = `${window.location.host}/monitor`;
 
+  const [nodes, setNodes] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+
+  const fetchNodes = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/nodes/sync', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const activeList = (data.nodes || []).filter(n => n.is_online === 1 && n.ip_address !== '192.168.1.1' && !n.ip_address.endsWith('.1'));
+        setNodes(activeList);
+      }
+    } catch (e) {
+      console.error('Failed to load topology:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchNodes();
+  }, [token]);
+
   const sortedAgents = [...allAgents].sort((a, b) => {
     const aActive = matchesAgent(a.type, activeAgent);
     const bActive = matchesAgent(b.type, activeAgent);
@@ -145,6 +171,147 @@ export default function AgentDashboard({ activeAgent }) {
 
   return (
     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto', background: 'var(--bg-primary)' }}>
+      {/* Network Topology Graph */}
+      <div style={{
+        background: 'var(--bg-glass)',
+        border: '1px solid var(--border-glass)',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '24px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Network size={20} style={{ color: 'var(--accent-primary)' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+              Active Field Node Topology
+            </h3>
+          </div>
+          <button 
+            onClick={fetchNodes} 
+            disabled={loading}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.85rem'
+            }}
+          >
+            <RefreshCw size={14} className={loading ? 'spin-anim' : ''} style={{ animation: loading ? 'spin 1.5s linear infinite' : 'none' }} />
+            <span>{loading ? 'Scanning...' : 'Refresh'}</span>
+          </button>
+        </div>
+
+        <div style={{
+          width: '100%',
+          height: '320px',
+          background: 'rgba(15, 23, 42, 0.4)',
+          borderRadius: '12px',
+          border: '1px solid rgba(255,255,255,0.05)',
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <svg width="100%" height="100%" viewBox="0 0 800 320" style={{ pointerEvents: 'auto' }}>
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+              </pattern>
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+
+            {/* Radar Wave Pulse */}
+            {(nodes.length === 0 || loading) && (
+              <>
+                <circle cx="400" cy="160" r="30" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity="0.6">
+                  <animate attributeName="r" values="30;160" dur="4s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.6;0" dur="4s" repeatCount="indefinite" />
+                </circle>
+                <circle cx="400" cy="160" r="30" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity="0.3">
+                  <animate attributeName="r" values="30;160" dur="4s" begin="2s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.3;0" dur="4s" begin="2s" repeatCount="indefinite" />
+                </circle>
+              </>
+            )}
+
+            {/* Link lines */}
+            {nodes.map((node, i) => {
+              const angle = (i * 2 * Math.PI) / nodes.length;
+              const radius = 120;
+              const x = 400 + radius * Math.cos(angle);
+              const y = 160 + radius * Math.sin(angle);
+
+              return (
+                <g key={`link-${node.id || node.ip_address}`}>
+                  <line 
+                    x1="400" 
+                    y1="160" 
+                    x2={x} 
+                    y2={y} 
+                    stroke="#22c55e" 
+                    strokeWidth="2.5" 
+                    strokeDasharray="6,4" 
+                    opacity="0.8"
+                    filter="url(#glow)"
+                  />
+                  <circle r="4.5" fill="#4ade80">
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path={`M 400 160 L ${x} ${y}`} />
+                  </circle>
+                </g>
+              );
+            })}
+
+            {/* Main Host */}
+            <g transform="translate(400, 160)">
+              <circle r="34" fill="#1e1b4b" stroke="var(--accent-primary)" strokeWidth="3" filter="url(#glow)" />
+              <text y="5" textAnchor="middle" fill="#fff" fontSize="18" fontWeight="bold">💻</text>
+              <text y="52" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="600">Main Host</text>
+              <text y="66" textAnchor="middle" fill="var(--text-secondary)" fontSize="10">127.0.0.1</text>
+            </g>
+
+            {/* Orbiting Discovered Active Nodes */}
+            {nodes.map((node, i) => {
+              const angle = (i * 2 * Math.PI) / nodes.length;
+              const radius = 120;
+              const x = 400 + radius * Math.cos(angle);
+              const y = 160 + radius * Math.sin(angle);
+
+              let deviceSymbol = '📱';
+              const devType = node.device_type ? node.device_type.toLowerCase() : '';
+              if (devType.includes('rpi')) deviceSymbol = '🍓';
+              else if (devType.includes('esp32')) deviceSymbol = '🔌';
+              else if (devType.includes('assistant')) deviceSymbol = '🔊';
+
+              return (
+                <g key={`node-${node.id || node.ip_address}`} transform={`translate(${x}, ${y})`}>
+                  <circle r="24" fill="#0f172a" stroke="#22c55e" strokeWidth="2.5" filter="url(#glow)" />
+                  <text y="5" textAnchor="middle" fill="#fff" fontSize="14">{deviceSymbol}</text>
+                  <text y="38" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="600">
+                    {node.node_name}
+                  </text>
+                  <text y="50" textAnchor="middle" fill="#22c55e" fontSize="9.5" fontWeight="bold">
+                    {node.ip_address}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
       {/* Header section with title and Standalone Monitor button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>

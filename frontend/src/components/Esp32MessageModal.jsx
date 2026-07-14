@@ -45,7 +45,7 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
 
         if (res.ok) {
           const data = await res.json();
-          const list = (data.nodes || []).filter(node => !filterHostIp(node.ip_address));
+          const list = (data.nodes || []).filter(node => !filterHostIp(node.ip_address) && node.is_online === 1);
           setDevices(list);
 
           // Find first online device to auto-select
@@ -281,7 +281,7 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
               onClick={onClose}
               style={{ flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer' }}
             >
-              Cancel
+              Close
             </button>
             <button
               type="submit"
