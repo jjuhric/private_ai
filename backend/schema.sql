@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS network_nodes (
   os_type TEXT,
   arch TEXT,
   node_version TEXT,
+  ssh_username TEXT,
+  ssh_password TEXT,
+  ssh_key TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

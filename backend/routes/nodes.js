@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { getDb } = require('../db');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 const os = require('os');
 const net = require('net');
@@ -210,8 +211,13 @@ router.post('/scan', authenticateToken, async (req, res) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const db = await getDb();
-    const nodes = await db.all('SELECT id, node_name, device_type, ip_address, port, last_seen, is_online, created_at FROM network_nodes WHERE user_id = ?', [req.user.id]);
-    res.json(nodes);
+    const nodes = await db.all('SELECT id, node_name, device_type, ip_address, port, last_seen, is_online, created_at, ssh_username, ssh_password, ssh_key FROM network_nodes WHERE user_id = ?', [req.user.id]);
+    const decryptedNodes = nodes.map(node => ({
+      ...node,
+      ssh_password: node.ssh_password ? decrypt(node.ssh_password) : '',
+      ssh_key: node.ssh_key ? decrypt(node.ssh_key) : ''
+    }));
+    res.json(decryptedNodes);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -219,7 +225,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // Add a new node
 router.post('/', authenticateToken, async (req, res) => {
-  const { node_name, device_type, ip_address, port, bridge_secret } = req.body;
+  const { node_name, device_type, ip_address, port, bridge_secret, ssh_username, ssh_password, ssh_key } = req.body;
   
   if (!node_name || !device_type || !ip_address) {
     return res.status(400).json({ error: 'node_name, device_type, and ip_address are required' });
@@ -239,9 +245,12 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Node with this IP address and port is already registered' });
     }
 
+    const encPassword = ssh_password ? encrypt(ssh_password) : null;
+    const encKey = ssh_key ? encrypt(ssh_key) : null;
+
     const result = await db.run(
-      'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, bridge_secret, last_seen, is_online) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), 1)',
-      [req.user.id, node_name, device_type, ip_address, targetPort, bridge_secret || null]
+      'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, bridge_secret, last_seen, is_online, ssh_username, ssh_password, ssh_key) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), 1, ?, ?, ?)',
+      [req.user.id, node_name, device_type, ip_address, targetPort, bridge_secret || null, ssh_username || null, encPassword, encKey]
     );
     
     res.json({ id: result.lastID, success: true, message: 'Node added successfully' });
@@ -252,14 +261,18 @@ router.post('/', authenticateToken, async (req, res) => {
 
 // Update a node
 router.put('/:id', authenticateToken, async (req, res) => {
-  const { node_name, device_type, ip_address, port, is_online } = req.body;
+  const { node_name, device_type, ip_address, port, is_online, ssh_username, ssh_password, ssh_key } = req.body;
   const { id } = req.params;
 
   try {
     const db = await getDb();
+    
+    const encPassword = ssh_password ? encrypt(ssh_password) : null;
+    const encKey = ssh_key ? encrypt(ssh_key) : null;
+    
     await db.run(
-      'UPDATE network_nodes SET node_name = ?, device_type = ?, ip_address = ?, port = ?, is_online = ? WHERE id = ? AND user_id = ?',
-      [node_name, device_type, ip_address, port, is_online, id, req.user.id]
+      'UPDATE network_nodes SET node_name = ?, device_type = ?, ip_address = ?, port = ?, is_online = ?, ssh_username = ?, ssh_password = ?, ssh_key = ? WHERE id = ? AND user_id = ?',
+      [node_name, device_type, ip_address, port, is_online, ssh_username || null, encPassword, encKey, id, req.user.id]
     );
     res.json({ success: true, message: 'Node updated successfully' });
   } catch (err) {

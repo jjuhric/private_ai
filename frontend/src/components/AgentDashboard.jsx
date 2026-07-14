@@ -1,4 +1,5 @@
 import React from 'react';
+import RpiTerminalModal from './RpiTerminalModal';
 import { 
   Network, Cpu, Server, BookOpen, Calendar, Search, 
   FileText, GitBranch, Shield, Wrench, UserPlus, 
@@ -137,6 +138,8 @@ export default function AgentDashboard({ activeAgent }) {
 
   const [nodes, setNodes] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
+  const [selectedTerminalNode, setSelectedTerminalNode] = React.useState(null);
+  const [isTerminalOpen, setIsTerminalOpen] = React.useState(false);
 
   const fetchNodes = async (runScan = false) => {
     if (!token) return;
@@ -304,8 +307,20 @@ export default function AgentDashboard({ activeAgent }) {
               else if (devType.includes('esp32')) deviceSymbol = '🔌';
               else if (devType.includes('assistant')) deviceSymbol = '🔊';
 
+              const isRpiOrLinux = devType.includes('rpi') || devType.includes('linux');
+
               return (
-                <g key={`node-${node.id || node.ip_address}`} transform={`translate(${x}, ${y})`}>
+                <g 
+                  key={`node-${node.id || node.ip_address}`} 
+                  transform={`translate(${x}, ${y})`}
+                  style={{ cursor: isRpiOrLinux ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (isRpiOrLinux) {
+                      setSelectedTerminalNode(node);
+                      setIsTerminalOpen(true);
+                    }
+                  }}
+                >
                   <circle r="24" fill="#0f172a" stroke="#22c55e" strokeWidth="2.5" filter="url(#glow)" />
                   <text y="5" textAnchor="middle" fill="#fff" fontSize="14">{deviceSymbol}</text>
                   <text y="38" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="600">
@@ -453,6 +468,14 @@ export default function AgentDashboard({ activeAgent }) {
         </div>
       </div>
       
+      <RpiTerminalModal
+        isOpen={isTerminalOpen}
+        onClose={() => { setIsTerminalOpen(false); setSelectedTerminalNode(null); }}
+        node={selectedTerminalNode}
+        token={token}
+        onNodeUpdated={fetchNodes}
+      />
+
       <style>{`
         @keyframes pulse {
           0% { transform: scale(1); opacity: 1; }

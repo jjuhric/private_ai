@@ -67,10 +67,10 @@ describe('Nodes API', () => {
   });
 
   test('GET /api/nodes returns nodes list', async () => {
-    mockDb.all.mockResolvedValueOnce([{ id: 1, node_name: 'Pi Node', is_online: 1 }]);
+    mockDb.all.mockResolvedValueOnce([{ id: 1, node_name: 'Pi Node', is_online: 1, ssh_username: null, ssh_password: null, ssh_key: null }]);
     const res = await request(app).get('/api/nodes');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([{ id: 1, node_name: 'Pi Node', is_online: 1 }]);
+    expect(res.body).toEqual([{ id: 1, node_name: 'Pi Node', is_online: 1, ssh_username: null, ssh_password: '', ssh_key: '' }]);
     expect(mockDb.all).toHaveBeenCalledWith(expect.any(String), [1]);
   });
 

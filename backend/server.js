@@ -239,6 +239,10 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
   });
 }
 
+// Initialize WebSocket terminal service
+const terminalService = require('./services/terminal_service');
+terminalService.init(server);
+
 // Handle graceful shutdown
 const gracefulShutdown = () => {
   logger.info('SIGTERM/SIGINT received. Shutting down gracefully...');

@@ -158,6 +158,15 @@ async function getDb() {
     if (!nodeColumns.some(col => col.name === 'node_version')) {
       await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN node_version TEXT');
     }
+    if (!nodeColumns.some(col => col.name === 'ssh_username')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN ssh_username TEXT');
+    }
+    if (!nodeColumns.some(col => col.name === 'ssh_password')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN ssh_password TEXT');
+    }
+    if (!nodeColumns.some(col => col.name === 'ssh_key')) {
+      await dbConnection.run('ALTER TABLE network_nodes ADD COLUMN ssh_key TEXT');
+    }
     
     // Auto-migrate deprecated gemini-1.5-flash entries to gemini-2.0-flash
     await dbConnection.run("UPDATE user_settings SET model_name = 'gemini-2.0-flash' WHERE model_name = 'gemini-1.5-flash'");
