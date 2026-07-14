@@ -8,6 +8,7 @@ import MemoryPane from './components/MemoryPane';
 import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
 import AgentDashboard from './components/AgentDashboard';
+import AcademyPane from './components/AcademyPane';
 import Toast from './components/Toast';
 import SetupWizard from './components/SetupWizard';
 import SudoModal from './components/SudoModal';
@@ -971,7 +972,7 @@ function App() {
                      <span className="normal-text">ntelligence</span>
                    </span>
                  </span>
-               ) : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard'))}
+               ) : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'academy' ? 'AI Coding Academy' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard')))}
              </h2>
           </div>
 
@@ -1031,6 +1032,9 @@ function App() {
             handleAddCalendarEvent={handleAddCalendarEvent}
             handleDeleteCalendarEvent={handleDeleteCalendarEvent}
           />
+        )}
+        {activeTab === 'academy' && (
+          <AcademyPane token={token} />
         )}
         {activeTab === 'memory' && (
           <MemoryPane

@@ -198,6 +198,14 @@ async function getDb() {
       )
     `);
 
+    // Migration for academy_lessons chat_history
+    try {
+      const academyColumns = await dbConnection.all('PRAGMA table_info(academy_lessons)');
+      if (academyColumns.length > 0 && !academyColumns.some(col => col.name === 'chat_history')) {
+        await dbConnection.run("ALTER TABLE academy_lessons ADD COLUMN chat_history JSON DEFAULT '[]'");
+      }
+    } catch (e) {}
+
     console.log('Database initialized successfully.');
   } catch (error) {
     console.error('Error initializing database:', error);

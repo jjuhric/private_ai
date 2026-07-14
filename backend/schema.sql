@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS academy_lessons (
   current_step_index INTEGER DEFAULT 0,
   status TEXT DEFAULT 'active', -- 'active', 'paused', 'completed'
   grades JSON DEFAULT '{}', -- JSON object: step_index -> { score, feedback, student_answer }
+  chat_history JSON DEFAULT '[]', -- JSON array of messages: [{role, content, created_at}]
   overall_rating TEXT,
   overall_grade REAL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

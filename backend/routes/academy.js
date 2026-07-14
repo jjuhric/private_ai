@@ -279,4 +279,90 @@ Language Updates/Breaking Changes: ${breakingChangesText}`;
   }
 });
 
+// POST /api/academy/lessons/:id/chat: Q&A discussion with the Teacher
+router.post('/lessons/:id/chat', authenticateToken, async (req, res) => {
+  const { message } = req.body;
+  if (!message) {
+    return res.status(400).json({ error: 'message is required' });
+  }
+
+  try {
+    const db = await getDb();
+    const lesson = await db.get(
+      'SELECT * FROM academy_lessons WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    const curriculum = JSON.parse(lesson.curriculum);
+    const stepIdx = lesson.current_step_index;
+    const currentStep = curriculum[stepIdx] || {};
+    const chatHistory = JSON.parse(lesson.chat_history || '[]');
+
+    // Load settings for LLM execution
+    const dbSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]);
+    const settings = {
+      provider: dbSettings.provider,
+      modelName: dbSettings.preferred_online_model || dbSettings.model_name,
+      onlineProvider: dbSettings.online_provider,
+      onlineKey: dbSettings.online_key,
+      geminiKey: dbSettings.gemini_key,
+      localBaseUrl: dbSettings.local_url,
+      localApiKey: dbSettings.local_key,
+      localApiStyle: dbSettings.local_api_style,
+      onlineUrl: dbSettings.online_url,
+      workingDirectory: dbSettings.working_directory,
+      db,
+      userId: req.user.id
+    };
+
+    logger.info(`[Academy] Chat turn with Teacher for lesson ${lesson.id}...`);
+
+    const promptTask = `Action: "discuss_lesson"
+Language: "${lesson.language}"
+Lesson Title: "${currentStep.title || 'Introduction'}"
+Lesson Explanation: "${currentStep.explanation || ''}"
+Code Example: "${currentStep.code_example || ''}"
+Test Instructions: "${currentStep.test_instructions || ''}"
+Student Message: "${message}"
+Discussion History: ${JSON.stringify(chatHistory)}`;
+
+    const responseText = await runWorkerAgent('teacher_agent', settings, promptTask, db, req.user.id);
+
+    let cleanedText = responseText.trim();
+    if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```(json)?\n/, '').replace(/\n```$/, '');
+    }
+
+    let discussData;
+    try {
+      discussData = JSON.parse(cleanedText);
+    } catch (e) {
+      logger.error('[Academy] Failed to parse Teacher discussion response: ' + e.message + '\nRaw Output: ' + responseText);
+      return res.status(500).json({ error: 'AI failed to reply. Please try again.' });
+    }
+
+    // Append to chat history
+    chatHistory.push({ role: 'student', content: message, created_at: new Date().toISOString() });
+    chatHistory.push({ role: 'teacher', content: discussData.reply || 'Let me think about that.', created_at: new Date().toISOString() });
+
+    await db.run(
+      'UPDATE academy_lessons SET chat_history = ?, updated_at = datetime("now") WHERE id = ?',
+      [JSON.stringify(chatHistory), lesson.id]
+    );
+
+    res.json({
+      success: true,
+      reply: discussData.reply,
+      chatHistory
+    });
+
+  } catch (err) {
+    logger.error('[Academy] Error in Teacher Q&A: ' + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

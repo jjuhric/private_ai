@@ -140,4 +140,33 @@ describe('Academy API', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });
+
+  test('POST /api/academy/lessons/:id/chat returns teacher reply', async () => {
+    mockDb.get
+      .mockResolvedValueOnce({
+        id: 1,
+        user_id: 1,
+        language: 'rust',
+        topic: 'Learn variables',
+        curriculum: JSON.stringify([{ title: 'Lesson 1' }]),
+        current_step_index: 0,
+        chat_history: '[]'
+      })
+      .mockResolvedValueOnce({ provider: 'gemini' });
+
+    runWorkerAgent.mockResolvedValueOnce(JSON.stringify({
+      reply: 'Ownership determines memory safety in Rust.'
+    }));
+
+    mockDb.run.mockResolvedValueOnce({});
+
+    const res = await request(app).post('/api/academy/lessons/1/chat').send({
+      message: 'Can you explain Ownership?'
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.reply).toBe('Ownership determines memory safety in Rust.');
+    expect(res.body.chatHistory).toHaveLength(2);
+  });
 });
