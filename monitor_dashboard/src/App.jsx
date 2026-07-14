@@ -295,16 +295,21 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
     const results = await Promise.all(
       configuredNodes.map(async (node) => {
         try {
-          const targetUrl = `http://${node.ip_address}:${node.port}/api/bridge/health`;
-          const res = await fetch(targetUrl, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+          const targetUrl = `http://${node.ip_address}:${node.port}/health`;
+          const res = await fetch(targetUrl);
           if (res.ok) {
             const data = await res.json();
-            return { id: node.id, health: data };
+            const isOnline = data.ok === true || data.status === 'online';
+            return { 
+              id: node.id, 
+              health: { 
+                status: isOnline ? 'online' : 'offline',
+                ...data
+              } 
+            };
           }
         } catch (err) {}
-        return { id: node.id, health: { status: 'offline', dependencies: {} } };
+        return { id: node.id, health: { status: 'offline' } };
       })
     );
 
@@ -910,9 +915,10 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       <div style={{
         flex: '1 1 0%',
         overflowY: activeSubTab === 'network' ? 'hidden' : 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0
+        display: activeSubTab === 'network' ? 'flex' : 'block',
+        flexDirection: activeSubTab === 'network' ? 'column' : 'initial',
+        minHeight: 0,
+        paddingRight: activeSubTab === 'network' ? '0' : '4px'
       }}>
         {activeSubTab === 'network' && (
           <div style={{
@@ -1241,7 +1247,9 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
 
             <div style={{
               width: '100%',
-              height: '320px',
+              height: 'auto',
+              aspectRatio: '800 / 320',
+              maxHeight: '360px',
               background: 'rgba(15, 23, 42, 0.4)',
               borderRadius: '12px',
               border: '1px solid rgba(255,255,255,0.05)',
@@ -1524,66 +1532,68 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
             )}
 
             {nodes.length > 0 ? (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                    <th style={{ padding: '8px' }}>Status</th>
-                    <th style={{ padding: '8px' }}>Name</th>
-                    <th style={{ padding: '8px' }}>Type</th>
-                    <th style={{ padding: '8px' }}>IP:Port</th>
-                    <th style={{ padding: '8px' }}>Health Status</th>
-                    <th style={{ padding: '8px' }}>Last Seen</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nodes.map(node => {
-                    const health = nodeHealthMap[node.id];
-                    const isOnline = health ? health.status === 'online' : node.is_online;
-                    return (
-                      <tr key={node.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '10px 8px' }}>
-                          <div style={{ 
-                            width: '10px', 
-                            height: '10px', 
-                            borderRadius: '50%', 
-                            background: isOnline ? '#34d399' : '#ff6b6b',
-                            boxShadow: isOnline ? '0 0 8px #34d399' : 'none'
-                          }}></div>
-                        </td>
-                        <td style={{ padding: '10px 8px', color: '#fff', fontWeight: 500 }}>{node.node_name}</td>
-                        <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.device_type}</td>
-                        <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.ip_address}:{node.port}</td>
-                        <td style={{ padding: '10px 8px' }}>
-                          <span className="badge" style={{ 
-                            padding: '4px 10px', 
-                            borderRadius: '6px', 
-                            background: isOnline ? '#059669' : '#dc2626', 
-                            color: '#fff', 
-                            fontWeight: 600, 
-                            fontSize: '0.8rem',
-                            display: 'inline-block',
-                            textAlign: 'center',
-                            minWidth: '80px',
-                            boxShadow: isOnline ? '0 0 6px rgba(5,150,105,0.4)' : '0 0 6px rgba(220,38,38,0.4)'
-                          }}>
-                            {isOnline ? 'ONLINE' : 'OFFLINE'}
-                          </span>
-                          <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                            {isOnline ? 'Ready for tasks' : 'Unreachable'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{new Date(node.last_seen).toLocaleString()}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                          <button className="btn btn-icon" onClick={() => handleDeleteNode(node.id)} style={{ color: '#ff6b6b', padding: '4px' }}>
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div style={{ overflowX: 'auto', width: '100%', scrollbarWidth: 'thin' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '650px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                      <th style={{ padding: '8px' }}>Status</th>
+                      <th style={{ padding: '8px' }}>Name</th>
+                      <th style={{ padding: '8px' }}>Type</th>
+                      <th style={{ padding: '8px' }}>IP:Port</th>
+                      <th style={{ padding: '8px' }}>Health Status</th>
+                      <th style={{ padding: '8px' }}>Last Seen</th>
+                      <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nodes.map(node => {
+                      const health = nodeHealthMap[node.id];
+                      const isOnline = health ? health.status === 'online' : node.is_online;
+                      return (
+                        <tr key={node.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '10px 8px' }}>
+                            <div style={{ 
+                              width: '10px', 
+                              height: '10px', 
+                              borderRadius: '50%', 
+                              background: isOnline ? '#34d399' : '#ff6b6b',
+                              boxShadow: isOnline ? '0 0 8px #34d399' : 'none'
+                            }}></div>
+                          </td>
+                          <td style={{ padding: '10px 8px', color: '#fff', fontWeight: 500 }}>{node.node_name}</td>
+                          <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.device_type}</td>
+                          <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{node.ip_address}:{node.port}</td>
+                          <td style={{ padding: '10px 8px' }}>
+                            <span className="badge" style={{ 
+                              padding: '4px 10px', 
+                              borderRadius: '6px', 
+                              background: isOnline ? '#059669' : '#dc2626', 
+                              color: '#fff', 
+                              fontWeight: 600, 
+                              fontSize: '0.8rem',
+                              display: 'inline-block',
+                              textAlign: 'center',
+                              minWidth: '80px',
+                              boxShadow: isOnline ? '0 0 6px rgba(5,150,105,0.4)' : '0 0 6px rgba(220,38,38,0.4)'
+                            }}>
+                              {isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </span>
+                            <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                              {isOnline ? 'Ready for tasks' : 'Unreachable'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{new Date(node.last_seen).toLocaleString()}</td>
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                            <button className="btn btn-icon" onClick={() => handleDeleteNode(node.id)} style={{ color: '#ff6b6b', padding: '4px' }}>
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-secondary)' }}>
                 No remote nodes configured. Add an ESP32 or Raspberry Pi to distribute tasks.

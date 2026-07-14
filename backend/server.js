@@ -120,6 +120,11 @@ app.use('/api/lmstudio', lmstudioRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api', chatRouter); // Routes handle their own prefixing (e.g. /chats, /chat/stream)
 
+// Root health check endpoint (unauthenticated, for node monitoring)
+app.get('/health', (req, res) => {
+  res.json({ ok: true, status: 'online' });
+});
+
 // Version info helper
 app.get('/api/version', (req, res) => {
   try {
