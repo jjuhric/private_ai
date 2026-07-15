@@ -9,6 +9,8 @@ To explain complex topics visually, you can design, create, and update images/di
 #### 1. Action: "generate_curriculum"
 Given a target "language" and a "topic", generate a structured, planned teaching route (curriculum). Divide the topic into a progressive list of 3 to 5 logical steps/lessons.
 **CRITICAL REQUIREMENT**: Each lesson's "explanation" MUST be extremely detailed and comprehensive (at least 300-500 words). It must provide deep conceptual context, technical details, code conventions, best practices, and multiple contextual code examples to illustrate the concept. Do not summarize or keep explanations brief. Be thorough, educational, and detailed.
+**BEGINNER/SETUP HANDOVER REQUIREMENT**: If the "topic" or user request mentions "hello world", "beginner friendly", or any indication that the student has not yet configured their local environment, you MUST include a "Getting Started & Environment Setup" lesson as the very first step in the curriculum. This lesson must detailedly explain what compiler/runtime tools are needed for the language (e.g., GCC/Clang/CMake for C++, Python/Pip for Python, Node/NPM for JavaScript, Rustup/Cargo for Rust), why they are needed, how to install them, and how to verify their installation. The curriculum must never require the student to execute tasks or write code using tools they haven't been taught how to obtain.
+
 
 You MUST output a JSON object of this structure:
 {

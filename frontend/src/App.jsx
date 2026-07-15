@@ -42,7 +42,7 @@ function ModelTransitionView({ direction, progress, complete, error, onContinue,
 
           {/* Network Connection Path */}
           <div className="network-path-container">
-            <svg width="100%" height="24" className="network-svg">
+            <svg viewBox="0 0 300 24" width="100%" height="24" className="network-svg">
               <defs>
                 <linearGradient id="pulse-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#6366f1" />
@@ -50,13 +50,23 @@ function ModelTransitionView({ direction, progress, complete, error, onContinue,
                 </linearGradient>
               </defs>
               <line 
-                x1="10%" y1="12" x2="90%" y2="12" 
+                x1="30" y1="12" x2="270" y2="12" 
                 className="base-line" 
               />
               <line 
-                x1="10%" y1="12" x2="90%" y2="12" 
+                x1="30" y1="12" x2="270" y2="12" 
                 className={`pulse-line ${isToAcademy ? 'pulse-forward' : 'pulse-backward'} ${complete ? 'paused' : ''}`}
               />
+              {!complete && (
+                <text dy="5" fontSize="14" style={{ filter: 'drop-shadow(0 0 4px #10b981)', pointerEvents: 'none' }}>
+                  <animateMotion 
+                    dur="3s" 
+                    repeatCount="indefinite" 
+                    path={isToAcademy ? "M 30 12 L 270 12" : "M 270 12 L 30 12"} 
+                  />
+                  ⚡
+                </text>
+              )}
             </svg>
             <div className="transfer-speed-label" style={{ fontWeight: 600 }}>
               {complete ? 'Handover Complete' : 'Transferring Context...'}
@@ -237,14 +247,31 @@ function App() {
     setTransitionError(null);
     setPendingTab(targetTab);
 
-    // Dynamic random progress step interval up to 90%
-    let progressVal = 0;
+    const startTime = Date.now();
+    const MIN_DURATION = 10000; // 10 seconds minimum
+    let apiCompleted = false;
+    let apiError = null;
+
     const progressInterval = setInterval(() => {
-      progressVal += Math.floor(Math.random() * 8) + 4;
-      if (progressVal >= 90) {
-        progressVal = 90;
-        clearInterval(progressInterval);
+      const elapsed = Date.now() - startTime;
+      let progressVal = Math.floor((elapsed / MIN_DURATION) * 100);
+      
+      if (progressVal >= 99) {
+        progressVal = 99;
+        if (apiCompleted) {
+          clearInterval(progressInterval);
+          setTransitionProgress(100);
+          setTransitionComplete(true);
+          return;
+        }
       }
+      
+      if (apiError) {
+        clearInterval(progressInterval);
+        setTransitionError(apiError);
+        return;
+      }
+
       setTransitionProgress(progressVal);
     }, 100);
 
@@ -281,15 +308,17 @@ function App() {
       }
 
       setLiveModel(modelId);
+      apiCompleted = true;
 
-      // Fast-forward progress to 100%
-      clearInterval(progressInterval);
-      setTransitionProgress(100);
-      setTransitionComplete(true);
+      // Check if we already passed 10 seconds. If so, finish immediately!
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= MIN_DURATION) {
+        clearInterval(progressInterval);
+        setTransitionProgress(100);
+        setTransitionComplete(true);
+      }
     } catch (err) {
-      clearInterval(progressInterval);
-      console.error('[Model Switch Handover Failed]', err);
-      setTransitionError(err.message || 'Unknown model swap error occurred.');
+      apiError = err.message || 'Unknown model swap error occurred.';
     }
   };
 

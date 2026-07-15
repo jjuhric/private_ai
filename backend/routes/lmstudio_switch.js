@@ -51,14 +51,31 @@ router.post('/switch-model', authenticateToken, async (req, res) => {
     }
 
     // Unload all currently loaded models
+    let unloadedAny = false;
     for (const m of availableModels) {
       if (m.isLoaded && m.instanceId) {
         logger.info(`[LM Studio Switch] Unloading model instance: ${m.instanceId} (${m.id})`);
         try {
           await unloadLocalModel(localBaseUrl, localApiKey, m.instanceId);
+          unloadedAny = true;
         } catch (unloadErr) {
           logger.warn(`[LM Studio Switch] Failed to unload instance ${m.instanceId}: ${unloadErr.message}`);
         }
+      }
+    }
+
+    // Wait until LM Studio finishes unloading and freeing GPU memory
+    if (unloadedAny) {
+      logger.info('[LM Studio Switch] Waiting for models to finish unloading...');
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const currentModels = await listLocalModels(localBaseUrl, localApiKey);
+        const stillLoaded = currentModels.some(m => m.isLoaded);
+        if (!stillLoaded) {
+          logger.info('[LM Studio Switch] All models successfully unloaded.');
+          break;
+        }
+        logger.info(`[LM Studio Switch] Still unloading (attempt ${attempt + 1}/10)...`);
       }
     }
 

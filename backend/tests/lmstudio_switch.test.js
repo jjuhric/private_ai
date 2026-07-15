@@ -60,10 +60,15 @@ describe('LM Studio Model & Tab Switch API', () => {
       local_url: 'http://localhost:1234/v1'
     });
 
-    lmstudioUtils.listLocalModels.mockResolvedValueOnce([
-      { id: 'qwen2.5-coder-7b-instruct', isLoaded: true, instanceId: 'inst-qwen' },
-      { id: 'google/gemma-4-e4b', isLoaded: false, instanceId: null }
-    ]);
+    lmstudioUtils.listLocalModels
+      .mockResolvedValueOnce([
+        { id: 'qwen2.5-coder-7b-instruct', isLoaded: true, instanceId: 'inst-qwen' },
+        { id: 'google/gemma-4-e4b', isLoaded: false, instanceId: null }
+      ])
+      .mockResolvedValueOnce([
+        { id: 'qwen2.5-coder-7b-instruct', isLoaded: false, instanceId: null },
+        { id: 'google/gemma-4-e4b', isLoaded: false, instanceId: null }
+      ]);
 
     lmstudioUtils.unloadLocalModel.mockResolvedValueOnce({ success: true });
     lmstudioUtils.loadLocalModel.mockResolvedValueOnce({ success: true });
