@@ -1,4 +1,6 @@
 require('dotenv').config();
+process.env.GIT_TERMINAL_PROMPT = '0';
+process.env.GCM_INTERACTIVE = 'never';
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
