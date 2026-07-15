@@ -13,12 +13,35 @@ class SafeUpdateService {
     this.daemonInterval = null;
   }
 
+  async getAuthenticatedRepoUrl() {
+    let token = process.env.GITHUB_TOKEN || '';
+    try {
+      const { getDb } = require('../db');
+      const db = await getDb();
+      const settings = await db.get('SELECT github_token FROM user_settings LIMIT 1');
+      if (settings && settings.github_token) {
+        const { decrypt } = require('../utils/crypto');
+        const dbToken = decrypt(settings.github_token);
+        if (dbToken && dbToken.trim()) {
+          token = dbToken;
+        }
+      }
+    } catch (err) {
+      // DB not ready or not initialized
+    }
+    if (token && this.repoUrl.startsWith('https://')) {
+      return this.repoUrl.replace('https://', `https://${token}@`);
+    }
+    return this.repoUrl;
+  }
+
   async checkForUpdates() {
     logger.info('[Safe Update] Checking for updates...');
     try {
-      await execPromise('git fetch origin main', { cwd: this.activeDir });
+      const authUrl = await this.getAuthenticatedRepoUrl();
+      await execPromise(`git fetch "${authUrl}" main`, { cwd: this.activeDir });
       const { stdout: localHead } = await execPromise('git rev-parse HEAD', { cwd: this.activeDir });
-      const { stdout: remoteHead } = await execPromise('git rev-parse origin/main', { cwd: this.activeDir });
+      const { stdout: remoteHead } = await execPromise('git rev-parse FETCH_HEAD', { cwd: this.activeDir });
       
       const hasUpdate = localHead.trim() !== remoteHead.trim();
       logger.info(`[Safe Update] Has update: ${hasUpdate} (Local: ${localHead.trim().substring(0, 7)} vs Remote: ${remoteHead.trim().substring(0, 7)})`);
@@ -36,13 +59,14 @@ class SafeUpdateService {
   async runUpdatePipeline() {
     logger.info('[Safe Update] Initiating safe update pipeline...');
     try {
+      const authUrl = await this.getAuthenticatedRepoUrl();
       // 1. Prepare Staging
       if (!fs.existsSync(this.stagingDir)) {
         logger.info(`[Safe Update] Creating staging directory by cloning to: ${this.stagingDir}`);
-        await execPromise(`git clone "${this.repoUrl}" "${this.stagingDir}"`);
+        await execPromise(`git clone "${authUrl}" "${this.stagingDir}"`);
       } else {
         logger.info('[Safe Update] Resetting and pulling in staging...');
-        await execPromise('git checkout . && git reset --hard && git checkout main && (git pull origin main || echo Git pull failed)', { cwd: this.stagingDir });
+        await execPromise(`git checkout . && git reset --hard && git checkout main && (git pull "${authUrl}" main || echo Git pull failed)`, { cwd: this.stagingDir });
       }
 
       // Copy environment configuration to staging for realistic test run
@@ -68,7 +92,7 @@ class SafeUpdateService {
 
       // 4. If staging passed validation, pull in Active directory
       logger.info('[Safe Update] Validation passed! Applying changes to active directory...');
-      await execPromise('git checkout . && git reset --hard && (git pull origin main || echo Git pull failed)', { cwd: this.activeDir });
+      await execPromise(`git checkout . && git reset --hard && (git pull "${authUrl}" main || echo Git pull failed)`, { cwd: this.activeDir });
       
       // Update active node_modules if needed
       logger.info('[Safe Update] Re-installing production dependencies in active...');

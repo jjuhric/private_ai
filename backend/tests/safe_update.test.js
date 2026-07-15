@@ -30,7 +30,7 @@ describe('Safe Update Service Tests', () => {
     mockExecPromise.mockImplementation(async (cmd) => {
       if (cmd.includes('rev-parse HEAD')) {
         return { stdout: 'local_sha_123\n', stderr: '' };
-      } else if (cmd.includes('rev-parse origin/main')) {
+      } else if (cmd.includes('rev-parse FETCH_HEAD')) {
         return { stdout: 'remote_sha_456\n', stderr: '' };
       }
       return { stdout: '', stderr: '' };
@@ -60,7 +60,7 @@ describe('Safe Update Service Tests', () => {
 
     expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('git reset --hard'), expect.any(Object));
     expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('npm test'), expect.any(Object));
-    expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('git pull origin main'), expect.any(Object));
+    expect(mockExecPromise).toHaveBeenCalledWith(expect.stringContaining('git pull'), expect.any(Object));
 
     // Check restart trigger
     jest.advanceTimersByTime(2000);
