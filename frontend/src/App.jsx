@@ -16,6 +16,94 @@ import PopoutWindow from './components/PopoutWindow';
 import CustomAlertModal from './components/CustomAlertModal';
 import Esp32MessageModal from './components/Esp32MessageModal';
 
+function ModelTransitionView({ direction, progress, complete, error, onContinue, onRetry }) {
+  const isToAcademy = direction === 'to-academy';
+  
+  return (
+    <div className="model-transition-container">
+      <div className="model-transition-card">
+        <h3 className="transition-title">
+          {isToAcademy ? 'Switching to Academy Environment' : 'Returning to Chat Environment'}
+        </h3>
+        <p className="transition-subtitle">
+          {isToAcademy 
+            ? 'Handing over control to Google Gemma (Vision Enabled)' 
+            : 'Handing over control to Qwen Coder (Code Optimized)'}
+        </p>
+
+        {/* Machine Network Transfer Animation */}
+        <div className="machines-container">
+          {/* Chat Machine (Left) */}
+          <div className={`machine-node chat-machine ${(!isToAcademy && !complete) || (isToAcademy && complete) ? 'active' : ''}`}>
+            <div className="machine-icon">💬</div>
+            <div className="machine-label">Chat Processor</div>
+            <div className="machine-status-tag">Qwen 2.5</div>
+          </div>
+
+          {/* Network Connection Path */}
+          <div className="network-path-container">
+            <svg width="100%" height="24" className="network-svg">
+              <defs>
+                <linearGradient id="pulse-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+              </defs>
+              <line 
+                x1="10%" y1="12" x2="90%" y2="12" 
+                className="base-line" 
+              />
+              <line 
+                x1="10%" y1="12" x2="90%" y2="12" 
+                className={`pulse-line ${isToAcademy ? 'pulse-forward' : 'pulse-backward'} ${complete ? 'paused' : ''}`}
+              />
+            </svg>
+            <div className="transfer-speed-label" style={{ fontWeight: 600 }}>
+              {complete ? 'Handover Complete' : 'Transferring Context...'}
+            </div>
+          </div>
+
+          {/* Academy Machine (Right) */}
+          <div className={`machine-node academy-machine ${(isToAcademy && !complete) || (!isToAcademy && complete) ? 'active' : ''}`}>
+            <div className="machine-icon">🎓</div>
+            <div className="machine-label">Academy Processor</div>
+            <div className="machine-status-tag">Gemma 4</div>
+          </div>
+        </div>
+
+        {/* Progress Bar or Error Display */}
+        {error ? (
+          <div className="transition-error-container">
+            <div className="error-message" style={{ fontWeight: 550 }}>⚠️ {error}</div>
+            <button className="btn btn-secondary" onClick={onRetry} style={{ marginTop: '12px', padding: '6px 14px' }}>
+              Retry Handover
+            </button>
+          </div>
+        ) : (
+          <div className="progress-section">
+            <div className="progress-bar-container">
+              <div 
+                className="progress-bar-fill" 
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <div className="progress-percentage-label">{progress}%</div>
+          </div>
+        )}
+
+        {/* Unlock Button */}
+        {complete && (
+          <div className="continue-button-container" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+            <button className="btn btn-primary btn-continue-glowing" onClick={onContinue}>
+              {isToAcademy ? 'Enter AI Academy' : 'Enter AI Chat'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   // Auth state
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -133,63 +221,108 @@ function App() {
     }
   }, [token]);
 
-  // Sync active tab and switch LM Studio models dynamically
-  useEffect(() => {
-    const switchTabModel = async () => {
-      try {
-        await fetch('/api/settings/active-tab', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ tab: activeTab })
-        });
-      } catch (err) {
-        console.error('[Active Tab Sync] Failed:', err);
+  // Model Transition State
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState('to-academy');
+  const [transitionProgress, setTransitionProgress] = useState(0);
+  const [transitionComplete, setTransitionComplete] = useState(false);
+  const [transitionError, setTransitionError] = useState(null);
+  const [pendingTab, setPendingTab] = useState(null);
+
+  const triggerModelTransition = async (direction, targetTab) => {
+    setIsTransitioning(true);
+    setTransitionDirection(direction);
+    setTransitionProgress(0);
+    setTransitionComplete(false);
+    setTransitionError(null);
+    setPendingTab(targetTab);
+
+    // Dynamic random progress step interval up to 90%
+    let progressVal = 0;
+    const progressInterval = setInterval(() => {
+      progressVal += Math.floor(Math.random() * 8) + 4;
+      if (progressVal >= 90) {
+        progressVal = 90;
+        clearInterval(progressInterval);
+      }
+      setTransitionProgress(progressVal);
+    }, 100);
+
+    const modelId = direction === 'to-academy' ? 'google/gemma-4-e4b' : 'qwen2.5-coder-7b-instruct';
+
+    try {
+      // Sync the active tab globally first
+      await fetch('/api/settings/active-tab', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ tab: targetTab })
+      });
+
+      // Switch models in LM Studio
+      const response = await fetch('/api/settings/switch-model', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ modelId })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        let parsedErr;
+        try {
+          parsedErr = JSON.parse(errText);
+        } catch(e) {}
+        throw new Error((parsedErr && parsedErr.error) || errText || `Failed to switch model to ${modelId}`);
       }
 
-      if (activeTab === 'academy') {
-        try {
-          const res = await fetch('/api/settings/switch-model', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ modelId: 'google/gemma-4-e4b' })
-          });
-          if (res.ok) {
-            setLiveModel('google/gemma-4-e4b');
-          }
-          showToast('Loaded Academy Model (google/gemma-4-e4b) in LM Studio', 'success');
-        } catch (err) {
-          console.error('[Model Switch] Failed to load gemma-4-e4b:', err);
-        }
-      } else if (activeTab === 'chat') {
-        try {
-          const res = await fetch('/api/settings/switch-model', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ modelId: 'qwen2.5-coder-7b-instruct' })
-          });
-          if (res.ok) {
-            setLiveModel('qwen2.5-coder-7b-instruct');
-          }
-          showToast('Loaded Chat Model (qwen2.5-coder-7b-instruct) in LM Studio', 'success');
-        } catch (err) {
-          console.error('[Model Switch] Failed to load qwen2.5-coder-7b-instruct:', err);
-        }
-      }
-    };
+      setLiveModel(modelId);
 
-    if (token) {
-      switchTabModel();
+      // Fast-forward progress to 100%
+      clearInterval(progressInterval);
+      setTransitionProgress(100);
+      setTransitionComplete(true);
+    } catch (err) {
+      clearInterval(progressInterval);
+      console.error('[Model Switch Handover Failed]', err);
+      setTransitionError(err.message || 'Unknown model swap error occurred.');
     }
-  }, [activeTab, token]);
+  };
+
+  const handleTabChange = (newTab) => {
+    if (newTab === activeTab) return;
+
+    if (settings.provider === 'local') {
+      if (newTab === 'academy') {
+        triggerModelTransition('to-academy', 'academy');
+        return;
+      }
+      if (activeTab === 'academy' && newTab !== 'academy') {
+        triggerModelTransition('to-chat', newTab);
+        return;
+      }
+    }
+
+    setActiveTab(newTab);
+  };
+
+  // Sync active tab globally on startup/token load
+  useEffect(() => {
+    if (token) {
+      fetch('/api/settings/active-tab', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ tab: activeTab })
+      }).catch(err => console.error('[Active Tab Startup Sync] Failed:', err));
+    }
+  }, [token]);
 
   // Connect to Alert Broadcast SSE stream
   useEffect(() => {
@@ -976,7 +1109,7 @@ function App() {
         activeChatId={activeChatId}
         setActiveChatId={setActiveChatId}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         isMobileSidebarOpen={isMobileSidebarOpen}
         setIsMobileSidebarOpen={setIsMobileSidebarOpen}
         editingChatId={editingChatId}
@@ -1009,7 +1142,7 @@ function App() {
               onClick={() => {
                 if (activeTab !== 'chat') {
                   if (!activeChatId && chats.length > 0) setActiveChatId(chats[0].id);
-                  setActiveTab('chat');
+                  handleTabChange('chat');
                 }
               }}
               title={activeTab !== 'chat' ? "Return to Chat" : ""}
@@ -1046,69 +1179,87 @@ function App() {
           </div>
         </header>
 
-        {activeTab === 'chat' && !isChatPoppedOut && (
-          <ChatPane
-            settings={settings}
-            messages={messages}
-            activeChatId={activeChatId}
-            isStreaming={isStreaming}
-            streamThoughts={streamThoughts}
-            streamContent={streamContent}
-            toolLogs={toolLogs}
-            inputText={inputText}
-            setInputText={setInputText}
-            handleSendMessage={handleSendMessage}
-            handleStop={handleStop}
-            messagesEndRef={messagesEndRef}
-            handleResolveCommand={handleResolveCommand}
-            streamStatus={streamStatus}
+        {isTransitioning ? (
+          <ModelTransitionView
+            direction={transitionDirection}
+            progress={transitionProgress}
+            complete={transitionComplete}
+            error={transitionError}
+            onContinue={() => {
+              setActiveTab(pendingTab);
+              setIsTransitioning(false);
+            }}
+            onRetry={() => {
+              triggerModelTransition(transitionDirection, pendingTab);
+            }}
           />
-        )}
-        {activeTab === 'chat' && isChatPoppedOut && (
-          <div className="chat-pane" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--text-secondary)' }}>
-            <ExternalLink size={48} className="text-accent-primary" style={{ opacity: 0.6, animation: 'pulse 2s infinite alternate' }} />
-            <h3>Chat is Popped Out</h3>
-            <p style={{ fontSize: '0.9rem', maxWidth: '350px', textAlign: 'center', lineHeight: '1.5' }}>
-              The chat has been opened in a separate window. You can browse the dashboard, calendar, or memories here while keeping the chat active.
-            </p>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => setIsChatPoppedOut(false)}
-              style={{ padding: '8px 18px', fontSize: '0.9rem' }}
-            >
-              Merge Chat Back
-            </button>
-          </div>
-        )}
-        {activeTab === 'calendar' && (
-          <CalendarPane
-            calendarEvents={calendarEvents}
-            calendarForm={calendarForm}
-            setCalendarForm={setCalendarForm}
-            calendarDate={calendarDate}
-            setCalendarDate={setCalendarDate}
-            handleAddCalendarEvent={handleAddCalendarEvent}
-            handleDeleteCalendarEvent={handleDeleteCalendarEvent}
-          />
-        )}
-        {activeTab === 'academy' && (
-          <AcademyPane token={token} />
-        )}
-        {activeTab === 'memory' && (
-          <MemoryPane
-            memories={memories}
-            onAddMemory={handleAddMemory}
-            onDeleteMemory={handleDeleteMemory}
-          />
-        )}
-        {activeTab === 'dashboard' && (
-          <AgentDashboard
-            token={token}
-            toolLogs={toolLogs}
-            activeAgent={activeAgent}
-            isStreaming={isStreaming}
-            settings={settings}
-          />
+        ) : (
+          <>
+            {activeTab === 'chat' && !isChatPoppedOut && (
+              <ChatPane
+                settings={settings}
+                messages={messages}
+                activeChatId={activeChatId}
+                isStreaming={isStreaming}
+                streamThoughts={streamThoughts}
+                streamContent={streamContent}
+                toolLogs={toolLogs}
+                inputText={inputText}
+                setInputText={setInputText}
+                handleSendMessage={handleSendMessage}
+                handleStop={handleStop}
+                messagesEndRef={messagesEndRef}
+                handleResolveCommand={handleResolveCommand}
+                streamStatus={streamStatus}
+              />
+            )}
+            {activeTab === 'chat' && isChatPoppedOut && (
+              <div className="chat-pane" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--text-secondary)' }}>
+                <ExternalLink size={48} className="text-accent-primary" style={{ opacity: 0.6, animation: 'pulse 2s infinite alternate' }} />
+                <h3>Chat is Popped Out</h3>
+                <p style={{ fontSize: '0.9rem', maxWidth: '350px', textAlign: 'center', lineHeight: '1.5' }}>
+                  The chat has been opened in a separate window. You can browse the dashboard, calendar, or memories here while keeping the chat active.
+                </p>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => setIsChatPoppedOut(false)}
+                  style={{ padding: '8px 18px', fontSize: '0.9rem' }}
+                >
+                  Merge Chat Back
+                </button>
+              </div>
+            )}
+            {activeTab === 'calendar' && (
+              <CalendarPane
+                calendarEvents={calendarEvents}
+                calendarForm={calendarForm}
+                setCalendarForm={setCalendarForm}
+                calendarDate={calendarDate}
+                setCalendarDate={setCalendarDate}
+                handleAddCalendarEvent={handleAddCalendarEvent}
+                handleDeleteCalendarEvent={handleDeleteCalendarEvent}
+              />
+            )}
+            {activeTab === 'academy' && (
+              <AcademyPane token={token} />
+            )}
+            {activeTab === 'memory' && (
+              <MemoryPane
+                memories={memories}
+                onAddMemory={handleAddMemory}
+                onDeleteMemory={handleDeleteMemory}
+              />
+            )}
+            {activeTab === 'dashboard' && (
+              <AgentDashboard
+                token={token}
+                toolLogs={toolLogs}
+                activeAgent={activeAgent}
+                isStreaming={isStreaming}
+                settings={settings}
+              />
+            )}
+          </>
         )}
       </main>
 

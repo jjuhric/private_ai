@@ -40,7 +40,7 @@ async function listLocalModels(localBaseUrl, localApiKey) {
       const modelsList = data.models || data.data || [];
       return modelsList.map(model => {
         const isLoaded = !!(model.loaded_instances && model.loaded_instances.length > 0);
-        const instanceId = isLoaded ? model.loaded_instances[0].instance_id : null;
+        const instanceId = isLoaded ? (model.loaded_instances[0].id || model.loaded_instances[0].instance_id) : null;
         return {
           id: model.id || model.key || '',
           name: model.name || model.id || '',
