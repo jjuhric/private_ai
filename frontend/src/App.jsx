@@ -151,7 +151,7 @@ function App() {
 
       if (activeTab === 'academy') {
         try {
-          await fetch('/api/settings/switch-model', {
+          const res = await fetch('/api/settings/switch-model', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -159,13 +159,16 @@ function App() {
             },
             body: JSON.stringify({ modelId: 'google/gemma-4-e4b' })
           });
+          if (res.ok) {
+            setLiveModel('google/gemma-4-e4b');
+          }
           showToast('Loaded Academy Model (google/gemma-4-e4b) in LM Studio', 'success');
         } catch (err) {
           console.error('[Model Switch] Failed to load gemma-4-e4b:', err);
         }
       } else if (activeTab === 'chat') {
         try {
-          await fetch('/api/settings/switch-model', {
+          const res = await fetch('/api/settings/switch-model', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -173,6 +176,9 @@ function App() {
             },
             body: JSON.stringify({ modelId: 'qwen2.5-coder-7b-instruct' })
           });
+          if (res.ok) {
+            setLiveModel('qwen2.5-coder-7b-instruct');
+          }
           showToast('Loaded Chat Model (qwen2.5-coder-7b-instruct) in LM Studio', 'success');
         } catch (err) {
           console.error('[Model Switch] Failed to load qwen2.5-coder-7b-instruct:', err);
