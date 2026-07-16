@@ -121,7 +121,7 @@ ESP32 microcontrollers serve as low-power, cheap sensor nodes or relay controls 
 When launching PATTI for the first time, you are greeted by an automated setup wizard:
 * **Step 1: Device Selection**: Identify the current device family (Windows, Raspberry Pi variants, ESP32 variants).
 * **Step 2: Profile Settings**: Configure personal settings, system name, and location.
-* **Step 3: Model Configuration**: Configure preferred online (Gemini/OpenAI/Claude) and local models.
+* **Step 3: Model Configuration**: Configure the mandatory local model (locked to `qwen2.5-coder-7b-instruct`) and optionally enable the Online LLM Fallback (Gemini/OpenAI/Claude) with confirmation validation.
 * **Step 4: Review & Deploy**: Validates and saves configurations to the SQLite DB.
 
 ### 2. Multi-Agent Supervisor & Agents Pool
@@ -142,14 +142,12 @@ Navigate to **System Control** -> **Field Nodes** tab to manage your smart home 
 
 ---
 
-## 🎓 Structured PDF Academy & Self-Paced Learning (v5.2.0)
+## 🌸 Custom Personalities & Skills Management
 
-The PATTI Academy has been upgraded with a comprehensive self-paced learning and grading architecture:
-* **Interactive Teacher Chat**: Submit questions about the lesson directly to the Teacher agent.
-* **Multi-Image Attachments**: Attach reference images/files to your chat questions or answers.
-* **Pass/Fail Graduation**: Students are graded on graduation tests. A minimum score of 70% is required to qualify for advancement.
-* **Manual Advancement**: Lessons no longer advance automatically upon evaluation. Passing students must explicitly advance to the next step.
-* **Premium PDF Layout**: Documents are presented in a high-fidelity desk-themed PDF viewer with styled headers, custom code blocks, tables, and Mermaid diagram renderers.
+PATTI features a dynamic profile manager to download, upload, and toggle agent personality prompts and skills rules directly from Markdown (`.md`) files:
+- **Personalities Tab**: Toggle and activate custom personalities (e.g., Friendly Secretary). Only one personality can be active at a time.
+- **Skills Tab**: Enable or disable specific skill instructions (e.g., Smart Home Helper) to extend PATTI's capability.
+- **Markdown Safety Preview**: When uploading a local file or downloading from a URL, PATTI parses the YAML frontmatter and shows a raw markdown code preview. The user can review the content and override the name/description before importing to ensure system security.
 
 ---
 

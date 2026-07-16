@@ -778,6 +778,26 @@ ${toolOutput}
   if (!workingDirectory) {
     workingDirectory = defaultWorkingDir;
   }
+  let activePersonalityPrompt = '';
+  try {
+    const personalityRow = await db.get('SELECT system_prompt FROM custom_personalities WHERE is_active = 1');
+    if (personalityRow) {
+      activePersonalityPrompt = `\n\n### ACTIVE CUSTOM PERSONALITY (OVERRIDE PERSONA):\n${personalityRow.system_prompt}`;
+    }
+  } catch (err) {
+    console.error('Failed to load active custom personality in runAgentLoop:', err);
+  }
+
+  let activeSkillsPrompt = '';
+  try {
+    const skillRows = await db.all('SELECT name, instructions FROM custom_skills WHERE is_active = 1');
+    if (skillRows && skillRows.length > 0) {
+      activeSkillsPrompt = '\n\n### ACTIVE CUSTOM SKILLS:\n' + skillRows.map(r => `- Skill "${r.name}":\n${r.instructions}`).join('\n\n');
+    }
+  } catch (err) {
+    console.error('Failed to load active custom skills in runAgentLoop:', err);
+  }
+
   settings.workingDirectory = workingDirectory;
 
   // --- Personal Info Interceptor ---
@@ -843,7 +863,7 @@ ${toolOutput}
 
     const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
     const mode2SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 1 -->[\s\S]*?<!-- END MODE 1 -->/g, '');
-    const responderInstruction = `${mode2SystemPrompt}
+    const responderInstruction = `${mode2SystemPrompt}${activePersonalityPrompt}
  
 ### INSTRUCTIONS:
 - You are operating in **MODE 2: Format Results**.
@@ -921,7 +941,7 @@ ${profileDetailsText ? `Here is the user profile details context:\n${profileDeta
     console.error('Failed to get feedback context in runAgentLoop:', fbErr);
   }
 
-  let systemPrompt = AGENT_PROMPTS.supervisor + feedbackContext + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
+  let systemPrompt = AGENT_PROMPTS.supervisor + feedbackContext + activeSkillsPrompt + `\n\n${profileContext}\n\n### User Memories Context:\n${memoriesResult}${dynamicCapabilitiesContext}${workspaceContext}`;
   let currentHistory = [...cleanedHistory];
   let accumulatedToolOutputs = [];
   let toolCallsCount = 0;
@@ -1078,7 +1098,7 @@ If no changes are required and you can proceed without executing the code, then 
       onThought("Communication Specialist translating request to Project Idea...\n");
       if (onAgentStatus) onAgentStatus({ agent: 'communication_specialist', status: 'active' });
       const commSpecialistSystemPrompt = require('./utils/agents/communication_specialist');
-      const mode1SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 2 -->[\s\S]*?<!-- END MODE 2 -->/g, '');
+      const mode1SystemPrompt = commSpecialistSystemPrompt.replace(/<!-- START MODE 2 -->[\s\S]*?<!-- END MODE 2 -->/g, '') + activePersonalityPrompt;
       const commSpecialistSettings = {
         ...settings,
         modelName: supervisorModel || settings.modelName
@@ -1453,7 +1473,7 @@ Make sure to answer the user query directly and clearly.`;
     } catch (timeErr) {
       console.error('Failed to get current time for responder instruction:', timeErr);
     }
-    responderInstruction = `${mode2SystemPrompt}
+    responderInstruction = `${mode2SystemPrompt}${activePersonalityPrompt}
  
 ### INSTRUCTIONS:
 - You are operating in **MODE 2: Format Results**.

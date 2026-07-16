@@ -403,7 +403,6 @@ write_env_var "MQTT_BROKER_URL" "${MQTT_BROKER_URL}"
 write_env_var "MQTT_NODE_ID" "${MQTT_NODE_ID}"
 write_env_var "MQTT_USERNAME" "${DEFAULT_MQTT_USERNAME}"
 write_env_var "MQTT_PASSWORD" "${DEFAULT_MQTT_PASSWORD}"
-write_env_var "TOOL_REGISTRY_REPO" "${DEFAULT_TOOL_REGISTRY_REPO}"
 write_env_var "TOOL_REGISTRY_LOCAL_PATH" "${DEFAULT_TOOL_REGISTRY_LOCAL_PATH}"
 if [ "$IS_MAIN_HOST" = "0" ]; then
     write_env_var "MAIN_HOST_IP" "${MAIN_HOST_IP}"

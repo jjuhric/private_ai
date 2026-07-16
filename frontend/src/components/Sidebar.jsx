@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, Plus, Edit2, X, Calendar, Settings, LogOut, Brain, Network, Send, BookOpen } from 'lucide-react';
+import { MessageSquare, Plus, Edit2, X, Calendar, Settings, LogOut, Brain, Network, Send, Sliders } from 'lucide-react';
 
 export default function Sidebar({
   user,
@@ -131,12 +131,12 @@ export default function Sidebar({
         </button>
 
         <button 
-          className={`btn-new-chat ${activeTab === 'academy' ? 'active' : ''}`} 
-          onClick={() => { setActiveTab('academy'); setIsMobileSidebarOpen(false); }} 
+          className={`btn-new-chat ${activeTab === 'personality-skills' ? 'active' : ''}`} 
+          onClick={() => { setActiveTab('personality-skills'); setIsMobileSidebarOpen(false); }} 
           style={{ margin: 0 }}
         >
-          <BookOpen size={18} />
-          <span>AI Academy</span>
+          <Sliders size={18} />
+          <span>Persona & Skills</span>
         </button>
 
         <button 

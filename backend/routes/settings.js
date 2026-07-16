@@ -87,6 +87,17 @@ router.put('/', authenticateToken, async (req, res) => {
     const defaultWorkingDir = path.resolve(path.join(__dirname, '../..'));
     const resolvedWorkingDir = working_directory || existing.working_directory || process.env.WORKING_DIRECTORY || defaultWorkingDir;
 
+    let finalProvider = provider || 'local';
+    let finalModelName = model_name || 'qwen2.5-coder-7b-instruct';
+    let finalPreferredLocal = preferred_local_model || 'qwen2.5-coder-7b-instruct';
+    let finalSupervisorModel = supervisor_model || 'qwen2.5-coder-7b-instruct';
+
+    if (finalProvider === 'local') {
+      finalModelName = 'qwen2.5-coder-7b-instruct';
+      finalPreferredLocal = 'qwen2.5-coder-7b-instruct';
+      finalSupervisorModel = 'qwen2.5-coder-7b-instruct';
+    }
+
     await db.run(
       `INSERT INTO user_settings (
          user_id, provider, model_name, github_token, gemini_key, local_key, 
@@ -116,9 +127,9 @@ router.put('/', authenticateToken, async (req, res) => {
          google_home_ip = excluded.google_home_ip,
          google_home_name = excluded.google_home_name`,
       [
-        req.user.id, provider || 'local', model_name || 'qwen2.5-coder-7b-instruct', finalGithub, finalGemini, finalLocal,
+        req.user.id, finalProvider, finalModelName, finalGithub, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
-        preferred_local_model, preferred_online_model, supervisor_model,
+        finalPreferredLocal, preferred_online_model || 'gemini-2.0-flash', finalSupervisorModel,
         device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir,
         (google_home_enabled === 1 || google_home_enabled === '1' || google_home_enabled === true || google_home_enabled === 'true') ? 1 : 0,
         google_home_ip || null, google_home_name || null

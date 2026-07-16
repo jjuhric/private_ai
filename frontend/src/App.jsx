@@ -8,7 +8,7 @@ import MemoryPane from './components/MemoryPane';
 import SettingsModal from './components/SettingsModal';
 import ProfileModal from './components/ProfileModal';
 import AgentDashboard from './components/AgentDashboard';
-import AcademyPane from './components/AcademyPane';
+import PersonalitySkillsPane from './components/PersonalitySkillsPane';
 import Toast from './components/Toast';
 import SetupWizard from './components/SetupWizard';
 import SudoModal from './components/SudoModal';
@@ -16,103 +16,7 @@ import PopoutWindow from './components/PopoutWindow';
 import CustomAlertModal from './components/CustomAlertModal';
 import Esp32MessageModal from './components/Esp32MessageModal';
 
-function ModelTransitionView({ direction, progress, complete, error, onContinue, onRetry }) {
-  const isToAcademy = direction === 'to-academy';
-  
-  return (
-    <div className="model-transition-container">
-      <div className="model-transition-card">
-        <h3 className="transition-title">
-          {isToAcademy ? 'Switching to Academy Environment' : 'Returning to Chat Environment'}
-        </h3>
-        <p className="transition-subtitle">
-          {isToAcademy 
-            ? 'Handing over control to Google Gemma (Vision Enabled)' 
-            : 'Handing over control to Qwen Coder (Code Optimized)'}
-        </p>
 
-        {/* Machine Network Transfer Animation */}
-        <div className="machines-container">
-          {/* Chat Machine (Left) */}
-          <div className={`machine-node chat-machine ${(!isToAcademy && !complete) || (isToAcademy && complete) ? 'active' : ''}`}>
-            <div className="machine-icon">💬</div>
-            <div className="machine-label">Chat Processor</div>
-            <div className="machine-status-tag">Qwen 2.5</div>
-          </div>
-
-          {/* Network Connection Path */}
-          <div className="network-path-container">
-            <svg viewBox="0 0 300 24" width="100%" height="24" className="network-svg">
-              <defs>
-                <linearGradient id="pulse-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#10b981" />
-                </linearGradient>
-              </defs>
-              <line 
-                x1="30" y1="12" x2="270" y2="12" 
-                className="base-line" 
-              />
-              <line 
-                x1="30" y1="12" x2="270" y2="12" 
-                className={`pulse-line ${isToAcademy ? 'pulse-forward' : 'pulse-backward'} ${complete ? 'paused' : ''}`}
-              />
-              {!complete && (
-                <text dy="5" fontSize="14" style={{ filter: 'drop-shadow(0 0 4px #10b981)', pointerEvents: 'none' }}>
-                  <animateMotion 
-                    dur="3s" 
-                    repeatCount="indefinite" 
-                    path={isToAcademy ? "M 30 12 L 270 12" : "M 270 12 L 30 12"} 
-                  />
-                  ⚡
-                </text>
-              )}
-            </svg>
-            <div className="transfer-speed-label" style={{ fontWeight: 600 }}>
-              {complete ? 'Handover Complete' : 'Transferring Context...'}
-            </div>
-          </div>
-
-          {/* Academy Machine (Right) */}
-          <div className={`machine-node academy-machine ${(isToAcademy && !complete) || (!isToAcademy && complete) ? 'active' : ''}`}>
-            <div className="machine-icon">🎓</div>
-            <div className="machine-label">Academy Processor</div>
-            <div className="machine-status-tag">Gemma 4</div>
-          </div>
-        </div>
-
-        {/* Progress Bar or Error Display */}
-        {error ? (
-          <div className="transition-error-container">
-            <div className="error-message" style={{ fontWeight: 550 }}>⚠️ {error}</div>
-            <button className="btn btn-secondary" onClick={onRetry} style={{ marginTop: '12px', padding: '6px 14px' }}>
-              Retry Handover
-            </button>
-          </div>
-        ) : (
-          <div className="progress-section">
-            <div className="progress-bar-container">
-              <div 
-                className="progress-bar-fill" 
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-            <div className="progress-percentage-label">{progress}%</div>
-          </div>
-        )}
-
-        {/* Unlock Button */}
-        {complete && (
-          <div className="continue-button-container" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-            <button className="btn btn-primary btn-continue-glowing" onClick={onContinue}>
-              {isToAcademy ? 'Enter AI Academy' : 'Enter AI Chat'}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function App() {
   // Auth state
@@ -231,111 +135,8 @@ function App() {
     }
   }, [token]);
 
-  // Model Transition State
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionDirection, setTransitionDirection] = useState('to-academy');
-  const [transitionProgress, setTransitionProgress] = useState(0);
-  const [transitionComplete, setTransitionComplete] = useState(false);
-  const [transitionError, setTransitionError] = useState(null);
-  const [pendingTab, setPendingTab] = useState(null);
-
-  const triggerModelTransition = async (direction, targetTab) => {
-    setIsTransitioning(true);
-    setTransitionDirection(direction);
-    setTransitionProgress(0);
-    setTransitionComplete(false);
-    setTransitionError(null);
-    setPendingTab(targetTab);
-
-    const startTime = Date.now();
-    const MIN_DURATION = 10000; // 10 seconds minimum
-    let apiCompleted = false;
-    let apiError = null;
-
-    const progressInterval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      let progressVal = Math.floor((elapsed / MIN_DURATION) * 100);
-      
-      if (progressVal >= 99) {
-        progressVal = 99;
-        if (apiCompleted) {
-          clearInterval(progressInterval);
-          setTransitionProgress(100);
-          setTransitionComplete(true);
-          return;
-        }
-      }
-      
-      if (apiError) {
-        clearInterval(progressInterval);
-        setTransitionError(apiError);
-        return;
-      }
-
-      setTransitionProgress(progressVal);
-    }, 100);
-
-    const modelId = direction === 'to-academy' ? 'google/gemma-4-e4b' : 'qwen2.5-coder-7b-instruct';
-
-    try {
-      // Sync the active tab globally first
-      await fetch('/api/settings/active-tab', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ tab: targetTab })
-      });
-
-      // Switch models in LM Studio
-      const response = await fetch('/api/settings/switch-model', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ modelId })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        let parsedErr;
-        try {
-          parsedErr = JSON.parse(errText);
-        } catch(e) {}
-        throw new Error((parsedErr && parsedErr.error) || errText || `Failed to switch model to ${modelId}`);
-      }
-
-      setLiveModel(modelId);
-      apiCompleted = true;
-
-      // Check if we already passed 10 seconds. If so, finish immediately!
-      const elapsed = Date.now() - startTime;
-      if (elapsed >= MIN_DURATION) {
-        clearInterval(progressInterval);
-        setTransitionProgress(100);
-        setTransitionComplete(true);
-      }
-    } catch (err) {
-      apiError = err.message || 'Unknown model swap error occurred.';
-    }
-  };
-
   const handleTabChange = (newTab) => {
     if (newTab === activeTab) return;
-
-    if (settings.provider === 'local') {
-      if (newTab === 'academy') {
-        triggerModelTransition('to-academy', 'academy');
-        return;
-      }
-      if (activeTab === 'academy' && newTab !== 'academy') {
-        triggerModelTransition('to-chat', newTab);
-        return;
-      }
-    }
-
     setActiveTab(newTab);
   };
 
@@ -1208,87 +1009,69 @@ function App() {
           </div>
         </header>
 
-        {isTransitioning ? (
-          <ModelTransitionView
-            direction={transitionDirection}
-            progress={transitionProgress}
-            complete={transitionComplete}
-            error={transitionError}
-            onContinue={() => {
-              setActiveTab(pendingTab);
-              setIsTransitioning(false);
-            }}
-            onRetry={() => {
-              triggerModelTransition(transitionDirection, pendingTab);
-            }}
+        {activeTab === 'chat' && !isChatPoppedOut && (
+          <ChatPane
+            settings={settings}
+            messages={messages}
+            activeChatId={activeChatId}
+            isStreaming={isStreaming}
+            streamThoughts={streamThoughts}
+            streamContent={streamContent}
+            toolLogs={toolLogs}
+            inputText={inputText}
+            setInputText={setInputText}
+            handleSendMessage={handleSendMessage}
+            handleStop={handleStop}
+            messagesEndRef={messagesEndRef}
+            handleResolveCommand={handleResolveCommand}
+            streamStatus={streamStatus}
           />
-        ) : (
-          <>
-            {activeTab === 'chat' && !isChatPoppedOut && (
-              <ChatPane
-                settings={settings}
-                messages={messages}
-                activeChatId={activeChatId}
-                isStreaming={isStreaming}
-                streamThoughts={streamThoughts}
-                streamContent={streamContent}
-                toolLogs={toolLogs}
-                inputText={inputText}
-                setInputText={setInputText}
-                handleSendMessage={handleSendMessage}
-                handleStop={handleStop}
-                messagesEndRef={messagesEndRef}
-                handleResolveCommand={handleResolveCommand}
-                streamStatus={streamStatus}
-              />
-            )}
-            {activeTab === 'chat' && isChatPoppedOut && (
-              <div className="chat-pane" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--text-secondary)' }}>
-                <ExternalLink size={48} className="text-accent-primary" style={{ opacity: 0.6, animation: 'pulse 2s infinite alternate' }} />
-                <h3>Chat is Popped Out</h3>
-                <p style={{ fontSize: '0.9rem', maxWidth: '350px', textAlign: 'center', lineHeight: '1.5' }}>
-                  The chat has been opened in a separate window. You can browse the dashboard, calendar, or memories here while keeping the chat active.
-                </p>
-                <button 
-                  className="btn btn-primary" 
-                  onClick={() => setIsChatPoppedOut(false)}
-                  style={{ padding: '8px 18px', fontSize: '0.9rem' }}
-                >
-                  Merge Chat Back
-                </button>
-              </div>
-            )}
-            {activeTab === 'calendar' && (
-              <CalendarPane
-                calendarEvents={calendarEvents}
-                calendarForm={calendarForm}
-                setCalendarForm={setCalendarForm}
-                calendarDate={calendarDate}
-                setCalendarDate={setCalendarDate}
-                handleAddCalendarEvent={handleAddCalendarEvent}
-                handleDeleteCalendarEvent={handleDeleteCalendarEvent}
-              />
-            )}
-            {activeTab === 'academy' && (
-              <AcademyPane token={token} />
-            )}
-            {activeTab === 'memory' && (
-              <MemoryPane
-                memories={memories}
-                onAddMemory={handleAddMemory}
-                onDeleteMemory={handleDeleteMemory}
-              />
-            )}
-            {activeTab === 'dashboard' && (
-              <AgentDashboard
-                token={token}
-                toolLogs={toolLogs}
-                activeAgent={activeAgent}
-                isStreaming={isStreaming}
-                settings={settings}
-              />
-            )}
-          </>
+        )}
+        {activeTab === 'chat' && isChatPoppedOut && (
+          <div className="chat-pane" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', color: 'var(--text-secondary)' }}>
+            <ExternalLink size={48} className="text-accent-primary" style={{ opacity: 0.6, animation: 'pulse 2s infinite alternate' }} />
+            <h3>Chat is Popped Out</h3>
+            <p style={{ fontSize: '0.9rem', maxWidth: '350px', textAlign: 'center', lineHeight: '1.5' }}>
+              The chat has been opened in a separate window. You can browse the dashboard, calendar, or memories here while keeping the chat active.
+            </p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setIsChatPoppedOut(false)}
+              style={{ padding: '8px 18px', fontSize: '0.9rem' }}
+            >
+              Merge Chat Back
+            </button>
+          </div>
+        )}
+        {activeTab === 'calendar' && (
+          <CalendarPane
+            calendarEvents={calendarEvents}
+            calendarForm={calendarForm}
+            setCalendarForm={setCalendarForm}
+            calendarDate={calendarDate}
+            setCalendarDate={setCalendarDate}
+            handleAddCalendarEvent={handleAddCalendarEvent}
+            handleDeleteCalendarEvent={handleDeleteCalendarEvent}
+          />
+        )}
+        {activeTab === 'personality-skills' && (
+          <PersonalitySkillsPane token={token} />
+        )}
+        {activeTab === 'memory' && (
+          <MemoryPane
+            memories={memories}
+            onAddMemory={handleAddMemory}
+            onDeleteMemory={handleDeleteMemory}
+          />
+        )}
+        {activeTab === 'dashboard' && (
+          <AgentDashboard
+            token={token}
+            toolLogs={toolLogs}
+            activeAgent={activeAgent}
+            isStreaming={isStreaming}
+            settings={settings}
+          />
         )}
       </main>
 

@@ -199,13 +199,36 @@ async function getDb() {
       )
     `);
 
-    // Migration for academy_lessons chat_history
+    // Seed default custom personality and skills if empty
     try {
-      const academyColumns = await dbConnection.all('PRAGMA table_info(academy_lessons)');
-      if (academyColumns.length > 0 && !academyColumns.some(col => col.name === 'chat_history')) {
-        await dbConnection.run("ALTER TABLE academy_lessons ADD COLUMN chat_history JSON DEFAULT '[]'");
+      const personalityCountRow = await dbConnection.get('SELECT COUNT(*) as count FROM custom_personalities');
+      if (personalityCountRow && personalityCountRow.count === 0) {
+        await dbConnection.run(`
+          INSERT INTO custom_personalities (name, description, system_prompt, is_active)
+          VALUES (?, ?, ?, ?)
+        `, [
+          'Friendly Secretary',
+          'A bubbly, warm, polite, and well-organized secretary persona.',
+          'You are a friendly, secretary-like assistant. Speak articulately and politely, break down problems into individual tasks, and check with the user before proceeding.',
+          1
+        ]);
       }
-    } catch (e) {}
+
+      const skillCountRow = await dbConnection.get('SELECT COUNT(*) as count FROM custom_skills');
+      if (skillCountRow && skillCountRow.count === 0) {
+        await dbConnection.run(`
+          INSERT INTO custom_skills (name, description, instructions, is_active)
+          VALUES (?, ?, ?, ?)
+        `, [
+          'Smart Home Helper',
+          'Standard rules for smart home Google Home operations.',
+          'Delegate all smart home commands like turn on/off lights or TVs to the system_specialist agent.',
+          1
+        ]);
+      }
+    } catch (e) {
+      console.error('Failed to seed default custom personalities/skills:', e);
+    }
 
     // Create query optimization indexes
     await dbConnection.run('CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id, created_at)');

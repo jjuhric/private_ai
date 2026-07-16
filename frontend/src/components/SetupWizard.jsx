@@ -36,6 +36,8 @@ export default function SetupWizard({ token, onComplete }) {
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
   const [showWeatherKey, setShowWeatherKey] = useState(false);
+  const [useOnline, setUseOnline] = useState(false);
+  const [showOnlineConfirm, setShowOnlineConfirm] = useState(false);
 
   // Connection testing states
   const [testing, setTesting] = useState(false);
@@ -121,7 +123,7 @@ export default function SetupWizard({ token, onComplete }) {
   };
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     try {
       // 1. Save Profile
       const profileRes = await fetch('/api/profile', {
@@ -138,27 +140,30 @@ export default function SetupWizard({ token, onComplete }) {
       }
 
       // 2. Save Settings
-        const settingsRes = await fetch('/api/settings', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            provider: llmForm.provider,
-            model_name: llmForm.model_name,
-            local_url: llmForm.local_url,
-            local_api_style: llmForm.local_api_style,
-            local_key: llmForm.local_key,
-            online_provider: llmForm.online_provider,
-            online_url: llmForm.online_url,
-            online_key: llmForm.online_key,
-            device_type: deviceForm.device_type,
-            is_main_host: deviceForm.is_main_host,
-            preferred_local_model: llmForm.provider === 'local' ? llmForm.model_name : 'qwen2.5-coder-7b-instruct',
-            preferred_online_model: llmForm.provider !== 'local' ? llmForm.model_name : 'qwen2.5-coder-7b-instruct'
-          })
-        });
+      const savedProvider = useOnline ? 'online' : 'local';
+      const savedModelName = useOnline ? (llmForm.model_name || 'gemini-2.0-flash') : 'qwen2.5-coder-7b-instruct';
+
+      const settingsRes = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          provider: savedProvider,
+          model_name: savedModelName,
+          local_url: llmForm.local_url,
+          local_api_style: llmForm.local_api_style,
+          local_key: llmForm.local_key,
+          online_provider: llmForm.online_provider,
+          online_url: llmForm.online_url,
+          online_key: llmForm.online_key,
+          device_type: deviceForm.device_type,
+          is_main_host: deviceForm.is_main_host,
+          preferred_local_model: 'qwen2.5-coder-7b-instruct',
+          preferred_online_model: savedModelName
+        })
+      });
       if (!settingsRes.ok) {
         const errData = await settingsRes.json();
         throw new Error(errData.error || 'Failed to save settings');
@@ -171,11 +176,13 @@ export default function SetupWizard({ token, onComplete }) {
   };
 
   const isStep3Valid = () => {
-    if (llmForm.provider === 'local') {
-      return llmForm.local_url && llmForm.local_url.startsWith('http');
-    } else {
-      return llmForm.online_key && llmForm.online_key.length > 5;
+    if (deviceForm.is_main_host) {
+      if (!llmForm.local_url || !llmForm.local_url.startsWith('http')) return false;
     }
+    if (useOnline) {
+      if (!llmForm.online_key || llmForm.online_key.length < 5) return false;
+    }
+    return true;
   };
 
   return (
@@ -446,97 +453,132 @@ export default function SetupWizard({ token, onComplete }) {
               <Cpu className="text-accent-primary" size={24} /> LLM Configuration
             </h2>
             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', marginBottom: '24px' }}>
-              Configure your primary language model. You must set up at least one Local or Online model.
+              Configure your primary language model. The Local model is mandatory. Optionally enable Online model fallback.
             </p>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <button
-                type="button"
-                className={`settings-tab-btn ${llmForm.provider === 'local' ? 'active' : ''}`}
-                onClick={() => setLlmForm(prev => ({ ...prev, provider: 'local' }))}
-                style={{ flex: 1, padding: '10px 0' }}
-              >
-                Local API
-              </button>
-              <button
-                type="button"
-                className={`settings-tab-btn ${llmForm.provider === 'gemini' ? 'active' : ''}`}
-                onClick={() => setLlmForm(prev => ({ ...prev, provider: 'gemini' }))}
-                style={{ flex: 1, padding: '10px 0', display: 'none' }}
-              >
-                Online API
-              </button>
-            </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {llmForm.provider === 'local' ? (
-                <>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local LLM Base URL</label>
+              {/* Mandatory Local LLM Settings */}
+              <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Local LLM Settings (Mandatory)</h4>
+                
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local LLM Base URL</label>
+                  <input 
+                    type="text" 
+                    className="form-control"
+                    value={llmForm.local_url}
+                    onChange={e => setLlmForm(prev => ({ ...prev, local_url: e.target.value }))}
+                    placeholder="e.g. http://192.168.1.42:1234/v1"
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>API Style</label>
+                  <select
+                    className="form-control"
+                    value={llmForm.local_api_style}
+                    onChange={e => setLlmForm(prev => ({ ...prev, local_api_style: e.target.value }))}
+                  >
+                    <option value="openai">OpenAI-compatible</option>
+                    <option value="lm-studio">LM Studio API</option>
+                    <option value="anthropic">Anthropic-compatible</option>
+                    <option value="local-gemini">Gemini Local Style</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local Key/Token (Optional)</label>
+                  <div style={{ position: 'relative' }}>
                     <input 
-                      type="text" 
+                      type={showLocalKey ? 'text' : 'password'} 
                       className="form-control"
-                      value={llmForm.local_url}
-                      onChange={e => setLlmForm(prev => ({ ...prev, local_url: e.target.value }))}
-                      placeholder="e.g. http://192.168.1.42:1234/v1"
+                      value={llmForm.local_key}
+                      onChange={e => setLlmForm(prev => ({ ...prev, local_key: e.target.value }))}
+                      placeholder="Token if required"
                     />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>API Style</label>
-                    <select
-                      className="form-control"
-                      value={llmForm.local_api_style}
-                      onChange={e => setLlmForm(prev => ({ ...prev, local_api_style: e.target.value }))}
+                    <button
+                      type="button"
+                      onClick={() => setShowLocalKey(!showLocalKey)}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}
                     >
-                      <option value="openai">OpenAI-compatible</option>
-                      <option value="lm-studio">LM Studio API</option>
-                      <option value="anthropic">Anthropic-compatible</option>
-                      <option value="local-gemini">Gemini Local Style</option>
-                    </select>
+                      {showLocalKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local Key/Token (Optional)</label>
-                    <div style={{ position: 'relative' }}>
-                      <input 
-                        type={showLocalKey ? 'text' : 'password'} 
-                        className="form-control"
-                        value={llmForm.local_key}
-                        onChange={e => setLlmForm(prev => ({ ...prev, local_key: e.target.value }))}
-                        placeholder="Token if required"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowLocalKey(!showLocalKey)}
-                        style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}
-                      >
-                        {showLocalKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local Model Name</label>
-                    <input 
-                      type="text" 
-                      className="form-control"
-                      value="qwen2.5-coder-7b-instruct"
-                      disabled
-                      readOnly
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Local Model Name</label>
+                  <input 
+                    type="text" 
+                    className="form-control"
+                    value="qwen2.5-coder-7b-instruct"
+                    disabled
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              {/* Online Checkbox Toggle */}
+              <div style={{ padding: '0 8px' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', gap: '8px', fontSize: '0.9rem', color: '#fff' }}>
+                  <input
+                    type="checkbox"
+                    checked={useOnline}
+                    onChange={e => setUseOnline(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                  />
+                  <strong>Use Online Model Fallback</strong>
+                </label>
+              </div>
+
+              {/* Optional Online LLM Settings */}
+              {useOnline && (
+                <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Online Model Settings</h4>
+                  
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Online Provider</label>
                     <select
                       className="form-control"
                       value={llmForm.online_provider}
-                      onChange={e => setLlmForm(prev => ({ ...prev, online_provider: e.target.value }))}
+                      onChange={e => {
+                        const nextProvider = e.target.value;
+                        let nextModel = 'gemini-2.0-flash';
+                        if (nextProvider === 'openai') nextModel = 'gpt-4o-mini';
+                        else if (nextProvider === 'anthropic') nextModel = 'claude-3-5-haiku-latest';
+                        
+                        setLlmForm(prev => ({
+                          ...prev,
+                          online_provider: nextProvider,
+                          model_name: nextModel
+                        }));
+                      }}
                     >
-                      <option value="gemini">Google Gemini</option>
-                      <option value="openai">OpenAI</option>
-                      <option value="anthropic">Anthropic</option>
+                      <option value="gemini">Google Gemini (Default: gemini-2.0-flash)</option>
+                      <option value="openai">OpenAI (Default: gpt-4o-mini)</option>
+                      <option value="anthropic">Anthropic (Default: claude-3-5-haiku-latest)</option>
+                      <option value="custom">Custom API URL</option>
                     </select>
+                  </div>
+                  {llmForm.online_provider !== 'gemini' && (
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Online API Base URL</label>
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        placeholder="e.g. https://api.openai.com/v1"
+                        value={llmForm.online_url || ''}
+                        onChange={e => setLlmForm(prev => ({ ...prev, online_url: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Online Model Name</label>
+                    <input 
+                      type="text" 
+                      className="form-control"
+                      placeholder="Enter online model name (e.g. gemini-2.0-flash)"
+                      value={llmForm.model_name || ''}
+                      onChange={e => setLlmForm(prev => ({ ...prev, model_name: e.target.value }))}
+                    />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>API Key</label>
@@ -557,7 +599,7 @@ export default function SetupWizard({ token, onComplete }) {
                       </button>
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
               {/* Test Connection Button */}
@@ -637,8 +679,8 @@ export default function SetupWizard({ token, onComplete }) {
               <div><strong>Name:</strong> {profileForm.name}</div>
               <div><strong>Location:</strong> {profileForm.zipcode || 'N/A'} ({profileForm.country})</div>
               <div><strong>Units:</strong> {profileForm.temp_unit.toUpperCase()}</div>
-              <div><strong>Active Provider:</strong> {llmForm.provider.toUpperCase()} ({llmForm.provider === 'local' ? llmForm.local_api_style : llmForm.online_provider})</div>
-              <div><strong>Model:</strong> {llmForm.model_name || 'Will be resolved dynamically'}</div>
+              <div><strong>Active Provider:</strong> {useOnline ? 'ONLINE' : 'LOCAL'} ({useOnline ? llmForm.online_provider : llmForm.local_api_style})</div>
+              <div><strong>Model:</strong> {useOnline ? (llmForm.model_name || 'gemini-2.0-flash') : 'qwen2.5-coder-7b-instruct'}</div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '32px' }}>
@@ -653,7 +695,13 @@ export default function SetupWizard({ token, onComplete }) {
               <button 
                 type="button" 
                 className="btn btn-primary"
-                onClick={handleSave}
+                onClick={(e) => {
+                  if (useOnline) {
+                    setShowOnlineConfirm(true);
+                  } else {
+                    handleSave(e);
+                  }
+                }}
                 style={{ flex: 1, padding: '10px 0' }}
               >
                 Launch PATTI 🚀
@@ -662,6 +710,63 @@ export default function SetupWizard({ token, onComplete }) {
           </div>
         )}
       </div>
+
+      {showOnlineConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div className="modal-content" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '24px',
+            background: 'var(--bg-glass)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '20px',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)',
+            textAlign: 'center'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 650, marginBottom: '16px', color: '#fff' }}>
+              Confirm Online Routing
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', marginBottom: '24px', lineHeight: '1.5' }}>
+              You are about to route your Private AI requests to an online provider during setup:<br/>
+              <strong>Provider:</strong> {llmForm.online_provider || 'gemini'}<br/>
+              <strong>Model:</strong> {llmForm.model_name || 'gemini-2.0-flash'}<br/><br/>
+              Do you wish to proceed?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowOnlineConfirm(false);
+                  handleSave();
+                }}
+                style={{ padding: '8px 20px', fontSize: '0.9rem', margin: 0 }}
+              >
+                Confirm
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowOnlineConfirm(false)}
+                style={{ padding: '8px 20px', fontSize: '0.9rem', margin: 0 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
