@@ -3,40 +3,9 @@ const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
+const logger = require('../utils/logger');
 
-// Helper to resolve paths safely relative to the workspace or home directory
-function resolveSafePath(userPath) {
-  const os = require('os');
-  const workspaceRoot = path.resolve(process.cwd());
-  const homeRoot = path.resolve(os.homedir());
-  
-  let resolved;
-  const isHomePrefix = userPath === '~' || userPath.startsWith('~/') || userPath.startsWith('~\\');
-  
-  if (isHomePrefix) {
-    resolved = userPath === '~' ? homeRoot : path.resolve(homeRoot, userPath.slice(2));
-    if (!resolved.startsWith(homeRoot)) {
-      throw new Error('Access denied: path is outside the home directory.');
-    }
-    return resolved;
-  }
-  
-  resolved = path.resolve(workspaceRoot, userPath);
-  const isAbsolute = path.isAbsolute(userPath);
-  
-  if (isAbsolute) {
-    if (resolved.startsWith(workspaceRoot) || resolved.startsWith(homeRoot)) {
-      return resolved;
-    }
-    throw new Error('Access denied: absolute path is outside the allowed workspace or home directories.');
-  }
-  
-  if (resolved.startsWith(workspaceRoot)) {
-    return resolved;
-  }
-  
-  throw new Error('Access denied: path is outside the workspace directory.');
-}
+const { resolveSafePath } = require('../utils/pathSecurity');
 
 async function handleReadFile(params) {
   const { filePath } = params;
@@ -82,7 +51,7 @@ This file write could cause disruptions. Do you want to run this? Please reply w
 2 - No`;
       }
     } catch (err) {
-      console.error('File verification failed:', err);
+      logger.error(`File verification failed: ${err.message}`);
       return `INPUT_REQUIRED_FROM_USER: [Supervisor Approval Required]
 Agent: ${agentName}
 File: ${filePath}

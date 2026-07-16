@@ -7,6 +7,7 @@ const { handleGoogleNewsTool } = require('./tools/google_news_tool');
 const { handleWeatherTool } = require('./tools/weather_tool');
 const { handleMemoryTool } = require('./tools/memory_tool');
 const { handleTimeTool } = require('./tools/time_tool');
+const logger = require('./utils/logger');
 
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
 async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk, abortSignal, db, userId, provider) {
@@ -110,7 +111,6 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     });
   } catch (fetchErr) {
     clearTimeout(timeoutId);
-    const logger = require('./utils/logger');
     logger.error('Local LLM fetch exception in callLocalLLMStream:', fetchErr);
     throw new Error("Local LLM Connection Lost. The model may have run out of memory. Please lower context length.");
   }
@@ -118,7 +118,6 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
 
   if (!response.ok) {
     const errText = await response.text();
-    const logger = require('./utils/logger');
     logger.error(`Local LLM response not ok: ${response.status} - ${errText}`);
     throw new Error(`LLM API error: ${response.status} - ${errText}`);
   }
@@ -146,10 +145,14 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
     }
     if (db && typeof db.run === 'function' && userId) {
       const providerType = provider === 'local' ? 'local' : 'online';
-      db.run(
-        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
-        [userId, modelName || 'unknown', providerType, tokenCount]
-      ).catch(err => console.error('Failed to log non-stream local LLM tokens:', err));
+      try {
+        await db.run(
+          'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+          [userId, modelName || 'unknown', providerType, tokenCount]
+        );
+      } catch (err) {
+        console.error('Failed to log non-stream local LLM tokens:', err);
+      }
     }
     return;
   }
@@ -198,10 +201,14 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
   const tokenCount = Math.ceil((promptText.length + fullResponseText.length) / 4);
   if (db && typeof db.run === 'function' && userId) {
     const providerType = provider === 'local' ? 'local' : 'online';
-    db.run(
-      'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
-      [userId, modelName || 'unknown', providerType, tokenCount]
-    ).catch(err => console.error('Failed to log streaming local LLM tokens:', err));
+    try {
+      await db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'unknown', providerType, tokenCount]
+      );
+    } catch (err) {
+      console.error('Failed to log streaming local LLM tokens:', err);
+    }
   }
 }
 
@@ -255,10 +262,14 @@ async function callGeminiStream(apiKey, modelName, systemInstruction, history, u
 
   if (db && typeof db.run === 'function' && userId) {
     const providerType = provider === 'local' ? 'local' : 'online';
-    db.run(
-      'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
-      [userId, modelName || 'gemini-2.0-flash', providerType, tokenCount]
-    ).catch(err => console.error('Failed to log Gemini stream tokens:', err));
+    try {
+      await db.run(
+        'INSERT INTO token_usage (user_id, model_name, provider_type, token_count) VALUES (?, ?, ?, ?)',
+        [userId, modelName || 'gemini-2.0-flash', providerType, tokenCount]
+      );
+    } catch (err) {
+      console.error('Failed to log Gemini stream tokens:', err);
+    }
   }
 }
 
@@ -325,22 +336,18 @@ async function runAgentLoop({
         const text = temp.trim();
 
         // Check if this is the ESP32 device
-        let isEsp32 = (ip === '192.168.1.117');
-        if (!isEsp32) {
-          try {
-            const espNode = await db.get(
-              'SELECT device_type, node_name FROM network_nodes WHERE ip_address = ? AND user_id = ?',
-              [ip, userId]
-            );
-            if (espNode && (
-              (espNode.device_type && espNode.device_type.toLowerCase().includes('esp32')) ||
-              (espNode.node_name && espNode.node_name.toLowerCase().includes('esp32'))
-            )) {
-              isEsp32 = true;
-            }
-          } catch (dbErr) {
-            console.error('Failed to query network nodes in ESP32 check:', dbErr);
+        let isEsp32 = false;
+        try {
+          const espNode = await db.get(
+            `SELECT device_type, node_name FROM network_nodes 
+             WHERE (ip_address = ? OR device_type LIKE '%esp32%' OR node_name LIKE '%esp32%') AND user_id = ? LIMIT 1`,
+            [ip, userId]
+          );
+          if (espNode) {
+            isEsp32 = true;
           }
+        } catch (dbErr) {
+          console.error('Failed to query network nodes in ESP32 check:', dbErr);
         }
         if (!isEsp32 && (originalUserMsgObj.content.toLowerCase().includes('esp32') || originalUserMsgObj.content.toLowerCase().includes('esp-32'))) {
           isEsp32 = true;
@@ -406,7 +413,17 @@ async function runAgentLoop({
 
     const hasEspKeyword = cleanMsgForSend.includes('esp32') || cleanMsgForSend.includes('esp-32');
     if (!ip && hasEspKeyword) {
-      ip = '192.168.1.117';
+      try {
+        const defaultEspNode = await db.get(
+          "SELECT ip_address FROM network_nodes WHERE (device_type LIKE '%esp32%' OR node_name LIKE '%esp32%') AND user_id = ? LIMIT 1",
+          [userId]
+        );
+        if (defaultEspNode) {
+          ip = defaultEspNode.ip_address;
+        }
+      } catch (dbErr) {
+        console.error('Failed to fetch default ESP32 node IP:', dbErr);
+      }
     }
 
     if (ip) {
@@ -419,22 +436,18 @@ async function runAgentLoop({
       const text = temp.trim();
 
       // Check if this is the ESP32 device
-      let isEsp32 = (ip === '192.168.1.117') || hasEspKeyword;
-      if (!isEsp32) {
-        try {
-          const espNode = await db.get(
-            'SELECT device_type, node_name FROM network_nodes WHERE ip_address = ? AND user_id = ?',
-            [ip, userId]
-          );
-          if (espNode && (
-            (espNode.device_type && espNode.device_type.toLowerCase().includes('esp32')) ||
-            (espNode.node_name && espNode.node_name.toLowerCase().includes('esp32'))
-          )) {
-            isEsp32 = true;
-          }
-        } catch (dbErr) {
-          console.error('Failed to query network nodes in ESP32 check:', dbErr);
+      let isEsp32 = hasEspKeyword;
+      try {
+        const espNode = await db.get(
+          `SELECT device_type, node_name FROM network_nodes 
+           WHERE (ip_address = ? OR device_type LIKE '%esp32%' OR node_name LIKE '%esp32%') AND user_id = ? LIMIT 1`,
+          [ip, userId]
+        );
+        if (espNode) {
+          isEsp32 = true;
         }
+      } catch (dbErr) {
+        console.error('Failed to query network nodes in ESP32 check:', dbErr);
       }
 
       if (isEsp32) {
@@ -632,7 +645,7 @@ ${toolOutput}
       let targetStyle = '';
 
       if (provider === 'local') {
-        targetUrl = localBaseUrl || 'http://192.168.1.42:1234/v1';
+        targetUrl = localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1';
         targetKey = localApiKey;
         targetStyle = localApiStyle || 'openai';
       } else {
@@ -864,7 +877,7 @@ ${profileDetailsText ? `Here is the user profile details context:\n${profileDeta
       let targetStyle = '';
 
       if (provider === 'local') {
-        targetUrl = localBaseUrl || 'http://192.168.1.42:1234/v1';
+        targetUrl = localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1';
         targetKey = localApiKey;
         targetStyle = localApiStyle || 'openai';
       } else {
@@ -1475,7 +1488,7 @@ ${accumulatedToolOutputs.length > 0 ? `Here are the gathered report/action resul
     let targetStyle = '';
 
     if (provider === 'local') {
-      targetUrl = localBaseUrl || 'http://192.168.1.42:1234/v1';
+      targetUrl = localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1';
       targetKey = localApiKey;
       targetStyle = localApiStyle || 'openai';
     } else {

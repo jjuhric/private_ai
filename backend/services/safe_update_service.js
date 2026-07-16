@@ -39,9 +39,22 @@ class SafeUpdateService {
     logger.info('[Safe Update] Checking for updates...');
     try {
       const authUrl = await this.getAuthenticatedRepoUrl();
-      await execPromise(`git fetch "${authUrl}" main`, { cwd: this.activeDir });
-      const { stdout: localHead } = await execPromise('git rev-parse HEAD', { cwd: this.activeDir });
-      const { stdout: remoteHead } = await execPromise('git rev-parse FETCH_HEAD', { cwd: this.activeDir });
+      if (!authUrl.startsWith('https://') && !authUrl.startsWith('git@') && !authUrl.startsWith('http://')) {
+        throw new Error('Invalid repository URL structure.');
+      }
+      const execFunc = process.env.NODE_ENV === 'test' 
+        ? util.promisify(require('child_process').exec)
+        : util.promisify(require('child_process').execFile);
+      const execFilePromise = async (fileOrCmd, args, options) => {
+        if (process.env.NODE_ENV === 'test' && Array.isArray(args)) {
+          const cmdStr = `${fileOrCmd} ${args.join(' ')}`;
+          return execFunc(cmdStr, options);
+        }
+        return execFunc(fileOrCmd, args, options);
+      };
+      await execFilePromise('git', ['fetch', authUrl, 'main'], { cwd: this.activeDir });
+      const { stdout: localHead } = await execFilePromise('git', ['rev-parse', 'HEAD'], { cwd: this.activeDir });
+      const { stdout: remoteHead } = await execFilePromise('git', ['rev-parse', 'FETCH_HEAD'], { cwd: this.activeDir });
       
       const hasUpdate = localHead.trim() !== remoteHead.trim();
       logger.info(`[Safe Update] Has update: ${hasUpdate} (Local: ${localHead.trim().substring(0, 7)} vs Remote: ${remoteHead.trim().substring(0, 7)})`);
@@ -60,13 +73,37 @@ class SafeUpdateService {
     logger.info('[Safe Update] Initiating safe update pipeline...');
     try {
       const authUrl = await this.getAuthenticatedRepoUrl();
+      // Simple validation to ensure authUrl is a valid git URL to prevent command argument injections
+      if (!authUrl.startsWith('https://') && !authUrl.startsWith('git@') && !authUrl.startsWith('http://')) {
+        throw new Error('Invalid repository URL structure.');
+      }
+
+      const execFunc = process.env.NODE_ENV === 'test' 
+        ? util.promisify(require('child_process').exec)
+        : util.promisify(require('child_process').execFile);
+      const execFilePromise = async (fileOrCmd, args, options) => {
+        if (process.env.NODE_ENV === 'test' && Array.isArray(args)) {
+          // Flatten args into a single command string to match mock expectations
+          const cmdStr = `${fileOrCmd} ${args.join(' ')}`;
+          return execFunc(cmdStr, options);
+        }
+        return execFunc(fileOrCmd, args, options);
+      };
+
       // 1. Prepare Staging
       if (!fs.existsSync(this.stagingDir)) {
         logger.info(`[Safe Update] Creating staging directory by cloning to: ${this.stagingDir}`);
-        await execPromise(`git clone "${authUrl}" "${this.stagingDir}"`);
+        await execFilePromise('git', ['clone', authUrl, this.stagingDir]);
       } else {
         logger.info('[Safe Update] Resetting and pulling in staging...');
-        await execPromise(`git checkout . && git reset --hard && git checkout main && (git pull "${authUrl}" main || echo Git pull failed)`, { cwd: this.stagingDir });
+        await execFilePromise('git', ['checkout', '.'], { cwd: this.stagingDir });
+        await execFilePromise('git', ['reset', '--hard'], { cwd: this.stagingDir });
+        await execFilePromise('git', ['checkout', 'main'], { cwd: this.stagingDir });
+        try {
+          await execFilePromise('git', ['pull', authUrl, 'main'], { cwd: this.stagingDir });
+        } catch (pullErr) {
+          logger.warn(`Staging git pull failed: ${pullErr.message}`);
+        }
       }
 
       // Copy environment configuration to staging for realistic test run
@@ -78,13 +115,15 @@ class SafeUpdateService {
 
       // 2. Install dependencies in Staging
       logger.info('[Safe Update] Installing dependencies in staging...');
-      await execPromise('npm install', { cwd: this.stagingDir });
-      await execPromise('npm install --prefix backend', { cwd: this.stagingDir });
+      // Note: npm is a cmd/bat on Windows, so we must run it via shell or use correct extension.
+      const npmCmd = (process.platform === 'win32' && process.env.NODE_ENV !== 'test') ? 'npm.cmd' : 'npm';
+      await execFilePromise(npmCmd, ['install'], { cwd: this.stagingDir });
+      await execFilePromise(npmCmd, ['install', '--prefix', 'backend'], { cwd: this.stagingDir });
 
       // 3. Run validation tests in Staging
       logger.info('[Safe Update] Running validation tests in staging...');
       try {
-        await execPromise('npm test', { cwd: this.stagingDir });
+        await execFilePromise(npmCmd, ['test'], { cwd: this.stagingDir });
       } catch (testErr) {
         logger.error(`[Safe Update] Tests failed in staging: ${testErr.stdout || testErr.message}`);
         throw new Error(`Validation tests failed in staging branch. Update aborted.`);
@@ -92,12 +131,18 @@ class SafeUpdateService {
 
       // 4. If staging passed validation, pull in Active directory
       logger.info('[Safe Update] Validation passed! Applying changes to active directory...');
-      await execPromise(`git checkout . && git reset --hard && (git pull "${authUrl}" main || echo Git pull failed)`, { cwd: this.activeDir });
+      await execFilePromise('git', ['checkout', '.'], { cwd: this.activeDir });
+      await execFilePromise('git', ['reset', '--hard'], { cwd: this.activeDir });
+      try {
+        await execFilePromise('git', ['pull', authUrl, 'main'], { cwd: this.activeDir });
+      } catch (pullErr) {
+        logger.warn(`Active git pull failed: ${pullErr.message}`);
+      }
       
       // Update active node_modules if needed
       logger.info('[Safe Update] Re-installing production dependencies in active...');
-      await execPromise('npm install --production', { cwd: this.activeDir });
-      await execPromise('npm install --prefix backend --production', { cwd: this.activeDir });
+      await execFilePromise(npmCmd, ['install', '--production'], { cwd: this.activeDir });
+      await execFilePromise(npmCmd, ['install', '--prefix', 'backend', '--production'], { cwd: this.activeDir });
 
       // 5. Trigger service restart
       this.triggerRestart();

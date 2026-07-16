@@ -36,7 +36,12 @@ const academyRouter = require('./routes/academy');
 const lmstudioSwitchRouter = require('./routes/lmstudio_switch');
 const mqttService = require('./services/mqtt_service');
 
+const helmet = require('helmet');
+
 const app = express();
+app.use(helmet({
+  contentSecurityPolicy: false, // Bypass CSP issues for embedded UI controls / dev setups
+}));
 const PORT = process.env.PORT || 3000;
 
 // Helper to check if origin is a local private network subnet
@@ -64,6 +69,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({
+  limit: '2mb',
   verify: (req, res, buf) => {
     req.rawBody = buf;
   }
@@ -76,6 +82,37 @@ getDb().then(async (db) => {
   try {
     // Initialize MQTT client
     mqttService.init();
+    
+    mqttService.subscribe('nodes/heartbeat', async (payload) => {
+      try {
+        if (!payload || !payload.nodeId) return;
+        
+        const deviceType = payload.device_type || 'unknown';
+        const ipAddress = payload.ip_address || 'unknown';
+        const port = payload.port || 3000;
+        const osType = payload.os || null;
+        
+        const existingNode = await db.get('SELECT id FROM network_nodes WHERE node_name = ? AND user_id = 1', [payload.nodeId]);
+        if (existingNode) {
+          await db.run(`
+            UPDATE network_nodes SET 
+              is_online = 1, 
+              last_seen = CURRENT_TIMESTAMP, 
+              ip_address = ?,
+              port = ?,
+              os_type = ?
+            WHERE id = ?
+          `, [ipAddress, port, osType, existingNode.id]);
+        } else {
+          await db.run(`
+            INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online, last_seen, os_type)
+            VALUES (1, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, ?)
+          `, [payload.nodeId, deviceType, ipAddress, port, osType]);
+        }
+      } catch (err) {
+        logger.error('[MQTT] Error processing node heartbeat:', err);
+      }
+    });
 
     // Probe and log node identity
     const nodeIdentity = require('./services/node_identity');
@@ -99,6 +136,12 @@ getDb().then(async (db) => {
     if (process.env.NODE_ENV !== 'test') {
       const safeUpdateService = require('./services/safe_update_service');
       safeUpdateService.startDaemon();
+
+      const hostAutoUpdate = require('./services/host_auto_update');
+      hostAutoUpdate.startHostAutoUpdater();
+
+      const googleNestDiscovery = require('./services/google_nest_discovery');
+      googleNestDiscovery.startGoogleNestDiscovery();
 
       const nodeHealthService = require('./services/node_health_service');
       nodeHealthService.startDaemon();
@@ -213,6 +256,17 @@ app.get('*', (req, res, next) => {
   });
 });
 
+// Global error handler — catches unhandled errors from all routes
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  logger.error(`Unhandled error on ${req.method} ${req.path}: ${err.message}`, { stack: err.stack });
+  if (!res.headersSent) {
+    res.status(statusCode).json({
+      error: statusCode === 500 ? 'Internal server error' : err.message
+    });
+  }
+});
+
 // Start Server
 let server;
 const https = require('https');
@@ -262,7 +316,7 @@ const terminalService = require('./services/terminal_service');
 terminalService.init(server);
 
 // Handle graceful shutdown
-const gracefulShutdown = () => {
+const gracefulShutdown = async () => {
   logger.info('SIGTERM/SIGINT received. Shutting down gracefully...');
   mqttService.disconnect();
 
@@ -272,8 +326,15 @@ const gracefulShutdown = () => {
     process.exit(0);
   }, 3000);
 
-  server.close(() => {
+  server.close(async () => {
     logger.info('HTTP server closed.');
+    try {
+      const { closeDb } = require('./db');
+      await closeDb();
+      logger.info('Database connection closed.');
+    } catch (dbErr) {
+      logger.error(`Error closing database during shutdown: ${dbErr.message}`);
+    }
     process.exit(0);
   });
 };
@@ -290,7 +351,7 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
   const PRODUCTION_REGISTRY_DIR = path.resolve(registryLocalPath);
   const LOCAL_STAGING_DIR = path.join(PRODUCTION_REGISTRY_DIR, 'staging');
   const fs = require('fs');
-  const { exec } = require('child_process');
+  const { execFile } = require('child_process');
 
   const executeSyncPipeline = async () => {
     // INTERCEPT: If the core system is currently busy executing agent logic threads, defer sync
@@ -324,7 +385,13 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
       } catch (err) { }
     }
 
-    exec(`git clone ${authenticatedUrl} ${LOCAL_STAGING_DIR}`, async (err) => {
+    // Validate URL before executing to prevent argument injection
+    if (!authenticatedUrl.startsWith('https://') && !authenticatedUrl.startsWith('git@') && !authenticatedUrl.startsWith('http://')) {
+      logger.error('[Tool Sync Daemon Error] Invalid repository URL structure. Aborting.');
+      return;
+    }
+
+    execFile('git', ['clone', authenticatedUrl, LOCAL_STAGING_DIR], async (err) => {
       if (err) {
         const sanitizedErr = token ? err.message.replace(new RegExp(token, 'g'), '****') : err.message;
         logger.error(`[Tool Sync Daemon Error] Pull operations aborted: ${sanitizedErr}`);

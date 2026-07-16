@@ -7,9 +7,16 @@ jest.mock('child_process', () => {
 
 jest.mock('fs', () => {
   const originalFs = jest.requireActual('fs');
+  const mockExistsSync = jest.fn((pathStr) => {
+    // If checking path relating to staging dir
+    if (typeof pathStr === 'string' && (pathStr.includes('private_ai_staging') || pathStr.includes('.env'))) {
+      return false; 
+    }
+    return originalFs.existsSync(pathStr);
+  });
   return {
     ...originalFs,
-    existsSync: jest.fn(),
+    existsSync: mockExistsSync,
     copyFileSync: jest.fn()
   };
 });

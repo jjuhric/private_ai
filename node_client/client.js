@@ -288,6 +288,24 @@ async function start() {
         console.log(`Subscribed to command topic: ${commandTopic}`);
       }
     });
+
+    // Start publishing heartbeats
+    const publishHeartbeat = () => {
+      const payload = JSON.stringify({
+        nodeId,
+        device_type: process.env.DEVICE_TYPE || 'rpi',
+        ip_address: getLocalIpAddress(),
+        port: process.env.PORT || 3000,
+        os: `${os.type()} ${os.release()} (${os.arch()})`
+      });
+      client.publish('nodes/heartbeat', payload);
+    };
+
+    // Publish immediately on connect
+    publishHeartbeat();
+
+    // And then every 60 seconds
+    setInterval(publishHeartbeat, 60000);
   });
 
   client.on('message', async (topic, message) => {

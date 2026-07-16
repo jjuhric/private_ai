@@ -5,7 +5,7 @@ const { getDb } = require('../db');
 const { decrypt } = require('../utils/crypto');
 const logger = require('../utils/logger');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
+const { JWT_SECRET } = require('../middleware/auth');
 
 function init(server) {
   const wss = new WebSocket.Server({ noServer: true });

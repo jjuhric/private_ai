@@ -28,4 +28,43 @@ function extractFirst100Words(html) {
   }
 }
 
-module.exports = { extractFirst100Words };
+function extractThoughts(rawContent, existingThoughts = '') {
+  let finalContent = rawContent || '';
+  let finalThoughts = existingThoughts || '';
+
+  const startTag = '<|channel>thought';
+  const endTag = '<channel|>';
+  if (finalContent.includes(startTag)) {
+    const startIdx = finalContent.indexOf(startTag);
+    const endIdx = finalContent.indexOf(endTag);
+    if (endIdx !== -1) {
+      const extractedThoughts = finalContent.substring(startIdx + startTag.length, endIdx).trim();
+      finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+      finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTag.length)).trim();
+    } else {
+      const extractedThoughts = finalContent.substring(startIdx + startTag.length).trim();
+      finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+      finalContent = finalContent.substring(0, startIdx).trim();
+    }
+  }
+
+  const startTagXml = '<think>';
+  const endTagXml = '</think>';
+  if (finalContent.includes(startTagXml)) {
+    const startIdx = finalContent.indexOf(startTagXml);
+    const endIdx = finalContent.indexOf(endTagXml);
+    if (endIdx !== -1) {
+      const extractedThoughts = finalContent.substring(startIdx + startTagXml.length, endIdx).trim();
+      finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+      finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTagXml.length)).trim();
+    } else {
+      const extractedThoughts = finalContent.substring(startIdx + startTagXml.length).trim();
+      finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
+      finalContent = finalContent.substring(0, startIdx).trim();
+    }
+  }
+
+  return { content: finalContent, thoughts: finalThoughts };
+}
+
+module.exports = { extractFirst100Words, extractThoughts };

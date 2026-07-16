@@ -1,6 +1,11 @@
 const jwt = require('jsonwebtoken');
 const { getDb } = require('../db');
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_private_ai_assistant_2026';
+const isTest = process.env.NODE_ENV === 'test';
+if (!process.env.JWT_SECRET && !isTest) {
+  console.error('FATAL ERROR: JWT_SECRET env variable is not configured.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'test_secret_key_private_ai_assistant_2026';
 
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];

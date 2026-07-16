@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./utils/logger');
 
 let dbConnection = null;
 
@@ -16,20 +17,20 @@ async function getDb() {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  dbConnection = await open({
-    filename: dbPath,
-    driver: sqlite3.Database
-  });
-
-  // Enable foreign keys
-  await dbConnection.run('PRAGMA foreign_keys = ON');
-
-  // Enable WAL (Write-Ahead Logging) mode and busy timeout for concurrent request handling
-  await dbConnection.run('PRAGMA journal_mode = WAL');
-  await dbConnection.run('PRAGMA busy_timeout = 5000');
-
   // Load schema
   try {
+    dbConnection = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+
+    // Enable foreign keys
+    await dbConnection.run('PRAGMA foreign_keys = ON');
+
+    // Enable WAL (Write-Ahead Logging) mode and busy timeout for concurrent request handling
+    await dbConnection.run('PRAGMA journal_mode = WAL');
+    await dbConnection.run('PRAGMA busy_timeout = 5000');
+
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
     await dbConnection.exec(schemaSql);
@@ -206,13 +207,34 @@ async function getDb() {
       }
     } catch (e) {}
 
-    console.log('Database initialized successfully.');
+    // Create query optimization indexes
+    await dbConnection.run('CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id, created_at)');
+    await dbConnection.run('CREATE INDEX IF NOT EXISTS idx_memories_user_expires ON memories(user_id, expires_at)');
+    await dbConnection.run('CREATE INDEX IF NOT EXISTS idx_token_usage_user_created ON token_usage(user_id, created_at)');
+    await dbConnection.run('CREATE INDEX IF NOT EXISTS idx_shown_articles_user ON shown_articles(user_id, seen_at)');
+
+    logger.info('Database initialized successfully.');
   } catch (error) {
-    console.error('Error initializing database:', error);
+    logger.error(`Error initializing database: ${error.message}`);
+    if (dbConnection) {
+      try {
+        await dbConnection.close();
+      } catch (closeErr) {}
+      dbConnection = null;
+    }
     throw error;
   }
 
   return dbConnection;
 }
 
-module.exports = { getDb };
+async function closeDb() {
+  if (dbConnection) {
+    try {
+      await dbConnection.close();
+    } catch (err) {}
+    dbConnection = null;
+  }
+}
+
+module.exports = { getDb, closeDb };

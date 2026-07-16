@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 const AGENT_PROMPTS = new Proxy({}, {
   get(target, prop) {
@@ -17,7 +18,7 @@ const AGENT_PROMPTS = new Proxy({}, {
       }
       return basePrompt;
     } catch (err) {
-      console.warn(`Warning: Prompt file for agent "${agentName}" not found:`, err.message);
+      logger.warn(`Warning: Prompt file for agent "${agentName}" not found: ${err.message}`);
       return undefined;
     }
   },
@@ -108,7 +109,7 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
     }
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
+      ? (localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1') 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
@@ -330,7 +331,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
     }
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
+      ? (localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1') 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
@@ -797,7 +798,7 @@ async function runSupervisorTurn(systemPrompt, settings, userMessage) {
     }
   } else {
     let targetUrl = provider === 'local' 
-      ? (localBaseUrl || 'http://192.168.1.42:1234/v1') 
+      ? (localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1') 
       : (onlineUrl || 'https://api.openai.com/v1');
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');

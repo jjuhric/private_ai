@@ -5,6 +5,16 @@ const { runAgentLoop, generateGreetingAndSave } = require('../ai');
 const { authenticateToken } = require('../middleware/auth');
 const { checkQuota } = require('../middleware/quotaMiddleware');
 const { getEmbedding } = require('../utils/embeddings');
+const rateLimit = require('express-rate-limit');
+const logger = require('../utils/logger');
+
+const streamLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 streaming completions per minute
+  message: { error: 'Too many stream requests from this IP, please try again after a minute.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 router.get('/chats', authenticateToken, async (req, res) => {
   try {
@@ -68,7 +78,7 @@ router.get('/chats/:id/messages', authenticateToken, async (req, res) => {
 });
 
 // Agent SSE Stream endpoint
-router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
+router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async (req, res) => {
   if (global.activeTab && global.activeTab !== 'chat') {
     return res.status(403).json({ error: 'Chat is disabled while on another tab.' });
   }
@@ -137,38 +147,10 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
           finalContent = "Interaction stopped by user.";
         }
 
-        let finalThoughts = accumulatedThoughts;
-        const startTag = '<|channel>thought';
-        const endTag = '<channel|>';
-        if (finalContent.includes(startTag)) {
-          const startIdx = finalContent.indexOf(startTag);
-          const endIdx = finalContent.indexOf(endTag);
-          if (endIdx !== -1) {
-            const extractedThoughts = finalContent.substring(startIdx + startTag.length, endIdx).trim();
-            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-            finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTag.length)).trim();
-          } else {
-            const extractedThoughts = finalContent.substring(startIdx + startTag.length).trim();
-            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-            finalContent = finalContent.substring(0, startIdx).trim();
-          }
-        }
-
-        const startTagXml = '<think>';
-        const endTagXml = '</think>';
-        if (finalContent.includes(startTagXml)) {
-          const startIdx = finalContent.indexOf(startTagXml);
-          const endIdx = finalContent.indexOf(endTagXml);
-          if (endIdx !== -1) {
-            const extractedThoughts = finalContent.substring(startIdx + startTagXml.length, endIdx).trim();
-            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-            finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTagXml.length)).trim();
-          } else {
-            const extractedThoughts = finalContent.substring(startIdx + startTagXml.length).trim();
-            finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-            finalContent = finalContent.substring(0, startIdx).trim();
-          }
-        }
+        const { extractThoughts } = require('../utils/helpers');
+        const parsed = extractThoughts(finalContent, accumulatedThoughts);
+        finalContent = parsed.content;
+        finalThoughts = parsed.thoughts;
 
         await db.run(
           'INSERT INTO messages (chat_id, role, content, thoughts) VALUES (?, ?, ?, ?)',
@@ -212,203 +194,176 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
     res.write(': heartbeat\n\n');
   }, 15000);
 
-  try {
-    // Process user feedback on previous turn (if any)
+    let finalContent = '';
+    let finalThoughts = '';
+
     try {
-      const { handleUserFeedback } = require('../services/feedback_learning');
-      await handleUserFeedback(db, req.user.id, chatId, message);
-    } catch (fbErr) {
-      console.error('Feedback learning handler failed:', fbErr);
-    }
-
-    // Save user message to database
-    await db.run(
-      'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
-      [chatId, 'user', message]
-    );
-
-    // Resolve preferred model names dynamically
-    let actualModel = settings.model_name;
-    if (settings.provider === 'local') {
-      actualModel = settings.preferred_local_model || settings.model_name || 'qwen2.5-coder-7b-instruct';
-    } else if (settings.provider !== 'local' && settings.preferred_online_model) {
-      actualModel = settings.preferred_online_model;
-    }
-
-    const { decrypt } = require('../utils/crypto');
-    const decryptedGithub = decrypt(settings.github_token);
-    const decryptedLocalKey = decrypt(settings.local_key);
-    const decryptedOnlineKey = decrypt(settings.online_key);
-    const decryptedGeminiKey = decrypt(settings.gemini_key);
-
-    // Trigger Model Selector Agent
-    const { selectBestModel } = require('../utils/model_selector');
-    const selectorSettings = {
-      provider: settings.provider,
-      modelName: actualModel,
-      onlineProvider: settings.online_provider || 'gemini',
-      onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
-      geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
-      localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
-      localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
-      localApiStyle: settings.local_api_style || 'openai'
-    };
-
-    let selectedModel = actualModel;
-    try {
-      selectedModel = await selectBestModel(selectorSettings, message, history);
-    } catch (selErr) {
-      console.error('Model selection routing failed:', selErr);
-    }
-
-    // If local provider and model changed, handle unloading of old and loading of new
-    if (settings.provider === 'local') {
-      const { listLocalModels, loadLocalModel, unloadLocalModel } = require('../utils/lmstudio');
-      const localBaseUrl = selectorSettings.localBaseUrl;
-      const localApiKey = selectorSettings.localApiKey;
-
+      // Process user feedback on previous turn (if any)
       try {
-        const availableModels = await listLocalModels(localBaseUrl, localApiKey);
-        const loadedModelObj = availableModels.find(m => m.isLoaded);
-        const loadedModel = loadedModelObj ? loadedModelObj.id : null;
-
-        if (loadedModel && loadedModel !== selectedModel) {
-          sendEvent('thought', `[System] Unloading model '${loadedModel}' and loading '${selectedModel}'... Please wait.\n`);
-          console.log(`[Model Switcher] Unloading loaded model: ${loadedModel}`);
-          if (loadedModelObj.instanceId) {
-            await unloadLocalModel(localBaseUrl, localApiKey, loadedModelObj.instanceId);
-          }
-          console.log(`[Model Switcher] Loading selected model: ${selectedModel}`);
-          await loadLocalModel(localBaseUrl, localApiKey, selectedModel);
-        } else if (!loadedModel) {
-          // Cold-start load
-          sendEvent('thought', `[System] Loading model '${selectedModel}'... Please wait.\n`);
-          console.log(`[Model Switcher] Cold loading selected model: ${selectedModel}`);
-          await loadLocalModel(localBaseUrl, localApiKey, selectedModel);
-        }
-      } catch (switchErr) {
-        console.error('Local model switching failed:', switchErr);
-        sendEvent('thought', `[System] Warning: Local model switching failed: ${switchErr.message}. Proceeding anyway.\n`);
+        const { handleUserFeedback } = require('../services/feedback_learning');
+        await handleUserFeedback(db, req.user.id, chatId, message);
+      } catch (fbErr) {
+        console.error('Feedback learning handler failed:', fbErr);
       }
-    }
 
-    actualModel = selectedModel;
+      // Save user message to database
+      await db.run(
+        'INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)',
+        [chatId, 'user', message]
+      );
 
-    // Send the model name to the frontend
-    sendEvent('model_used', { model: actualModel });
+      // Resolve preferred model names dynamically
+      let actualModel = settings.model_name;
+      if (settings.provider === 'local') {
+        actualModel = settings.preferred_local_model || settings.model_name || 'qwen2.5-coder-7b-instruct';
+      } else if (settings.provider !== 'local' && settings.preferred_online_model) {
+        actualModel = settings.preferred_online_model;
+      }
 
-    // Broadcast streaming status to Standalone Monitor
-    try {
-      const { broadcastAlert } = require('./alerts');
-      broadcastAlert({ type: 'streaming_status', isStreaming: true });
-    } catch (e) {}
+      const { decrypt } = require('../utils/crypto');
+      const decryptedGithub = decrypt(settings.github_token);
+      const decryptedLocalKey = decrypt(settings.local_key);
+      const decryptedOnlineKey = decrypt(settings.online_key);
+      const decryptedGeminiKey = decrypt(settings.gemini_key);
 
-    const { enqueue } = require('../services/ai_queue');
-    await enqueue(async (onThoughtCallback) => {
+      // Trigger Model Selector Agent
+      const { selectBestModel } = require('../utils/model_selector');
+      const selectorSettings = {
+        provider: settings.provider,
+        modelName: actualModel,
+        onlineProvider: settings.online_provider || 'gemini',
+        onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+        geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
+        localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
+        localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
+        localApiStyle: settings.local_api_style || 'openai'
+      };
+
+      let selectedModel = actualModel;
       try {
-        await runAgentLoop({
-          db,
-          userId: req.user.id,
-          chatId,
-          provider: settings.provider,
-          modelName: actualModel,
-          supervisorModel: actualModel,
-          userMessage: message,
-          history,
-          githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
-          localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
-          localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
-          localApiStyle: settings.local_api_style || 'openai',
-          onlineUrl: settings.online_url,
-          onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
-          geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
-          onlineProvider: settings.online_provider || 'gemini',
-          isAborted: () => streamAbortController.signal.aborted,
-          abortSignal: streamAbortController.signal,
-          onThought: (thoughtChunk) => {
-            accumulatedThoughts += thoughtChunk;
-            sendEvent('thought', thoughtChunk);
-            onThoughtCallback(thoughtChunk);
-          },
-          onContent: (contentChunk) => {
-            accumulatedContent += contentChunk;
-            sendEvent('content', contentChunk);
-          },
-          onToolCall: (toolCall) => {
-            sendEvent('tool', toolCall);
-            // Broadcast tool call to Standalone Monitor
-            try {
-              const { broadcastAlert } = require('./alerts');
-              broadcastAlert({ type: 'tool_call', toolCall });
-            } catch (e) {}
-          },
-          onAgentStatus: (statusData) => {
-            sendEvent('agent_status', statusData);
-            // Broadcast agent status to Standalone Monitor
-            try {
-              const { broadcastAlert } = require('./alerts');
-              broadcastAlert({
-                type: 'agent_status',
-                agent: statusData.agent,
-                status: statusData.status
-              });
-            } catch (e) {}
-          },
-          onCommandApprovalRequired: ({ commandId, command, safety_analysis }) => {
-            sendEvent('command_approval_required', { commandId, command, safety_analysis });
-          }
-        });
-      } finally {
-        // Broadcast transition to Communication Specialist to Standalone Monitor
+        selectedModel = await selectBestModel(selectorSettings, message, history);
+      } catch (selErr) {
+        console.error('Model selection routing failed:', selErr);
+      }
+
+      // If local provider and model changed, handle unloading of old and loading of new
+      if (settings.provider === 'local') {
+        const { listLocalModels, loadLocalModel, unloadLocalModel } = require('../utils/lmstudio');
+        const localBaseUrl = selectorSettings.localBaseUrl;
+        const localApiKey = selectorSettings.localApiKey;
+
         try {
-          const { broadcastAlert } = require('./alerts');
-          broadcastAlert({ type: 'agent_status', agent: 'communication_specialist', status: 'active' });
-        } catch (e) {}
+          const availableModels = await listLocalModels(localBaseUrl, localApiKey);
+          const loadedModelObj = availableModels.find(m => m.isLoaded);
+          const loadedModel = loadedModelObj ? loadedModelObj.id : null;
+
+          if (loadedModel && loadedModel !== selectedModel) {
+            sendEvent('thought', `[System] Unloading model '${loadedModel}' and loading '${selectedModel}'... Please wait.\n`);
+            console.log(`[Model Switcher] Unloading loaded model: ${loadedModel}`);
+            if (loadedModelObj.instanceId) {
+              await unloadLocalModel(localBaseUrl, localApiKey, loadedModelObj.instanceId);
+            }
+            console.log(`[Model Switcher] Loading selected model: ${selectedModel}`);
+            await loadLocalModel(localBaseUrl, localApiKey, selectedModel);
+          } else if (!loadedModel) {
+            // Cold-start load
+            sendEvent('thought', `[System] Loading model '${selectedModel}'... Please wait.\n`);
+            console.log(`[Model Switcher] Cold loading selected model: ${selectedModel}`);
+            await loadLocalModel(localBaseUrl, localApiKey, selectedModel);
+          }
+        } catch (switchErr) {
+          console.error('Local model switching failed:', switchErr);
+          sendEvent('thought', `[System] Warning: Local model switching failed: ${switchErr.message}. Proceeding anyway.\n`);
+        }
       }
-    }, { nodeId: 'chat-ui', name: `User Chat Request` });
 
-    // Save assistant response to database
-    let finalContent = accumulatedContent;
-    let finalThoughts = accumulatedThoughts;
+      actualModel = selectedModel;
 
-    const startTag = '<|channel>thought';
-    const endTag = '<channel|>';
-    if (finalContent.includes(startTag)) {
-      const startIdx = finalContent.indexOf(startTag);
-      const endIdx = finalContent.indexOf(endTag);
-      if (endIdx !== -1) {
-        const extractedThoughts = finalContent.substring(startIdx + startTag.length, endIdx).trim();
-        finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-        finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTag.length)).trim();
-      } else {
-        const extractedThoughts = finalContent.substring(startIdx + startTag.length).trim();
-        finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-        finalContent = finalContent.substring(0, startIdx).trim();
-      }
-    }
+      // Send the model name to the frontend
+      sendEvent('model_used', { model: actualModel });
 
-    const startTagXml = '<think>';
-    const endTagXml = '</think>';
-    if (finalContent.includes(startTagXml)) {
-      const startIdx = finalContent.indexOf(startTagXml);
-      const endIdx = finalContent.indexOf(endTagXml);
-      if (endIdx !== -1) {
-        const extractedThoughts = finalContent.substring(startIdx + startTagXml.length, endIdx).trim();
-        finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-        finalContent = (finalContent.substring(0, startIdx) + finalContent.substring(endIdx + endTagXml.length)).trim();
-      } else {
-        const extractedThoughts = finalContent.substring(startIdx + startTagXml.length).trim();
-        finalThoughts = (finalThoughts + '\n' + extractedThoughts).trim();
-        finalContent = finalContent.substring(0, startIdx).trim();
-      }
-    }
+      // Broadcast streaming status to Standalone Monitor
+      try {
+        const { broadcastAlert } = require('./alerts');
+        broadcastAlert({ type: 'streaming_status', isStreaming: true });
+      } catch (e) {}
 
-    await db.run(
-      'INSERT INTO messages (chat_id, role, content, thoughts) VALUES (?, ?, ?, ?)',
-      [chatId, 'assistant', finalContent, finalThoughts]
-    );
+      const { enqueue } = require('../services/ai_queue');
+      await enqueue(async (onThoughtCallback) => {
+        try {
+          await runAgentLoop({
+            db,
+            userId: req.user.id,
+            chatId,
+            provider: settings.provider,
+            modelName: actualModel,
+            supervisorModel: actualModel,
+            userMessage: message,
+            history,
+            githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
+            localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
+            localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
+            localApiStyle: settings.local_api_style || 'openai',
+            onlineUrl: settings.online_url,
+            onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+            geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
+            onlineProvider: settings.online_provider || 'gemini',
+            isAborted: () => streamAbortController.signal.aborted,
+            abortSignal: streamAbortController.signal,
+            onThought: (thoughtChunk) => {
+              accumulatedThoughts += thoughtChunk;
+              sendEvent('thought', thoughtChunk);
+              onThoughtCallback(thoughtChunk);
+            },
+            onContent: (contentChunk) => {
+              accumulatedContent += contentChunk;
+              sendEvent('content', contentChunk);
+            },
+            onToolCall: (toolCall) => {
+              sendEvent('tool', toolCall);
+              // Broadcast tool call to Standalone Monitor
+              try {
+                const { broadcastAlert } = require('./alerts');
+                broadcastAlert({ type: 'tool_call', toolCall });
+              } catch (e) {}
+            },
+            onAgentStatus: (statusData) => {
+              sendEvent('agent_status', statusData);
+              // Broadcast agent status to Standalone Monitor
+              try {
+                const { broadcastAlert } = require('./alerts');
+                broadcastAlert({
+                  type: 'agent_status',
+                  agent: statusData.agent,
+                  status: statusData.status
+                });
+              } catch (e) {}
+            },
+            onCommandApprovalRequired: ({ commandId, command, safety_analysis }) => {
+              sendEvent('command_approval_required', { commandId, command, safety_analysis });
+            }
+          });
+        } finally {
+          // Broadcast transition to Communication Specialist to Standalone Monitor
+          try {
+            const { broadcastAlert } = require('./alerts');
+            broadcastAlert({ type: 'agent_status', agent: 'communication_specialist', status: 'active' });
+          } catch (e) {}
+        }
+      }, { nodeId: 'chat-ui', name: `User Chat Request` });
 
-    completed = true;
+      // Save assistant response to database
+      const { extractThoughts } = require('../utils/helpers');
+      const parsed = extractThoughts(accumulatedContent, accumulatedThoughts);
+      finalContent = parsed.content;
+      finalThoughts = parsed.thoughts;
+
+      await db.run(
+        'INSERT INTO messages (chat_id, role, content, thoughts) VALUES (?, ?, ?, ?)',
+        [chatId, 'assistant', finalContent, finalThoughts]
+      );
+
+      completed = true;
 
     const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
     const chatMemContent = `User asked: "${message.trim()}"\nAssistant replied: "${finalContent.trim()}"`;
@@ -470,10 +425,9 @@ router.post('/chat/stream', authenticateToken, checkQuota, async (req, res) => {
       } else {
         console.log('[Model Ejection] Skipped model ejection: follow-up or clarification request detected.');
       }
-    }
-  } catch (err) {
-    const logger = require('../utils/logger');
-    logger.error('Stream processing error in chat route:', err);
+      }
+    } catch (err) {
+      logger.error('Stream processing error in chat route:', err);
     const errMsg = "Local LLM Connection Lost. The model may have run out of memory. Please lower context length.";
     if (!res.headersSent) {
       res.status(500).json({ error: errMsg });

@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const logger = require('./logger');
 
 /**
  * Retrieves a vector embedding for a given text.
@@ -24,7 +25,7 @@ async function getEmbedding(text, userSettings = {}) {
   if (isGemini) {
     const apiKey = decryptedSettings.online_key || decryptedSettings.gemini_key;
     if (!apiKey) {
-      console.warn('Embeddings: No Gemini API Key configured in user settings.');
+      logger.warn('Embeddings: No Gemini API Key configured in user settings.');
       return null;
     }
 
@@ -36,7 +37,7 @@ async function getEmbedding(text, userSettings = {}) {
         return result.embedding.values;
       }
     } catch (err) {
-      console.error('Embeddings: Failed to generate embedding via Gemini API:', err.message);
+      logger.error(`Embeddings: Failed to generate embedding via Gemini API: ${err.message}`);
     }
   } else {
     // Local / OpenAI / Custom provider
@@ -45,7 +46,7 @@ async function getEmbedding(text, userSettings = {}) {
     let modelName = 'text-embedding-ada-002';
 
     if (decryptedSettings.provider === 'local') {
-      baseUrl = decryptedSettings.local_url || 'http://192.168.1.42:1234/v1';
+      baseUrl = decryptedSettings.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1';
       apiKey = decryptedSettings.local_key || '';
       modelName = 'text-embedding-ada-002';
 

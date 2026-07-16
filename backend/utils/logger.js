@@ -1,5 +1,6 @@
 const winston = require('winston');
 const path = require('path');
+const fs = require('fs');
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -15,8 +16,17 @@ const logger = winston.createLogger({
         winston.format.printf(info => `[${info.timestamp}] [${info.level}]: ${info.message}${info.stack ? '\n' + info.stack : ''}`)
       )
     }),
-    new winston.transports.File({
-      filename: path.join(__dirname, '../../app.log'),
+    new (require('winston-daily-rotate-file'))({
+      filename: (() => {
+        const logsDir = path.join(__dirname, '../../logs');
+        if (!fs.existsSync(logsDir)) {
+          fs.mkdirSync(logsDir, { recursive: true });
+        }
+        return path.join(logsDir, 'app-%DATE%.log');
+      })(),
+      datePattern: 'YYYY-MM-DD',
+      maxFiles: '14d',
+      maxSize: '20m',
       format: winston.format.combine(
         winston.format.printf(info => `[${info.timestamp}] [${info.level}]: ${info.message}${info.stack ? '\n' + info.stack : ''}`)
       )

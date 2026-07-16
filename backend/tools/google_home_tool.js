@@ -3,6 +3,7 @@ const { getDb } = require('../db');
 const { generateTTS } = require('../utils/tts');
 const path = require('path');
 const fs = require('fs');
+const logger = require('../utils/logger');
 
 async function executeViaAssistantSDK(command) {
   const credentialsPath = path.resolve(__dirname, '../credentials.json');
@@ -153,7 +154,11 @@ async function handleGoogleHomeTool(db, userId, action, params) {
       if (resolvedDevice) {
         targetIp = resolvedDevice.host;
       } else {
-        targetIp = targetIp || '192.168.1.60';
+        targetIp = targetIp || process.env.GOOGLE_HOME_IP || null;
+        if (!targetIp) {
+          const latestNest = await db.get("SELECT ip_address FROM network_nodes WHERE device_type = 'google_home' ORDER BY last_seen DESC LIMIT 1");
+          if (latestNest) targetIp = latestNest.ip_address;
+        }
       }
 
       const Device = require('chromecast-api/lib/device');
@@ -164,7 +169,7 @@ async function handleGoogleHomeTool(db, userId, action, params) {
       });
 
       device.on('error', (err) => {
-        console.error('[Chromecast Device Error]:', err.message);
+        logger.error(`[Chromecast Device Error]: ${err.message}`);
       });
 
       await new Promise((resolve, reject) => {
@@ -275,7 +280,11 @@ async function handleGoogleHomeTool(db, userId, action, params) {
         await db.run('UPDATE user_settings SET google_home_ip = ? WHERE user_id = ?', [targetIp, userId]);
       }
     } else {
-      targetIp = targetIp || '192.168.1.60';
+      targetIp = targetIp || process.env.GOOGLE_HOME_IP || null;
+      if (!targetIp) {
+        const latestNest = await db.get("SELECT ip_address FROM network_nodes WHERE device_type = 'google_home' ORDER BY last_seen DESC LIMIT 1");
+        if (latestNest) targetIp = latestNest.ip_address;
+      }
     }
 
     const Device = require('chromecast-api/lib/device');
@@ -286,7 +295,7 @@ async function handleGoogleHomeTool(db, userId, action, params) {
     });
 
     device.on('error', (err) => {
-      console.error('[Chromecast Device Error]:', err.message);
+      logger.error(`[Chromecast Device Error]: ${err.message}`);
     });
 
     await new Promise((resolve, reject) => {

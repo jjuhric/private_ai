@@ -7,27 +7,7 @@ const execPromise = util.promisify(exec);
 const { measurePower } = require('./ina219_tool');
 const { measureCpuTemp } = require('./temp_tool');
 
-// Helper to resolve paths safely relative to the workspace or home directory
-function resolveSafePath(userPath) {
-  const workspaceRoot = path.resolve(process.cwd());
-  const homeRoot = path.resolve(os.homedir());
-  
-  let resolved;
-  if (userPath === '~') {
-    resolved = homeRoot;
-  } else if (userPath.startsWith('~/') || userPath.startsWith('~\\')) {
-    resolved = path.resolve(homeRoot, userPath.slice(2));
-    if (!resolved.startsWith(homeRoot)) {
-      throw new Error('Access denied: path is outside the home directory.');
-    }
-  } else {
-    resolved = path.resolve(workspaceRoot, userPath);
-    if (!resolved.startsWith(workspaceRoot)) {
-      throw new Error('Access denied: path is outside the workspace directory.');
-    }
-  }
-  return resolved;
-}
+const { resolveSafePath } = require('../utils/pathSecurity');
 
 /**
  * Helper to fetch power/battery info via INA219 helper script.

@@ -1,10 +1,13 @@
 const crypto = require('crypto');
 const ALGORITHM = 'aes-256-gcm';
 
-// Obtain encryption key from secret env or fallback for local dev
-const ENCRYPTION_KEY = process.env.DB_ENCRYPTION_SECRET 
-  ? crypto.scryptSync(process.env.DB_ENCRYPTION_SECRET, 'salt', 32)
-  : crypto.scryptSync('dev_encryption_secret_key_2026', 'salt', 32);
+const isTest = process.env.NODE_ENV === 'test';
+if (!process.env.DB_ENCRYPTION_SECRET && !isTest) {
+  console.error('FATAL ERROR: DB_ENCRYPTION_SECRET env variable is not configured.');
+  process.exit(1);
+}
+const secret = process.env.DB_ENCRYPTION_SECRET || 'test_encryption_secret_key_2026';
+const ENCRYPTION_KEY = crypto.scryptSync(secret, 'salt', 32);
 
 /**
  * Encrypts cleartext into hex format with IV and AuthTag:

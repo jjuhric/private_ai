@@ -5,7 +5,10 @@
  * This can be used for GPIO writes or reads.
  */
 async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecret) {
-  const ip = nodeIp || '192.168.1.117';
+  const ip = nodeIp || process.env.ESP32_DEFAULT_IP || null;
+  if (!ip) {
+    return 'Error: No ESP32 IP address provided. Pass an IP address or set the ESP32_DEFAULT_IP environment variable.';
+  }
   let portVal = nodePort;
   let devType = '';
 

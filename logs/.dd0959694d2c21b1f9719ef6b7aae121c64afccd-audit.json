@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\jjuhr\\OneDrive\\Documents\\private_ai\\logs\\.dd0959694d2c21b1f9719ef6b7aae121c64afccd-audit.json",
+    "files": [
+        {
+            "date": 1784238770654,
+            "name": "C:\\Users\\jjuhr\\OneDrive\\Documents\\private_ai\\logs\\app-2026-07-16.log",
+            "hash": "ee3912a43785970504ca00dead0bf58415ae60e9e01353b0373f643f76166a6f"
+        }
+    ],
+    "hashType": "sha256"
+}

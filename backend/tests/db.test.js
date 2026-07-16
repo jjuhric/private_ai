@@ -18,25 +18,25 @@ describe('Database Migration Tests', () => {
 
   beforeEach(() => {
     // Clear connection and delete old test file + WAL/SHM journals
-    jest.resetModules();
     cleanupDbFiles();
     process.env.DB_PATH = testDbPath;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const { closeDb } = require('../db');
+    await closeDb();
     cleanupDbFiles();
   });
 
   test('should initialize a new database and apply migrations', async () => {
-    const { getDb } = require('../db');
+    const { getDb, closeDb } = require('../db');
     const db = await getDb();
     expect(db).toBeDefined();
 
-    // The second getDb call should return the existing connection
     const db2 = await getDb();
     expect(db2).toBe(db);
 
-    await db.close();
+    await closeDb();
   });
 
   test('should trigger migrations when columns are missing', async () => {
@@ -55,7 +55,7 @@ describe('Database Migration Tests', () => {
     await db.exec(`
       CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT);
       CREATE TABLE user_settings (user_id INTEGER PRIMARY KEY, provider TEXT, model_name TEXT, github_token TEXT, gemini_key TEXT);
-      CREATE TABLE memories (id INTEGER PRIMARY KEY, user_id INTEGER, content TEXT, level TEXT);
+      CREATE TABLE memories (id INTEGER PRIMARY KEY, user_id INTEGER, content TEXT, level TEXT, expires_at DATETIME);
     `);
     await db.close();
 
@@ -75,7 +75,8 @@ describe('Database Migration Tests', () => {
     const memoryCols = await migratedDb.all('PRAGMA table_info(memories)');
     expect(memoryCols.some(c => c.name === 'embedding')).toBe(true);
 
-    await migratedDb.close();
+    const { closeDb } = require('../db');
+    await closeDb();
   });
 
   test('handles initialization errors', async () => {

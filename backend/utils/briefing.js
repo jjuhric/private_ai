@@ -2,6 +2,7 @@ const { handleWeatherTool } = require('../tools/weather_tool');
 const { handleGoogleNewsTool } = require('../ai');
 const { runWorkerAgent } = require('./agents');
 const { decrypt } = require('./crypto');
+const logger = require('./logger');
 
 async function generateDailyBriefing(db, userId) {
   try {
@@ -95,7 +96,7 @@ Generate the daily briefing now. Keep it professional, highly structured, and wa
       onlineProvider: activeSettings.online_provider || 'gemini',
       onlineKey: decrypt(activeSettings.online_key),
       geminiKey: decrypt(activeSettings.gemini_key),
-      localBaseUrl: activeSettings.local_url || 'http://192.168.1.42:1234/v1',
+      localBaseUrl: activeSettings.local_url || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1',
       localApiKey: decrypt(activeSettings.local_key),
       localApiStyle: activeSettings.local_api_style || 'openai',
       onlineUrl: activeSettings.online_url
