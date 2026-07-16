@@ -497,7 +497,7 @@ function App() {
         const data = await res.json();
         setChats(prev => [data, ...prev]);
         setActiveChatId(data.chatId);
-        setActiveTab('chat');
+        handleTabChange('chat');
         setIsMobileSidebarOpen(false);
       }
     } catch (err) {

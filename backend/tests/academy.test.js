@@ -96,7 +96,8 @@ describe('Academy API', () => {
         topic: 'Learn variables',
         curriculum: JSON.stringify([{ title: 'Lesson 1', test_instructions: 'Print hello' }]),
         current_step_index: 0,
-        grades: '{}'
+        grades: '{}',
+        status: 'active'
       }) // lesson
       .mockResolvedValueOnce({ breaking_changes: '[]' }) // language updates
       .mockResolvedValueOnce({ provider: 'gemini' }); // user settings
@@ -116,7 +117,70 @@ describe('Academy API', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.grade.score).toBe(85);
-    expect(res.body.status).toBe('completed'); // since it advances past index 0 (the only step)
+    expect(res.body.status).toBe('active'); // does not advance automatically now
+  });
+
+  test('POST /api/academy/lessons/:id/advance advances step when passed', async () => {
+    mockDb.get.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      language: 'rust',
+      topic: 'Learn variables',
+      curriculum: JSON.stringify([{ title: 'Lesson 1' }, { title: 'Lesson 2' }]),
+      current_step_index: 0,
+      grades: JSON.stringify({ '0': { score: 85, feedback: 'Good job!' } }),
+      status: 'active'
+    });
+
+    mockDb.run.mockResolvedValueOnce({});
+
+    const res = await request(app).post('/api/academy/lessons/1/advance');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.currentStepIndex).toBe(1);
+    expect(res.body.status).toBe('active');
+  });
+
+  test('POST /api/academy/lessons/:id/advance completes course on final step', async () => {
+    mockDb.get.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      language: 'rust',
+      topic: 'Learn variables',
+      curriculum: JSON.stringify([{ title: 'Lesson 1' }]),
+      current_step_index: 0,
+      grades: JSON.stringify({ '0': { score: 85, feedback: 'Good job!' } }),
+      status: 'active'
+    });
+
+    mockDb.run.mockResolvedValueOnce({});
+
+    const res = await request(app).post('/api/academy/lessons/1/advance');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.currentStepIndex).toBe(1);
+    expect(res.body.status).toBe('completed');
+    expect(res.body.overallGrade).toBe(85);
+  });
+
+  test('POST /api/academy/lessons/:id/advance rejects advance if not passed', async () => {
+    mockDb.get.mockResolvedValueOnce({
+      id: 1,
+      user_id: 1,
+      language: 'rust',
+      topic: 'Learn variables',
+      curriculum: JSON.stringify([{ title: 'Lesson 1' }]),
+      current_step_index: 0,
+      grades: '{}',
+      status: 'active'
+    });
+
+    const res = await request(app).post('/api/academy/lessons/1/advance');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('You must pass the graduation test');
   });
 
   test('POST /api/academy/lessons/:id/pause pauses lesson', async () => {

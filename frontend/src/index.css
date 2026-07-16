@@ -1245,6 +1245,180 @@ select.form-control option {
   }
 }
 
+/* PDF Academy Styles */
+.pdf-viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pdf-body-scroll {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  background: #334155; /* Desk layout bg */
+  border-radius: 12px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.35);
+  margin-top: 10px;
+}
+
+.pdf-page {
+  background: #ffffff;
+  color: #1e293b;
+  width: 100%;
+  max-width: 800px;
+  min-height: 1000px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  padding: 3.5rem;
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  border-radius: 4px;
+  position: relative;
+  border: 1px solid #cbd5e1;
+}
+
+.pdf-header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 0.75rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+}
+
+.pdf-content {
+  margin-bottom: 3.5rem;
+}
+
+.pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4 {
+  font-family: 'Outfit', sans-serif;
+  color: #0f172a;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+}
+
+.pdf-content h1 { font-size: 1.8rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+.pdf-content h2 { font-size: 1.45rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.25rem; }
+.pdf-content h3 { font-size: 1.25rem; }
+.pdf-content h4 { font-size: 1.1rem; }
+
+.pdf-content p {
+  margin-bottom: 1.25rem;
+  text-align: justify;
+}
+
+.pdf-content ul, .pdf-content ol {
+  margin-left: 24px;
+  margin-bottom: 1.25rem;
+}
+
+.pdf-content li {
+  margin-bottom: 0.5rem;
+}
+
+.pdf-content code {
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+  font-size: 0.9rem;
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.pdf-content pre {
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 1.25rem;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid #1e293b;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.pdf-content pre code {
+  background: transparent !important;
+  color: #f8fafc !important;
+  padding: 0 !important;
+  border: none !important;
+  font-size: 0.88rem !important;
+  line-height: 1.5 !important;
+}
+
+.pdf-footer {
+  position: absolute;
+  bottom: 2rem;
+  left: 3.5rem;
+  right: 3.5rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Tab bar custom styles */
+.academy-tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 20px;
+}
+
+.academy-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-smooth);
+}
+
+.academy-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.02);
+}
+
+.academy-tab-btn.active {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.04);
+}
+
+/* Diagrams and Mermaid */
+.mermaid-diagram-container {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.mermaid {
+  background: transparent !important;
+  color: #000 !important;
+}
+
 
 
 

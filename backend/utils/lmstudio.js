@@ -40,7 +40,17 @@ async function listLocalModels(localBaseUrl, localApiKey) {
       const modelsList = data.models || data.data || [];
       return modelsList.map(model => {
         const isLoaded = !!(model.loaded_instances && model.loaded_instances.length > 0);
-        const instanceId = isLoaded ? (model.loaded_instances[0].id || model.loaded_instances[0].instance_id) : null;
+        let instanceId = null;
+        if (isLoaded) {
+          const first = model.loaded_instances[0];
+          if (first && typeof first === 'object') {
+            instanceId = first.id || first.instance_id || first.instanceId || first.identifier || model.id;
+          } else if (typeof first === 'string') {
+            instanceId = first;
+          } else {
+            instanceId = model.id;
+          }
+        }
         return {
           id: model.id || model.key || '',
           name: model.name || model.id || '',

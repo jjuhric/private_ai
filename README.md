@@ -1,4 +1,4 @@
-# PATTI — Enterprise Suite (v5.1.0)
+# PATTI — Enterprise Suite (v5.2.0)
 
 <p align="center">
   <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
@@ -142,7 +142,18 @@ Navigate to **System Control** -> **Field Nodes** tab to manage your smart home 
 
 ---
 
-## 🛡️ High-Performance Interceptors & Privacy Controls (v5.1.0)
+## 🎓 Structured PDF Academy & Self-Paced Learning (v5.2.0)
+
+The PATTI Academy has been upgraded with a comprehensive self-paced learning and grading architecture:
+* **Interactive Teacher Chat**: Submit questions about the lesson directly to the Teacher agent.
+* **Multi-Image Attachments**: Attach reference images/files to your chat questions or answers.
+* **Pass/Fail Graduation**: Students are graded on graduation tests. A minimum score of 70% is required to qualify for advancement.
+* **Manual Advancement**: Lessons no longer advance automatically upon evaluation. Passing students must explicitly advance to the next step.
+* **Premium PDF Layout**: Documents are presented in a high-fidelity desk-themed PDF viewer with styled headers, custom code blocks, tables, and Mermaid diagram renderers.
+
+---
+
+## 🛡️ High-Performance Interceptors & Privacy Controls (v5.2.0)
 
 To maximize execution speed, reduce model token costs, and enforce strict security boundaries, PATTI coordinates key queries via high-performance interceptors before launching agent planning loops:
 

@@ -357,40 +357,80 @@ Language Updates/Breaking Changes: ${breakingChangesText}`;
       student_answer
     };
 
-    let nextStepIdx = stepIdx;
-    let nextStatus = lesson.status;
-    let overallRating = lesson.overall_rating;
-    let overallGrade = lesson.overall_grade;
-
-    if (gradeData.is_correct) {
-      nextStepIdx += 1;
-      
-      // If we finished the last step, mark as completed
-      if (nextStepIdx >= curriculum.length) {
-        nextStatus = 'completed';
-        
-        // Calculate average grade
-        const scores = Object.values(grades).map(g => g.score);
-        const total = scores.reduce((sum, val) => sum + val, 0);
-        overallGrade = scores.length > 0 ? parseFloat((total / scores.length).toFixed(1)) : 0;
-        
-        // Determine overall rating
-        if (overallGrade >= 90) overallRating = 'Outstanding (A+)';
-        else if (overallGrade >= 80) overallRating = 'Excellent (A)';
-        else if (overallGrade >= 70) overallRating = 'Competent (B)';
-        else if (overallGrade >= 50) overallRating = 'Passing (C)';
-        else overallRating = 'Needs Improvement (F)';
-      }
-    }
-
     await db.run(
-      'UPDATE academy_lessons SET current_step_index = ?, status = ?, grades = ?, overall_rating = ?, overall_grade = ?, updated_at = datetime("now") WHERE id = ?',
-      [nextStepIdx, nextStatus, JSON.stringify(grades), overallRating, overallGrade, lesson.id]
+      'UPDATE academy_lessons SET grades = ?, updated_at = datetime("now") WHERE id = ?',
+      [JSON.stringify(grades), lesson.id]
     );
 
     res.json({
       success: true,
       grade: gradeData,
+      currentStepIndex: stepIdx,
+      status: lesson.status,
+      overallRating: lesson.overall_rating,
+      overallGrade: lesson.overall_grade
+    });
+
+  } catch (err) {
+    logger.error('[Academy] Error grading submission: ' + err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Advance to the next lesson/step after passing the graduation test
+router.post('/lessons/:id/advance', authenticateToken, checkAcademyTab, async (req, res) => {
+  try {
+    const db = await getDb();
+    const lesson = await db.get(
+      'SELECT * FROM academy_lessons WHERE id = ? AND user_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    if (lesson.status === 'completed') {
+      return res.status(400).json({ error: 'Lesson is already completed.' });
+    }
+
+    const curriculum = JSON.parse(lesson.curriculum);
+    const stepIdx = lesson.current_step_index;
+    const grades = JSON.parse(lesson.grades || '{}');
+    const currentGrade = grades[stepIdx];
+
+    if (!currentGrade || currentGrade.score < 70) {
+      return res.status(400).json({ error: 'You must pass the graduation test for the current step with a score of 70 or higher to advance.' });
+    }
+
+    const nextStepIdx = stepIdx + 1;
+    let nextStatus = lesson.status;
+    let overallRating = lesson.overall_rating;
+    let overallGrade = lesson.overall_grade;
+
+    // Check if we finished the last step
+    if (nextStepIdx >= curriculum.length) {
+      nextStatus = 'completed';
+      
+      // Calculate average grade
+      const scores = Object.values(grades).map(g => g.score);
+      const total = scores.reduce((sum, val) => sum + val, 0);
+      overallGrade = scores.length > 0 ? parseFloat((total / scores.length).toFixed(1)) : 0;
+      
+      // Determine overall rating
+      if (overallGrade >= 90) overallRating = 'Outstanding (A+)';
+      else if (overallGrade >= 80) overallRating = 'Excellent (A)';
+      else if (overallGrade >= 70) overallRating = 'Competent (B)';
+      else if (overallGrade >= 50) overallRating = 'Passing (C)';
+      else overallRating = 'Needs Improvement (F)';
+    }
+
+    await db.run(
+      'UPDATE academy_lessons SET current_step_index = ?, status = ?, overall_rating = ?, overall_grade = ?, updated_at = datetime("now") WHERE id = ?',
+      [nextStepIdx, nextStatus, overallRating, overallGrade, lesson.id]
+    );
+
+    res.json({
+      success: true,
       currentStepIndex: nextStepIdx,
       status: nextStatus,
       overallRating,
@@ -398,7 +438,7 @@ Language Updates/Breaking Changes: ${breakingChangesText}`;
     });
 
   } catch (err) {
-    logger.error('[Academy] Error grading submission: ' + err.message);
+    logger.error('[Academy] Error advancing lesson: ' + err.message);
     res.status(500).json({ error: err.message });
   }
 });
