@@ -79,8 +79,8 @@ describe('SetupWizard Component Tests', () => {
     fireEvent.change(screen.getByPlaceholderText('Jeffery'), { target: { value: 'Jeffery' } });
     fireEvent.click(screen.getByText('Continue'));
 
-    // Switch to Online API (which requires an API key)
-    fireEvent.click(screen.getByText('Online API'));
+    // Switch to Online API fallback (which requires an API key)
+    fireEvent.click(screen.getByRole('checkbox'));
 
     // Check that continue button is disabled
     const continueBtn = screen.getAllByText('Continue')[0];
@@ -211,8 +211,8 @@ describe('SetupWizard Component Tests', () => {
     // Go to Step 3
     fireEvent.click(screen.getByText('Continue'));
 
-    // Select Online API and toggle Anthropic / OpenAI
-    fireEvent.click(screen.getByText('Online API'));
+    // Select Use Online Model Fallback checkbox
+    fireEvent.click(screen.getByRole('checkbox'));
     
     const providerSelects = screen.getAllByRole('combobox');
     const onlineProvSelect = providerSelects.find(s => s.value === 'gemini');
@@ -241,7 +241,7 @@ describe('SetupWizard Component Tests', () => {
     fireEvent.click(screen.getByText('Continue'));
     
     // Switch back to Local and Continue to Step 4
-    fireEvent.click(screen.getByText('Local API'));
+    fireEvent.click(screen.getByRole('checkbox'));
     
     // Cover Local API inputs
     fireEvent.change(screen.getByPlaceholderText('e.g. http://192.168.1.42:1234/v1'), { target: { value: 'http://127.0.0.1:11434/v1' } });

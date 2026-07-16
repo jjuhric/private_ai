@@ -129,76 +129,15 @@ If the tool is safe, fully complete, and ready for production, end your review w
           return `QA Review Rejected for tool "${toolName}". Review details:\n${qaAgentOutput}`;
         }
 
-        // Step 4: Branch & PR Creation
-        logger.info(`[Dev Pipeline] Tool approved! Creating branch and PR for tool: ${toolName}`);
-        const branchName = `tool/${toolName}`;
-        let prUrl = '';
-
-        try {
-          const { handleGitHubTool } = require('./github_tool');
-          
-          // Create branch
-          const branchRes = await handleGitHubTool(githubToken, 'create_branch', {
-            owner: 'jjuhric',
-            repo: 'private_ai_tools',
-            branch: branchName
-          });
-          const branchData = JSON.parse(branchRes);
-          if (branchData.error) throw new Error(branchData.error);
-
-          // Prepare tool files content to commit
-          const toolDirPath = path.join(toolManager.registryLocalPath, 'tools', toolName);
-          const manifestFile = 'manifest.json';
-          const handlerFile = 'handler.js';
-          const testFile = 'handler.test.js';
-
-          const files = [];
-          for (const file of [manifestFile, handlerFile, testFile]) {
-            const filePath = path.join(toolDirPath, file);
-            if (fs.existsSync(filePath)) {
-              files.push({
-                path: `tools/${toolName}/${file}`,
-                content: fs.readFileSync(filePath, 'base64') // GitHub contents API expects base64
-              });
-            }
-          }
-
-          // Commit files
-          await handleGitHubTool(githubToken, 'commit_files', {
-            owner: 'jjuhric',
-            repo: 'private_ai_tools',
-            branch: branchName,
-            files: files,
-            message: `feat(tools): add dynamic tool ${toolName}`
-          });
-
-          // Create PR
-          const prRes = await handleGitHubTool(githubToken, 'create_pr', {
-            owner: 'jjuhric',
-            repo: 'private_ai_tools',
-            title: `feat(tools): add dynamic tool ${toolName}`,
-            body: `Automatically created dynamic tool: ${toolName}\n\n**Original Request:** ${originalPrompt}\n\n**QA Report:**\n${qaAgentOutput}`,
-            head: branchName,
-            base: 'main'
-          });
-          const prData = JSON.parse(prRes);
-          prUrl = prData.url || '';
-        } catch (gitErr) {
-          logger.error(`[Dev Pipeline] Git / PR flow failed: ${gitErr.message}`);
-          // We don't mark pipeline as failed if git flow fails after QA approval, we keep it as approved but log the git issue
-          await db.run(
-            'UPDATE dev_pipeline SET status = "approved", branch_name = ? WHERE request_id = ?',
-            [branchName, requestId]
-          );
-          return `Tool "${toolName}" was developed and approved, but Git/PR creation failed: ${gitErr.message}`;
-        }
+        // Step 4: Local Deployment Only (Bypass Git flow for private_ai_tools repo)
+        logger.info(`[Dev Pipeline] Tool approved! Registering tool locally: ${toolName}`);
 
         await db.run(
-          'UPDATE dev_pipeline SET status = "deployed", branch_name = ?, pr_url = ? WHERE request_id = ?',
-          [branchName, prUrl, requestId]
+          'UPDATE dev_pipeline SET status = "deployed" WHERE request_id = ?',
+          [requestId]
         );
 
-        return `Successfully developed, tested, and QA-approved tool "${toolName}". Pull request created: ${prUrl}`;
+        return `Successfully developed, tested, and QA-approved tool "${toolName}" locally.`;
       }
 
       case 'get_pipeline_status': {

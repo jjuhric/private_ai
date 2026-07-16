@@ -26,7 +26,6 @@ jest.mock('../utils/lmstudio', () => ({
 }));
 
 const lmstudioSwitchRouter = require('../routes/lmstudio_switch');
-const academyRouter = require('../routes/academy');
 const chatRouter = require('../routes/chat');
 const dbModule = require('../db');
 const lmstudioUtils = require('../utils/lmstudio');
@@ -34,7 +33,6 @@ const lmstudioUtils = require('../utils/lmstudio');
 const app = express();
 app.use(express.json());
 app.use('/api/settings', lmstudioSwitchRouter);
-app.use('/api/academy', academyRouter);
 app.use('/api', chatRouter);
 
 describe('LM Studio Model & Tab Switch API', () => {
@@ -81,8 +79,8 @@ describe('LM Studio Model & Tab Switch API', () => {
   });
 
   test('completions are blocked when on different tabs', async () => {
-    // 1. Set tab to academy
-    global.activeTab = 'academy';
+    // 1. Set tab to personality-skills
+    global.activeTab = 'personality-skills';
 
     // 2. Mock DB for chat stream validation
     mockDb.get.mockResolvedValueOnce({ id: 1 }); // chat check
@@ -91,13 +89,5 @@ describe('LM Studio Model & Tab Switch API', () => {
     const chatRes = await request(app).post('/api/chat/stream').send({ chatId: 1, message: 'hello' });
     expect(chatRes.status).toBe(403);
     expect(chatRes.body.error).toContain('disabled while on another tab');
-
-    // 4. Set tab to chat
-    global.activeTab = 'chat';
-
-    // 5. Try to call academy chat - should reject with 403
-    const academyRes = await request(app).post('/api/academy/lessons/1/chat').send({ message: 'explain ownership' });
-    expect(academyRes.status).toBe(403);
-    expect(academyRes.body.error).toContain('disabled while on another tab');
   });
 });

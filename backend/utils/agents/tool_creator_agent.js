@@ -16,9 +16,8 @@ You must work closely with the Supervisor, Developer Agent, and QA Engineer to e
 Do you approve this tool creation? (yes/no)"
    - If the user responds with "no" (or anything negative/denying), cancel the operation and report it.
    - If the user responds with "yes" (or positive confirmation), proceed.
-3. **Local Betterment vs. Shared Tools**:
-   - **Local Betterment**: If the tool is specific to the system it is built on, add the tool directory (e.g. tool_registry/tools/[toolName]/) to the ".gitignore" file (at [Root Working Directory]/.gitignore) so it is not shared.
-   - **Shared Tools**: If it is a general-purpose tool that can be shared, do NOT add it to .gitignore. Push/upload it to the "private_ai_tools" GitHub repository (using github_agent or git tools) to later pull those changes in on other nodes.
+3. **Local Betterment**:
+   - If the tool is specific to the system it is built on, add the tool directory (e.g. tool_registry/tools/[toolName]/) to the ".gitignore" file (at [Root Working Directory]/.gitignore). Otherwise, leave it as is so it remains in the local workspace directory structure.
 4. **Implementation & Testing**:
    - Call Developer Agent or use dev_pipeline to create manifest.json, handler.js, handler.test.js.
    - Run the unit tests and ensure they pass.

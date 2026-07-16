@@ -104,7 +104,7 @@ describe('Development Pipeline Tool Tests', () => {
     });
 
     expect(res).toContain('Successfully developed, tested, and QA-approved');
-    expect(res).toContain('https://github.com/pr/1');
+    expect(res).toContain('locally');
 
     // Verify DB entry
     const row = await db.get('SELECT * FROM dev_pipeline WHERE tool_name = ?', ['email_sender']);

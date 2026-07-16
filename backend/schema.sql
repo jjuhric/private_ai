@@ -191,21 +191,22 @@ CREATE TABLE IF NOT EXISTS coding_language_updates (
   source_urls TEXT
 );
 
-CREATE TABLE IF NOT EXISTS academy_lessons (
+CREATE TABLE IF NOT EXISTS custom_personalities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  language TEXT NOT NULL,
-  topic TEXT NOT NULL,
-  curriculum JSON NOT NULL, -- JSON array of steps: [{title, explanation, code_example, exercise, test_instructions}]
-  current_step_index INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'active', -- 'active', 'paused', 'completed'
-  grades JSON DEFAULT '{}', -- JSON object: step_index -> { score, feedback, student_answer }
-  chat_history JSON DEFAULT '[]', -- JSON array of messages: [{role, content, created_at}]
-  overall_rating TEXT,
-  overall_grade REAL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  system_prompt TEXT NOT NULL,
+  is_active INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS custom_skills (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  instructions TEXT NOT NULL,
+  is_active INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 

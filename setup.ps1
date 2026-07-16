@@ -351,7 +351,6 @@ Write-EnvVar "MQTT_BROKER_URL" $mqttBrokerUrl
 Write-EnvVar "MQTT_NODE_ID" $mqttNodeId
 Write-EnvVar "MQTT_USERNAME" $defaultMqttUsername
 Write-EnvVar "MQTT_PASSWORD" $defaultMqttPassword
-Write-EnvVar "TOOL_REGISTRY_REPO" $defaultToolRegistryRepo
 Write-EnvVar "TOOL_REGISTRY_LOCAL_PATH" $defaultToolRegistryLocalPath
 if ($isMainHost -eq "0") {
     Write-EnvVar "MAIN_HOST_IP" $mainHostIp

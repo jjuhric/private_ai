@@ -32,8 +32,8 @@ const nodesRouter = require('./routes/nodes');
 const tokenUsageRouter = require('./routes/token_usage');
 const lmstudioRouter = require('./routes/lmstudio');
 const alertsRouter = require('./routes/alerts');
-const academyRouter = require('./routes/academy');
 const lmstudioSwitchRouter = require('./routes/lmstudio_switch');
+const personalitiesSkillsRouter = require('./routes/personalities_skills');
 const mqttService = require('./services/mqtt_service');
 
 const app = express();
@@ -82,11 +82,6 @@ getDb().then(async (db) => {
     const identity = await nodeIdentity.getIdentity();
     logger.info(`[Node Startup] Node Identity: ${JSON.stringify(identity)}`);
 
-    // Start Centralized Repository Tool Synchronization (Rule 8)
-    if (process.env.NODE_ENV !== 'test') {
-      const systemMachineName = identity.node_name || 'Windows-Host';
-      initializeCentralizedToolSynchronizationDaemon(db, systemMachineName);
-    }
 
     const { runDailyMemoryCheck } = require('./tools/memory_tool');
     await runDailyMemoryCheck(db);
@@ -127,7 +122,7 @@ app.use('/api/host', hostRouter);
 app.use('/api/bridge', agentBridgeRouter);
 app.use('/api/agent-bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
-app.use('/api/academy', academyRouter);
+app.use('/api/personalities-skills', personalitiesSkillsRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
 app.use('/api/alerts', alertsRouter);
@@ -281,109 +276,6 @@ const gracefulShutdown = () => {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
-/**
- * Rule 8: 4-Hour Tool Ingestion Engine with Active Request Postponement Fallbacks
- */
-function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
-  const TOOLS_REPO_URL = process.env.TOOL_REGISTRY_REPO || 'https://github.com/jjuhric/private_ai_tools.git';
-  const registryLocalPath = process.env.TOOL_REGISTRY_LOCAL_PATH || './tool_registry';
-  const PRODUCTION_REGISTRY_DIR = path.resolve(registryLocalPath);
-  const LOCAL_STAGING_DIR = path.join(PRODUCTION_REGISTRY_DIR, 'staging');
-  const fs = require('fs');
-  const { exec } = require('child_process');
 
-  const executeSyncPipeline = async () => {
-    // INTERCEPT: If the core system is currently busy executing agent logic threads, defer sync
-    if (global.activeAgentOps > 0) {
-      logger.info(`[Tool Sync Daemon] Deferring repository pull. System is busy handling active agent executions. Retrying in 5 minutes...`);
-      setTimeout(executeSyncPipeline, 5 * 60 * 1000); // 5-minute fallback check loop
-      return;
-    }
-
-    logger.info(`[Tool Sync Daemon] Executing scheduled centralized module checking routines...`);
-
-    let token = process.env.GITHUB_TOKEN || '';
-    try {
-      const settings = await db.get('SELECT github_token FROM user_settings LIMIT 1');
-      if (settings && settings.github_token) {
-        const { decrypt } = require('./utils/crypto');
-        token = decrypt(settings.github_token);
-      }
-    } catch (err) {
-      // Database might not be initialized or table empty yet
-    }
-
-    let authenticatedUrl = TOOLS_REPO_URL;
-    if (token && TOOLS_REPO_URL.startsWith('https://')) {
-      authenticatedUrl = TOOLS_REPO_URL.replace('https://', `https://${token}@`);
-    }
-
-    if (fs.existsSync(LOCAL_STAGING_DIR)) {
-      try {
-        fs.rmSync(LOCAL_STAGING_DIR, { recursive: true, force: true });
-      } catch (err) { }
-    }
-
-    exec(`git clone ${authenticatedUrl} ${LOCAL_STAGING_DIR}`, async (err) => {
-      if (err) {
-        const sanitizedErr = token ? err.message.replace(new RegExp(token, 'g'), '****') : err.message;
-        logger.error(`[Tool Sync Daemon Error] Pull operations aborted: ${sanitizedErr}`);
-        return;
-      }
-
-      try {
-        const manifestIndexPath = path.join(LOCAL_STAGING_DIR, 'manifest.json');
-        if (!fs.existsSync(manifestIndexPath)) return;
-
-        const registryIndex = JSON.parse(fs.readFileSync(manifestIndexPath, 'utf-8'));
-
-        // Filter elements explicitly based on your local system identity configs
-        const applicableTools = registryIndex.tools.filter(tool =>
-          tool.target_machine_name === systemMachineName || (tool.compatibility_tags && tool.compatibility_tags.includes(process.arch))
-        );
-
-        if (!fs.existsSync(PRODUCTION_REGISTRY_DIR)) {
-          fs.mkdirSync(PRODUCTION_REGISTRY_DIR, { recursive: true });
-        }
-
-        for (const targetTool of applicableTools) {
-          const toolSourceDir = path.join(LOCAL_STAGING_DIR, 'tools', targetTool.name);
-          const toolDestDir = path.join(PRODUCTION_REGISTRY_DIR, targetTool.name);
-
-          if (fs.existsSync(toolSourceDir)) {
-            if (fs.existsSync(toolDestDir)) {
-              fs.rmSync(toolDestDir, { recursive: true, force: true });
-            }
-            fs.renameSync(toolSourceDir, toolDestDir);
-
-            // Register/update the tool capability in sqlite DB
-            await db.run(`
-              INSERT INTO installed_tools (tool_name, version, manifest)
-              VALUES (?, ?, ?)
-              ON CONFLICT(tool_name) DO UPDATE SET version = excluded.version, manifest = excluded.manifest
-            `, [targetTool.name, targetTool.version, JSON.stringify(targetTool)]);
-          }
-        }
-        logger.info(`[Tool Sync Daemon Success] Node tools array synchronized for host machine profile: ${systemMachineName}`);
-      } catch (parseErr) {
-        logger.error(`[Tool Sync Daemon Failure] Error handling file moves: ${parseErr.message}`);
-      } finally {
-        if (fs.existsSync(LOCAL_STAGING_DIR)) {
-          try {
-            fs.rmSync(LOCAL_STAGING_DIR, { recursive: true, force: true });
-          } catch (err) { }
-        }
-      }
-    });
-  };
-
-  // Run on system bootstrap sequence execution
-  executeSyncPipeline();
-
-  // Run scheduled 4-hour synchronization loops via Cron configurations
-  cron.schedule('0 */4 * * *', () => {
-    executeSyncPipeline();
-  });
-}
 
 
