@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ExternalLink } from 'lucide-react';
 
 export default function AgentDashboard({ nodes = [], token, handleDeleteNode, activeSubTab = 'nodes' }) {
   const [nodeHealthMap, setNodeHealthMap] = useState({});
@@ -41,6 +41,35 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, ac
 
   return (
     <div className="p-4">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#fff' }}>Agent Dashboard</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+            Monitor and manage active network nodes.
+          </p>
+        </div>
+        <a
+          href="/monitor"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-primary"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            fontSize: '0.9rem',
+            textDecoration: 'none',
+            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+            borderRadius: '10px',
+            color: '#fff',
+            fontWeight: 600,
+            boxShadow: '0 4px 15px rgba(139, 92, 246, 0.25)'
+          }}
+        >
+          <ExternalLink size={16} /> Launch Standalone Monitor
+        </a>
+      </div>
       {activeSubTab === 'nodes' && (
         <div className="overflow-x-auto w-full">
           <table className="table table-zebra w-full text-sm">
