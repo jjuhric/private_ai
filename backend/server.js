@@ -32,7 +32,6 @@ const nodesRouter = require('./routes/nodes');
 const tokenUsageRouter = require('./routes/token_usage');
 const lmstudioRouter = require('./routes/lmstudio');
 const alertsRouter = require('./routes/alerts');
-const academyRouter = require('./routes/academy');
 const lmstudioSwitchRouter = require('./routes/lmstudio_switch');
 const mqttService = require('./services/mqtt_service');
 
@@ -170,7 +169,6 @@ app.use('/api/host', hostRouter);
 app.use('/api/bridge', agentBridgeRouter);
 app.use('/api/agent-bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
-app.use('/api/academy', academyRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
 app.use('/api/alerts', alertsRouter);
