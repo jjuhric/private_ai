@@ -20,7 +20,9 @@ export default defineConfig({
     env: {
       PORT: '5173',
       DB_PATH: 'backend/test_database.db', // Use a separate DB for E2E testing
-      LOCAL_LLM_URL: 'http://localhost:1234/v1' // Force setup complete to bypass SetupWizard
+      LOCAL_LLM_URL: 'http://localhost:1234/v1', // Force setup complete to bypass SetupWizard
+      JWT_SECRET: 'mock_jwt_secret_for_e2e_tests_only',
+      DB_ENCRYPTION_SECRET: 'mock_db_encryption_secret_for_e2e_tests_only'
     }
   },
 });
