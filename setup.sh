@@ -39,16 +39,19 @@ log_error() {
 }
 
 # Detect presence of configuration targets
-if [ ! -f ".env" ]; then
+if [ ! -f "backend/.env" ]; then
     echo "⚠️ Warning: Target environment layout configuration file [.env] was not found!"
     echo "Would you like to configure mandatory environment properties via this console shell now? (y/N)"
     read -r configure_now
     
     if [ "$configure_now" = "y" ] || [ "$configure_now" = "Y" ]; then
-        NON_INTERACTIVE=false
+        cp backend/.env.example backend/.env
+        echo -n "Enter target uniqueness identifier for this node machine configuration string: "
+        read -r node_identity
+        sed -i "s/NODE_NAME=.*/NODE_NAME=$node_identity/g" backend/.env
+        echo "✅ Basic node parameters logged configuration setups completed."
     else
         echo "💡 Initialization Notice: Missing configurations can be completed using the Setup Wizard Dashboard directly inside your browser once runtime starts up."
-        NON_INTERACTIVE=true
     fi
 fi
 

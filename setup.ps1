@@ -16,16 +16,18 @@ function Write-Log ($Msg, $Color = "White") {
     Write-Host "`n[INFO] $Msg" -ForegroundColor $Color
 }
 
-$EnvPath = ".env"
+$EnvPath = "backend\.env"
 if (-not (Test-Path $EnvPath)) {
     Write-Host "⚠️ Warning: Environment file [.env] not detected in target project root path mappings." -ForegroundColor Yellow
     $Choice = Read-Host "Would you like to provision missing initial environment context keys right now? (y/N)"
     
     if ($Choice -eq "y" -or $Choice -eq "Y") {
-        $NonInteractive = $false
+        Copy-Item "backend\.env.example" $EnvPath
+        $NodeName = Read-Host "Enter descriptive uniqueness text profile name for this machine registry key"
+        (Get-Content $EnvPath) -replace 'NODE_NAME=.*', "NODE_NAME=$NodeName" | Set-Content $EnvPath
+        Write-Host "✅ Configuration initialized successfully." -ForegroundColor Green
     } else {
         Write-Host "💡 Note: You can complete missing properties using the Setup Wizard layout directly in-app." -ForegroundColor Blue
-        $NonInteractive = $true
     }
 }
 

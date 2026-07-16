@@ -574,36 +574,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     }
 
     // Rule 1 & 8: Intercept write actions or tool generation cycles
-    let isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) || 
-                           (decision.tool === 'dev_pipeline' && decision.action === 'create_tool');
-
-    if (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command', 'update_node'].includes(decision.action)) {
-      let isTargetMainHost = false;
-      const targetNodeId = decision.params?.nodeId;
-      if (db && targetNodeId) {
-        try {
-          const nodeRow = await db.get('SELECT is_main_host FROM network_nodes WHERE id = ?', [targetNodeId]);
-          if (nodeRow && nodeRow.is_main_host === 1) {
-            isTargetMainHost = true;
-          }
-        } catch (dbErr) {
-          console.error('Failed to query node for main host status in agents.js:', dbErr);
-        }
-      }
-
-      if (isTargetMainHost) {
-        // Actions targeting the Main Host must always go through human approval
-        isMutationAction = true;
-      } else {
-        // Actions targeting remote nodes do not need approval unless they are breaking/destructive changes
-        const cmd = decision.params?.actionParams?.command || '';
-        const breakingPatterns = [/rm\s+-rf/i, /mkfs/i, /fdisk/i, /dd\s+/i, /reboot/i, /shutdown/i, /format\s+/i];
-        const isBreaking = breakingPatterns.some(pat => pat.test(cmd));
-        if (isBreaking) {
-          isMutationAction = true;
-        }
-      }
-    }
+    const isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) || 
+                             (decision.tool === 'dev_pipeline' && decision.action === 'create_tool') ||
+                             (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command', 'update_node'].includes(decision.action));
 
     if (isMutationAction && settings.onCommandApprovalRequired) {
       const approved = await settings.onCommandApprovalRequired({
@@ -613,7 +586,7 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
         explanation: `Tool creation or file mutation request initiated by expert thread module.`
       });
       
-      if (approved === false) {
+      if (!approved) {
         return "Pipeline Interrupted: Dynamic tool update or file update mutation was explicitly rejected by the human operator.";
       }
     }

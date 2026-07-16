@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { getDb } = require('./db');
+const cron = require('node-cron');
 
 // Global tracker to handle Rule 8 busy checking across the system
 global.activeAgentOps = global.activeAgentOps || 0;
@@ -379,8 +380,10 @@ function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
   // Run on system bootstrap sequence execution
   executeSyncPipeline();
 
-  // Run scheduled 4-hour synchronization loops
-  setInterval(executeSyncPipeline, 4 * 60 * 60 * 1000);
+  // Run scheduled 4-hour synchronization loops via Cron configurations
+  cron.schedule('0 */4 * * *', () => {
+    executeSyncPipeline();
+  });
 }
 
 

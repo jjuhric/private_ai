@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@lancedb/lancedb": "^0.4.2",
     "@xenova/transformers": "^2.0.1",
     "axios": "^1.18.1",
     "bcryptjs": "^2.4.3",
@@ -30,12 +31,12 @@
     "google-news-url-decoder": "^1.2.2",
     "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.14.0",
+    "node-cron": "^4.6.0",
     "node-dns-sd": "^1.0.1",
     "node-html-parser": "^8.0.4",
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",
     "ssh2": "^1.17.0",
-    "@lancedb/lancedb": "^0.4.2",
     "winston": "^3.19.0",
     "ws": "^8.21.0"
   },

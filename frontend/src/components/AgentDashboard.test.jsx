@@ -1,41 +1,24 @@
 import React from 'react';
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import AgentDashboard from './AgentDashboard';
 
 describe('AgentDashboard Component Tests', () => {
-  beforeEach(() => {
-    // Mock window.location
-    vi.stubGlobal('location', {
-      hostname: 'localhost',
-      port: '3000',
-      host: 'localhost:3000'
-    });
-  });
+  test('renders nodes list correctly', () => {
+    const mockNodes = [
+      { id: 1, node_name: 'Pi Node 1', device_type: 'RPi', ip_address: '192.168.1.100', port: 3000 }
+    ];
 
-  test('renders Standalone Agent Monitor header and launcher card', () => {
-    render(<AgentDashboard />);
+    render(
+      <AgentDashboard 
+        nodes={mockNodes} 
+        token="test-token" 
+        handleDeleteNode={() => {}} 
+        activeSubTab="nodes" 
+      />
+    );
 
-    expect(screen.getByText('Standalone Agent Monitor')).toBeInTheDocument();
-    expect(screen.getByText(/The Live Agent & Concurrency Dashboard has been decoupled/)).toBeInTheDocument();
-    
-    const launchLink = screen.getByText('Launch Standalone Monitor');
-    expect(launchLink).toBeInTheDocument();
-    expect(launchLink).toHaveAttribute('href', 'http://localhost:3000/monitor/?token=');
-  });
-
-  test('safely handles token inclusion when localStorage is available', () => {
-    // Mock localStorage
-    const mockLocalStorage = {
-      getItem: vi.fn().mockReturnValue('mocked-jwt-token')
-    };
-    vi.stubGlobal('localStorage', mockLocalStorage);
-
-    render(<AgentDashboard />);
-
-    const launchLink = screen.getByText('Launch Standalone Monitor');
-    expect(launchLink).toHaveAttribute('href', 'http://localhost:3000/monitor/?token=mocked-jwt-token');
-    
-    vi.unstubAllGlobals();
+    expect(screen.getByText('Pi Node 1')).toBeInTheDocument();
+    expect(screen.getByText('192.168.1.100:3000')).toBeInTheDocument();
   });
 });
