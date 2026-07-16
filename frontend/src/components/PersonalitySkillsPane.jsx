@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, Download, Upload, Trash2, CheckCircle, HelpCircle, Loader2 } from 'lucide-react';
+import { Sliders, Download, Upload, Trash2, CheckCircle, HelpCircle, Loader2, Edit } from 'lucide-react';
 
 export default function PersonalitySkillsPane({ token }) {
   const [activeTab, setActiveTab] = useState('personalities');
@@ -18,6 +18,13 @@ export default function PersonalitySkillsPane({ token }) {
   const [overrideName, setOverrideName] = useState('');
   const [overrideDesc, setOverrideDesc] = useState('');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // Edit Modal State
+  const [editItem, setEditItem] = useState(null); // { id, name, description, body, type: 'personality' | 'skill' }
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -59,7 +66,7 @@ export default function PersonalitySkillsPane({ token }) {
         fetchData();
       } else {
         const errData = await res.json();
-        alert(errData.error || 'Failed to activate personality.');
+        alert(errData.error || 'Failed to set default personality.');
       }
     } catch (err) {
       alert(err.message);
@@ -181,6 +188,39 @@ export default function PersonalitySkillsPane({ token }) {
     }
   };
 
+  const handleSaveEdit = async () => {
+    if (!editName.trim() || !editBody.trim()) {
+      alert('Name and details are required.');
+      return;
+    }
+    const type = editItem.type;
+    const bodyKey = type === 'personality' ? 'system_prompt' : 'instructions';
+    try {
+      const res = await fetch(`/api/personalities-skills/${type === 'personality' ? 'personalities' : 'skills'}/${editItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editName.trim(),
+          description: editDesc.trim(),
+          [bodyKey]: editBody
+        })
+      });
+      if (res.ok) {
+        setShowEditModal(false);
+        setEditItem(null);
+        fetchData();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to update profile.');
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="chat-pane" style={{ padding: '24px', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -259,7 +299,7 @@ export default function PersonalitySkillsPane({ token }) {
                 placeholder="https://raw.githubusercontent.com/.../profile.md"
                 value={urlInput}
                 onChange={e => setUrlInput(e.target.value)}
-                style={{ flex: 1, margin: 0 }}
+                style={{ flex: '1 1 auto', width: 'auto', minWidth: '200px', margin: 0 }}
               />
               <button
                 className="btn btn-primary"
@@ -300,7 +340,7 @@ export default function PersonalitySkillsPane({ token }) {
                     {p.is_active ? (
                       <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '2px 8px', borderRadius: '9999px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></span>
-                        Active
+                        Default
                       </span>
                     ) : null}
                   </div>
@@ -315,21 +355,37 @@ export default function PersonalitySkillsPane({ token }) {
                       onClick={() => handleActivatePersonality(p.id)}
                       style={{ margin: 0, padding: '4px 12px', fontSize: '0.8rem' }}
                     >
-                      Activate
+                      Set Default
                     </button>
                   ) : (
-                    <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 550 }}>Primary Persona</span>
+                    <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 550 }}>Default Persona</span>
                   )}
-                  {p.name !== 'Friendly Secretary' && (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       className="btn-icon"
-                      onClick={() => handleDeleteItem('personality', p.id)}
-                      style={{ color: 'var(--error)', background: 'transparent', padding: '4px' }}
-                      title="Delete profile"
+                      onClick={() => {
+                        setEditItem({ ...p, type: 'personality' });
+                        setEditName(p.name);
+                        setEditDesc(p.description || '');
+                        setEditBody(p.system_prompt || '');
+                        setShowEditModal(true);
+                      }}
+                      style={{ color: 'var(--text-secondary)', background: 'transparent', padding: '4px', cursor: 'pointer' }}
+                      title="Edit personality"
                     >
-                      <Trash2 size={16} />
+                      <Edit size={16} />
                     </button>
-                  )}
+                    {p.name !== 'Friendly Secretary' && (
+                      <button
+                        className="btn-icon"
+                        onClick={() => handleDeleteItem('personality', p.id)}
+                        style={{ color: 'var(--error)', background: 'transparent', padding: '4px' }}
+                        title="Delete profile"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
@@ -356,7 +412,7 @@ export default function PersonalitySkillsPane({ token }) {
                         style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
                       />
                       <span style={{ fontSize: '0.75rem', color: s.is_active ? '#fff' : 'var(--text-secondary)', fontWeight: 550 }}>
-                        {s.is_active ? 'Enabled' : 'Disabled'}
+                        {s.is_active ? 'Default' : 'Inactive'}
                       </span>
                     </label>
                   </div>
@@ -364,7 +420,21 @@ export default function PersonalitySkillsPane({ token }) {
                     {s.description || 'No description provided.'}
                   </p>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-glass)', paddingTop: '12px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', borderTop: '1px solid var(--border-glass)', paddingTop: '12px', marginTop: '4px' }}>
+                  <button
+                    className="btn-icon"
+                    onClick={() => {
+                      setEditItem({ ...s, type: 'skill' });
+                      setEditName(s.name);
+                      setEditDesc(s.description || '');
+                      setEditBody(s.instructions || '');
+                      setShowEditModal(true);
+                    }}
+                    style={{ color: 'var(--text-secondary)', background: 'transparent', padding: '4px', cursor: 'pointer' }}
+                    title="Edit skill"
+                  >
+                    <Edit size={16} />
+                  </button>
                   {s.name !== 'Smart Home Helper' && (
                     <button
                       className="btn-icon"
@@ -473,6 +543,104 @@ export default function PersonalitySkillsPane({ token }) {
                 style={{ margin: 0, padding: '8px 24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <CheckCircle size={16} /> Confirm & Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditModal && editItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div className="modal-content" style={{
+            maxWidth: '640px',
+            width: '100%',
+            padding: '24px',
+            background: 'var(--bg-glass)',
+            border: '1px solid var(--border-glass)',
+            borderRadius: '24px',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 650, color: '#fff', margin: 0 }}>
+              Edit {editItem.type === 'personality' ? 'Personality' : 'Skill'}
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Name</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  style={{ margin: 0 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Description</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editDesc}
+                  onChange={e => setEditDesc(e.target.value)}
+                  style={{ margin: 0 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  {editItem.type === 'personality' ? 'System Prompt' : 'Instructions'}
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={8}
+                  value={editBody}
+                  onChange={e => setEditBody(e.target.value)}
+                  style={{
+                    margin: 0,
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                    resize: 'vertical',
+                    background: 'rgba(0,0,0,0.4)',
+                    color: '#f3f4f6'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditItem(null);
+                }}
+                style={{ margin: 0, padding: '8px 20px', fontSize: '0.9rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveEdit}
+                style={{ margin: 0, padding: '8px 24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <CheckCircle size={16} /> Save Changes
               </button>
             </div>
           </div>

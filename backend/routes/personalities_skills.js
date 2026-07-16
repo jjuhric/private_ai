@@ -123,6 +123,44 @@ router.post('/skills/toggle', authenticateToken, async (req, res) => {
   }
 });
 
+// Update a personality
+router.put('/personalities/:id', authenticateToken, async (req, res) => {
+  const { name, description, system_prompt } = req.body;
+  if (!name || !system_prompt) {
+    return res.status(400).json({ error: 'Name and system_prompt are required.' });
+  }
+  try {
+    const db = await getDb();
+    await db.run(`
+      UPDATE custom_personalities
+      SET name = ?, description = ?, system_prompt = ?
+      WHERE id = ?
+    `, [name, description || '', system_prompt, req.params.id]);
+    res.json({ success: true, message: 'Personality updated.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update a skill
+router.put('/skills/:id', authenticateToken, async (req, res) => {
+  const { name, description, instructions } = req.body;
+  if (!name || !instructions) {
+    return res.status(400).json({ error: 'Name and instructions are required.' });
+  }
+  try {
+    const db = await getDb();
+    await db.run(`
+      UPDATE custom_skills
+      SET name = ?, description = ?, instructions = ?
+      WHERE id = ?
+    `, [name, description || '', instructions, req.params.id]);
+    res.json({ success: true, message: 'Skill updated.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Delete a personality
 router.delete('/personalities/:id', authenticateToken, async (req, res) => {
   try {
