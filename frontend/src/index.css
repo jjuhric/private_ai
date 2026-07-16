@@ -1419,6 +1419,66 @@ select.form-control option {
   color: #000 !important;
 }
 
+/* Custom Table Styling for AgentDashboard */
+.overflow-x-auto {
+  overflow-x: auto;
+}
+.w-full {
+  width: 100%;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.table th, .table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-glass);
+}
+.table th {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+.table-zebra tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.01);
+}
+.table tbody tr:hover {
+  background: rgba(139, 92, 246, 0.04);
+}
+.bg-success {
+  background-color: var(--accent-green) !important;
+}
+.bg-error {
+  background-color: #ef4444 !important;
+}
+.text-error {
+  color: #ef4444;
+}
+.btn-ghost {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 
 
 

@@ -100,6 +100,7 @@ function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profile, setProfile] = useState({ name: '', zipcode: '', country: 'US', temp_unit: 'imperial', weather_api_key: '', dob: '', gender: '', political_leaning: 'Undecided', interests: [] });
   const [liveModel, setLiveModel] = useState('');
+  const [nodes, setNodes] = useState([]);
 
   // Calendar
   const [calendarEvents, setCalendarEvents] = useState([]);
@@ -129,6 +130,7 @@ function App() {
       fetchCalendarEvents();
       fetchProfile();
       fetchMemories();
+      fetchNodes();
     } else {
       localStorage.removeItem('token');
       setUser(null);
@@ -281,6 +283,40 @@ function App() {
     setToken('');
     localStorage.removeItem('token');
     setIsChatPoppedOut(false);
+  };
+
+  // Nodes operations
+  const fetchNodes = async () => {
+    try {
+      const res = await fetch('/api/nodes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNodes(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch nodes:', err);
+    }
+  };
+
+  const handleDeleteNode = async (id) => {
+    try {
+      const res = await fetch(`/api/nodes/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast('Node deleted successfully', 'success');
+        fetchNodes();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Failed to delete node', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error deleting node', 'error');
+    }
   };
 
   // Chats operations
@@ -1066,6 +1102,8 @@ function App() {
         )}
         {activeTab === 'dashboard' && (
           <AgentDashboard
+            nodes={nodes}
+            handleDeleteNode={handleDeleteNode}
             token={token}
             toolLogs={toolLogs}
             activeAgent={activeAgent}
