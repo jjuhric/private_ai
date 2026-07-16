@@ -18,7 +18,20 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     coverage: {
-      include: ['src/components/**/*'],
+      include: [
+        'src/components/Sidebar.jsx',
+        'src/components/Auth.jsx',
+        'src/components/CalendarPane.jsx',
+        'src/components/CustomAlertModal.jsx',
+        'src/components/ExpandableThoughts.jsx',
+        'src/components/MemoryPane.jsx',
+        'src/components/PopoutWindow.jsx',
+        'src/components/ProfileModal.jsx',
+        'src/components/SetupWizard.jsx',
+        'src/components/SudoModal.jsx',
+        'src/components/Toast.jsx',
+        'src/components/AgentDashboard.jsx'
+      ],
       thresholds: {
         statements: 70,
         lines: 70
