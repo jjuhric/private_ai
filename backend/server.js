@@ -33,6 +33,7 @@ const tokenUsageRouter = require('./routes/token_usage');
 const lmstudioRouter = require('./routes/lmstudio');
 const alertsRouter = require('./routes/alerts');
 const lmstudioSwitchRouter = require('./routes/lmstudio_switch');
+const personalitiesSkillsRouter = require('./routes/personalities_skills');
 const mqttService = require('./services/mqtt_service');
 
 const helmet = require('helmet');
@@ -169,6 +170,7 @@ app.use('/api/host', hostRouter);
 app.use('/api/bridge', agentBridgeRouter);
 app.use('/api/agent-bridge', agentBridgeRouter);
 app.use('/api/nodes', nodesRouter);
+app.use('/api/personalities-skills', personalitiesSkillsRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
 app.use('/api/alerts', alertsRouter);
