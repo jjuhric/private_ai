@@ -84,15 +84,23 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, ac
               </tr>
             </thead>
             <tbody>
-              {nodes.map(node => {
-                const health = nodeHealthMap[node.id];
-                const isOnline = health?.status === 'online';
-                
-                return (
-                  <tr key={node.id} className="border-b border-base-300">
-                    <td>
-                      <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-success shadow-lg' : 'bg-error'}`} />
-                    </td>
+              {nodes
+                .filter(node => {
+                  const health = nodeHealthMap[node.id];
+                  if (health) {
+                    return health.status === 'online';
+                  }
+                  return node.is_online === 1 || node.is_online === true;
+                })
+                .map(node => {
+                  const health = nodeHealthMap[node.id];
+                  const isOnline = health?.status === 'online' || node.is_online === 1;
+                  
+                  return (
+                    <tr key={node.id} className="border-b border-base-300">
+                      <td>
+                        <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-success shadow-lg' : 'bg-error'}`} />
+                      </td>
                     <td className="font-bold">{node.node_name}</td>
                     <td>{node.device_type}</td>
                     <td>{node.ip_address}:{node.port}</td>
