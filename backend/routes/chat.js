@@ -428,12 +428,12 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
       }
     } catch (err) {
       logger.error('Stream processing error in chat route:', err);
-    const errMsg = "Local LLM Connection Lost. The model may have run out of memory. Please lower context length.";
-    if (!res.headersSent) {
-      res.status(500).json({ error: errMsg });
-    } else {
-      sendEvent('error', { message: errMsg });
-    }
+      const errMsg = err.message || "Local LLM Connection Lost. The model may have run out of memory. Please lower context length.";
+      if (!res.headersSent) {
+        res.status(500).json({ error: errMsg });
+      } else {
+        sendEvent('error', { message: errMsg });
+      }
   } finally {
     clearInterval(heartbeat);
     // Broadcast end of streaming status to Standalone Monitor

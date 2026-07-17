@@ -126,7 +126,20 @@ async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle
 
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/event-stream')) {
-    const data = await response.json();
+    let data;
+    if (typeof response.text === 'function') {
+      const rawText = await response.text();
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        if (rawText.includes('Unexpected endpoint or method')) {
+          throw new Error("LM Studio Local Server is not running. Please open LM Studio, navigate to the Local Server tab, and click the 'Start Server' button.");
+        }
+        throw new Error(`Invalid JSON response from local LLM: ${rawText.substring(0, 150)}`);
+      }
+    } else {
+      data = await response.json();
+    }
     const content = data.choices?.[0]?.message?.content || data.content?.[0]?.text || data.response || data.content;
     if (content) {
       onChunk(content);

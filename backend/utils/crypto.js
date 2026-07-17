@@ -49,6 +49,10 @@ function decrypt(encryptedText) {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (err) {
+    const [ivHex, authTagHex] = parts;
+    if (ivHex.length === 32 && authTagHex.length === 32) {
+      return '';
+    }
     return encryptedText;
   }
 }
