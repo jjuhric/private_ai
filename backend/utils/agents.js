@@ -509,7 +509,7 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
             systemPrompt += `\n- Profile Temp Unit: ${profile.temp_unit || 'imperial'}`;
           }
 
-          const needsPersonalDetails = ['web_searcher', 'memory_agent'].includes(targetAgent);
+          const needsPersonalDetails = ['web_searcher', 'memory_agent', 'news_agent'].includes(targetAgent);
           if (needsPersonalDetails) {
             systemPrompt += `\n- Date of Birth (DOB): ${profile.dob || 'Not set'}`;
             systemPrompt += `\n- Gender: ${profile.gender || 'Not set'}`;
