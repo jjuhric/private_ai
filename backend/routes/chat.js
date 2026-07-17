@@ -8,6 +8,59 @@ const { getEmbedding } = require('../utils/embeddings');
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
 
+let idleUnloadTimer = null;
+
+function resetIdleUnloadTimer() {
+  if (idleUnloadTimer) {
+    clearTimeout(idleUnloadTimer);
+    idleUnloadTimer = null;
+  }
+}
+
+function startIdleUnloadTimer() {
+  resetIdleUnloadTimer();
+  idleUnloadTimer = setTimeout(async () => {
+    try {
+      const aiQueue = require('../services/ai_queue');
+      // If there is active agent operations, postpone
+      if ((global.activeAgentOps && global.activeAgentOps > 0) || aiQueue.isProcessing) {
+        logger.info('[Idle Model Unloader] Agent processing is active. Postponing unload.');
+        startIdleUnloadTimer(); // reschedule
+        return;
+      }
+
+      logger.info('[Idle Model Unloader] System idle for 2 minutes. Unloading all loaded models...');
+      const { getDb } = require('../db');
+      const db = await getDb();
+      const userSettings = await db.get('SELECT * FROM user_settings WHERE user_id = 1');
+      if (!userSettings || userSettings.provider !== 'local') return;
+
+      const { decrypt } = require('../utils/crypto');
+      const decryptedLocalKey = decrypt(userSettings.local_key);
+      const localBaseUrl = userSettings.local_url || 'http://192.168.1.42:1234/v1';
+      const localApiKey = decryptedLocalKey || '';
+
+      const { listLocalModels, unloadLocalModel } = require('../utils/lmstudio');
+      const availableModels = await listLocalModels(localBaseUrl, localApiKey);
+      let unloadedAny = false;
+      for (const m of availableModels) {
+        if (m.isLoaded && m.instanceId) {
+          logger.info(`[Idle Model Unloader] Unloading model instance: ${m.instanceId} (${m.id})`);
+          await unloadLocalModel(localBaseUrl, localApiKey, m.instanceId);
+          unloadedAny = true;
+        }
+      }
+      if (unloadedAny) {
+        const { broadcastAlert } = require('./alerts');
+        broadcastAlert({ type: 'streaming_status', isStreaming: false });
+        broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
+      }
+    } catch (err) {
+      logger.error('[Idle Model Unloader] Error during idle unload:', err);
+    }
+  }, 120000); // 2 minutes
+}
+
 const streamLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 10, // Limit each IP to 10 streaming completions per minute
@@ -79,6 +132,7 @@ router.get('/chats/:id/messages', authenticateToken, async (req, res) => {
 
 // Agent SSE Stream endpoint
 router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async (req, res) => {
+  resetIdleUnloadTimer();
   if (global.activeTab && global.activeTab !== 'chat') {
     return res.status(403).json({ error: 'Chat is disabled while on another tab.' });
   }
@@ -162,6 +216,7 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
     }
 
     // If provider is local, do not automatically eject model on abort (only swap if a different model is chosen)
+    startIdleUnloadTimer();
   });
 
   let accumulatedThoughts = '';
@@ -386,6 +441,7 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
       broadcastAlert({ type: 'agent_status', agent: null, status: 'idle' });
     } catch (e) {}
     res.end();
+    startIdleUnloadTimer();
   }
 });
 
