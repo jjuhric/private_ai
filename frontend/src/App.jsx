@@ -1104,6 +1104,7 @@ function App() {
           <AgentDashboard
             nodes={nodes}
             handleDeleteNode={handleDeleteNode}
+            onRefresh={fetchNodes}
             token={token}
             toolLogs={toolLogs}
             activeAgent={activeAgent}
