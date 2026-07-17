@@ -44,7 +44,8 @@
   },
   "scripts": {
     "test": "jest --runInBand --forceExit",
-    "test:coverage": "jest --coverage --runInBand --forceExit"
+    "test:coverage": "jest --coverage --runInBand --forceExit",
+    "seed:docs": "node scripts/seed_system_docs.js"
   },
   "devDependencies": {
     "jest": "^29.7.0",

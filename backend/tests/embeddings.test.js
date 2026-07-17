@@ -9,9 +9,11 @@ jest.mock('@xenova/transformers', () => {
 });
 
 // Mock @lancedb/lancedb
+// Note: the real installed @lancedb/lancedb table API is `.vectorSearch(vec).distanceType('cosine').limit(n).toArray()`,
+// not the older `.search(vec).metricType('cosine').limit(n).execute()` shape - mocks below match the real API.
 const mockAdd = jest.fn();
 const mockDelete = jest.fn();
-const mockExecute = jest.fn().mockResolvedValue([
+const mockToArray = jest.fn().mockResolvedValue([
   {
     text: 'test memory text',
     metadata: JSON.stringify({ userId: 1, level: 'long-term' }),
@@ -20,15 +22,34 @@ const mockExecute = jest.fn().mockResolvedValue([
 ]);
 
 const mockSearch = jest.fn().mockReturnValue({
-  metricType: jest.fn().mockReturnThis(),
+  distanceType: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
-  execute: mockExecute
+  toArray: mockToArray
 });
 
 const mockTable = {
   add: mockAdd,
   delete: mockDelete,
-  search: mockSearch
+  vectorSearch: mockSearch
+};
+
+const mockSystemDocsAdd = jest.fn();
+const mockSystemDocsToArray = jest.fn().mockResolvedValue([
+  {
+    text: 'Write a manifest.json, handler.js, and handler.test.js for the new tool.',
+    metadata: JSON.stringify({ source: 'Contributing.md' }),
+    _distance: 0.2
+  }
+]);
+const mockSystemDocsSearch = jest.fn().mockReturnValue({
+  distanceType: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
+  toArray: mockSystemDocsToArray
+});
+const mockSystemDocsTable = {
+  add: mockSystemDocsAdd,
+  delete: jest.fn(),
+  vectorSearch: mockSystemDocsSearch
 };
 
 const mockDb = {
@@ -43,7 +64,7 @@ jest.mock('@lancedb/lancedb', () => {
   };
 });
 
-const { getEmbedding, cosineSimilarity, getKeywordSimilarity, getSemanticSimilarity, storeMemory, searchMemory } = require('../utils/embeddings');
+const { getEmbedding, cosineSimilarity, getKeywordSimilarity, getSemanticSimilarity, storeMemory, searchMemory, storeSystemDoc, searchSystemDocs } = require('../utils/embeddings');
 
 // Mock @google/generative-ai
 jest.mock('@google/generative-ai', () => {
@@ -74,11 +95,13 @@ describe('Embeddings Utility Tests', () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
     global.__mockTable = mockTable;
+    global.__mockSystemDocsTable = mockSystemDocsTable;
   });
 
   afterEach(() => {
     delete global.fetch;
     delete global.__mockTable;
+    delete global.__mockSystemDocsTable;
   });
 
   describe('getEmbedding', () => {
@@ -244,6 +267,48 @@ describe('Embeddings Utility Tests', () => {
         })
       );
       expect(mockSearch).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+    });
+  });
+
+  describe('storeSystemDoc', () => {
+    test('should vectorize text and store it in the LanceDB system_docs table', async () => {
+      await storeSystemDoc('Write a manifest.json for the new tool.', { source: 'Contributing.md' });
+      expect(mockSystemDocsAdd).toHaveBeenCalledWith([
+        expect.objectContaining({
+          vector: [0.1, 0.2, 0.3],
+          text: 'Write a manifest.json for the new tool.',
+          metadata: JSON.stringify({ source: 'Contributing.md' })
+        })
+      ]);
+      // Confirms system_docs and memory tables stay isolated from one another
+      expect(mockAdd).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('searchSystemDocs', () => {
+    test('should query the LanceDB system_docs table and return scored results', async () => {
+      const results = await searchSystemDocs('how do I add a new tool', 5);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual(
+        expect.objectContaining({
+          text: 'Write a manifest.json, handler.js, and handler.test.js for the new tool.',
+          metadata: expect.objectContaining({ source: 'Contributing.md' }),
+          score: expect.any(Number)
+        })
+      );
+      expect(mockSystemDocsSearch).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+      // Confirms system_docs and memory tables stay isolated from one another
+      expect(mockSearch).not.toHaveBeenCalled();
+    });
+
+    test('should return an empty array if the search throws', async () => {
+      mockSystemDocsSearch.mockReturnValueOnce({
+        distanceType: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        toArray: jest.fn().mockRejectedValue(new Error('LanceDB unavailable'))
+      });
+      const results = await searchSystemDocs('test query');
+      expect(results).toEqual([]);
     });
   });
 });

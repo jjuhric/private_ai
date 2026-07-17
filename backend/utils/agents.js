@@ -646,6 +646,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     } else if (decision.tool === 'query_vault') {
       const { handleVaultTool } = require('../tools/vault_tool');
       output = await handleVaultTool(db, userId, 'query', decision.params);
+    } else if (decision.tool === 'query_system_docs') {
+      const { handleSystemDocsTool } = require('../tools/system_docs_tool');
+      output = await handleSystemDocsTool('query', decision.params);
     } else if (['list_network_nodes', 'remote_node_bridge'].includes(decision.tool)) {
       const { handleNetworkNodeTool } = require('../tools/network_node_tool');
       const mergedParams = { ...decision.params };

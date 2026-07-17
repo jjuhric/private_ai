@@ -289,10 +289,10 @@ async function searchMemory(query, limit = 3) {
     const vector = await getXenovaEmbedding(query);
     const table = await getMemoryTable();
     const results = await table
-      .search(vector)
-      .metricType('cosine')
+      .vectorSearch(vector)
+      .distanceType('cosine')
       .limit(limit)
-      .execute();
+      .toArray();
 
     const minified = results.map(r => ({
       text: r.text,
@@ -353,10 +353,10 @@ async function searchLearnedBehaviors(query, limit = 3) {
     const vector = await getXenovaEmbedding(query);
     const table = await getLearnedBehaviorsTable();
     const results = await table
-      .search(vector)
-      .metricType('cosine')
+      .vectorSearch(vector)
+      .distanceType('cosine')
       .limit(limit)
-      .execute();
+      .toArray();
 
     return results.map(r => ({
       text: r.text,
@@ -369,6 +369,83 @@ async function searchLearnedBehaviors(query, limit = 3) {
   }
 }
 
+async function getSystemDocsTable() {
+  if (process.env.NODE_ENV === 'test' && global.__mockSystemDocsTable) {
+    return global.__mockSystemDocsTable;
+  }
+  const db = await getLanceDb();
+  if (process.env.NODE_ENV === 'test') {
+    return await db.openTable('system_docs');
+  }
+  const tableNames = await db.tableNames();
+  if (tableNames.includes('system_docs')) {
+    return await db.openTable('system_docs');
+  } else {
+    const dummyVector = new Array(384).fill(0);
+    const table = await db.createTable('system_docs', [
+      {
+        vector: dummyVector,
+        text: 'dummy_init',
+        metadata: JSON.stringify({ init: true })
+      }
+    ]);
+    await table.delete('text = "dummy_init"');
+    return table;
+  }
+}
+
+/**
+ * Stores a chunk of PATTI's own project documentation (README/wiki) so agents
+ * can ground answers about the system itself instead of guessing.
+ *
+ * @param {string} text Chunk of documentation text.
+ * @param {object} metadata e.g. { source: 'Contributing.md' }
+ */
+async function storeSystemDoc(text, metadata = {}) {
+  try {
+    const vector = await getXenovaEmbedding(text);
+    const table = await getSystemDocsTable();
+    await table.add([
+      {
+        vector,
+        text,
+        metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
+      }
+    ]);
+  } catch (err) {
+    console.error('storeSystemDoc error:', err);
+    throw err;
+  }
+}
+
+/**
+ * Searches PATTI's own indexed documentation for chunks relevant to a query.
+ *
+ * @param {string} query Search query.
+ * @param {number} limit Max results to return.
+ * @returns {Promise<Array<{text: string, metadata: object, score: number}>>}
+ */
+async function searchSystemDocs(query, limit = 5) {
+  try {
+    const vector = await getXenovaEmbedding(query);
+    const table = await getSystemDocsTable();
+    const results = await table
+      .vectorSearch(vector)
+      .distanceType('cosine')
+      .limit(limit)
+      .toArray();
+
+    return results.map(r => ({
+      text: r.text,
+      metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata,
+      score: 1 - r._distance
+    }));
+  } catch (err) {
+    console.error('searchSystemDocs error:', err);
+    return [];
+  }
+}
+
 module.exports = {
   getEmbedding,
   cosineSimilarity,
@@ -377,5 +454,7 @@ module.exports = {
   storeMemory,
   searchMemory,
   storeLearnedBehavior,
-  searchLearnedBehaviors
+  searchLearnedBehaviors,
+  storeSystemDoc,
+  searchSystemDocs
 };

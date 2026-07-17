@@ -148,6 +148,13 @@ getDb().then(async (db) => {
 
       const researchDaemon = require('./services/research_daemon');
       researchDaemon.startDaemon();
+
+      // Index PATTI's own README/wiki docs so agents can ground answers about
+      // the system itself (e.g. "how do I add a skill for X"). Cheap no-op on
+      // subsequent boots once content hashes match.
+      require('./scripts/seed_system_docs').main().catch(err => {
+        logger.error('[System Docs Seed] Failed:', err);
+      });
     }
   } catch (err) {
     logger.error('Error starting daily memory maintenance check:', err);
