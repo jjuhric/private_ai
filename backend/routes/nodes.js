@@ -174,7 +174,7 @@ router.post('/scan', authenticateToken, async (req, res) => {
               }
               
               const exist = await db.get(
-                'SELECT id FROM network_nodes WHERE user_id = ? AND ip_address = ?',
+                'SELECT id, device_type, node_name FROM network_nodes WHERE user_id = ? AND ip_address = ?',
                 [req.user.id, ip]
               );
               
@@ -184,9 +184,14 @@ router.post('/scan', authenticateToken, async (req, res) => {
                   [req.user.id, name, deviceType, ip, targetPort]
                 );
               } else {
+                const finalDeviceType = exist.device_type === 'google_home' ? 'google_home' : deviceType;
+                const finalName = (exist.node_name && !exist.node_name.startsWith('Google Cast Device') && !exist.node_name.startsWith('Google Assistant Speaker'))
+                  ? exist.node_name
+                  : name;
+
                 await db.run(
-                  'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ? WHERE id = ?',
-                  [name, exist.id]
+                  'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ?, device_type = ?, port = ? WHERE id = ?',
+                  [finalName, finalDeviceType, targetPort, exist.id]
                 );
               }
               

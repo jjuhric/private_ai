@@ -50,19 +50,19 @@ async function discoverGoogleCastDevices() {
         }
       }
 
-      // Check if node already exists by name
-      const existingNode = await db.get('SELECT id FROM network_nodes WHERE node_name = ? AND user_id = 1', [deviceName]);
+      // Check if node already exists by IP address
+      const existingNode = await db.get('SELECT id FROM network_nodes WHERE ip_address = ? AND user_id = 1', [ipAddress]);
       
       if (existingNode) {
         await db.run(`
           UPDATE network_nodes SET 
             is_online = 1, 
             last_seen = CURRENT_TIMESTAMP, 
-            ip_address = ?,
+            node_name = ?,
             port = 8009,
             device_type = 'google_home'
           WHERE id = ?
-        `, [ipAddress, existingNode.id]);
+        `, [deviceName, existingNode.id]);
       } else {
         await db.run(`
           INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online, last_seen, os_type)
