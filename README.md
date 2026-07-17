@@ -135,10 +135,12 @@ ESP32 microcontrollers serve as low-power, cheap sensor nodes or relay controls 
 ## 🚀 How to Interact with PATTI
 
 ### 1. Dynamic Network Mesh Checking
-Go to **System Control** -> **Field Nodes** tab to manage your smart home mesh:
-* **Auto-Discovery**: Any Raspberry Pi or ESP32 node configured with the MQTT broker URL will automatically check in and populate here.
-* **Online Status**: Live green/red online dots show when nodes are active. If a node goes offline, it automatically updates.
-* **Google Nest Speakers**: Headless Nest Minis are scanned and logged under the name extracted from their network cards.
+Go to **Agent Dashboard** -> **Field Nodes** tab to manage your smart home mesh:
+* **Auto-Discovery & Heartbeats**: Raspberry Pi and ESP32 nodes configured with the MQTT broker URL will automatically check in via heartbeats and populate. If a node ceases sending heartbeats, it is hidden from the dashboard to keep the view clean.
+* **Simplified Health Status**: Devices show a simplified **Healthy** or **Not Healthy** pill indicating their overall operational state.
+* **Device & Router Filtering**: The network scanner automatically filters out duplicate IP addresses and gateway router IPs (e.g. `192.168.1.1`), ensuring only actionable local devices are shown.
+* **Google Nest Speaker Priority**: Headless Google Nest/Cast devices are discovered via mDNS and prioritised as `google_home` node signatures.
+* **Scan Network & Polling**: The network is polled automatically every 15 minutes. You can trigger a live scan at any time using the **Scan Network** button.
 
 ### 2. Speaking on Google Nest Speakers
 You can send TTS messages directly from the assistant. Simply say:
