@@ -18,7 +18,6 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, on
         if (typeof onRefresh === 'function') {
           await onRefresh();
         }
-        // Increment key to reset the 15-minute interval timer
         setRefreshKey(prev => prev + 1);
       } else {
         alert('Network scan failed.');
@@ -110,31 +109,54 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, on
               </tr>
             </thead>
             <tbody>
-              {nodes
-                .filter(node => node.is_online === 1 || node.is_online === true)
-                .map(node => {
-                  const isOnline = node.is_online === 1 || node.is_online === true;
-                  return (
-                    <tr key={node.id} className="border-b border-base-300">
-                      <td>
-                        <div className="w-3 h-3 rounded-full bg-success shadow-lg" />
-                      </td>
-                      <td className="font-bold">{node.node_name}</td>
-                      <td>{node.device_type}</td>
-                      <td>{node.ip_address}:{node.port}</td>
-                      <td>
-                        <span className="px-2 py-1 rounded text-white font-semibold bg-success">
-                          Healthy
-                        </span>
-                      </td>
-                      <td className="text-right">
-                        <button className="btn btn-ghost btn-sm text-error" onClick={() => handleDeleteNode(node.id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+              {(() => {
+                const uniqueNodes = [];
+                const ipMap = new Map();
+
+                // Sort nodes to prioritize google_home devices over Google Assistant duplicates
+                const sortedNodes = [...nodes].sort((a, b) => {
+                  if (a.device_type === 'google_home' && b.device_type !== 'google_home') return -1;
+                  if (b.device_type === 'google_home' && a.device_type !== 'google_home') return 1;
+                  return 0;
+                });
+
+                for (const node of sortedNodes) {
+                  // Hide gateway/subnet IP 192.168.1.1
+                  if (node.ip_address === '192.168.1.1') {
+                    continue;
+                  }
+                  // Hide duplicate IPs (keeps first match, which prefers google_home due to sorting)
+                  if (!ipMap.has(node.ip_address)) {
+                    ipMap.set(node.ip_address, node);
+                    uniqueNodes.push(node);
+                  }
+                }
+
+                return uniqueNodes
+                  .filter(node => node.is_online === 1 || node.is_online === true)
+                  .map(node => {
+                    return (
+                      <tr key={node.id} className="border-b border-base-300">
+                        <td>
+                          <div className="w-3 h-3 rounded-full bg-success shadow-lg" />
+                        </td>
+                        <td className="font-bold">{node.node_name}</td>
+                        <td>{node.device_type}</td>
+                        <td>{node.ip_address}:{node.port}</td>
+                        <td>
+                          <span className="px-2 py-1 rounded text-white font-semibold bg-success">
+                            Healthy
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <button className="btn btn-ghost btn-sm text-error" onClick={() => handleDeleteNode(node.id)}>
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  });
+              })()}
             </tbody>
           </table>
         </div>
