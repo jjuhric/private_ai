@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   gender TEXT,
   political_leaning TEXT DEFAULT 'Undecided',
   interests TEXT DEFAULT '[]',
+  favorite_teams TEXT DEFAULT '[]',
   timezone TEXT DEFAULT 'America/Chicago',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

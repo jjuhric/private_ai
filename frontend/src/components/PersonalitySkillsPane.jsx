@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, Download, Upload, Trash2, CheckCircle, HelpCircle, Loader2, Edit } from 'lucide-react';
+import { Sliders, Download, Upload, Trash2, CheckCircle, HelpCircle, Loader2, Edit, Wand2 } from 'lucide-react';
+import SkillWizardModal from './SkillWizardModal';
 
 export default function PersonalitySkillsPane({ token }) {
   const [activeTab, setActiveTab] = useState('personalities');
@@ -25,6 +26,9 @@ export default function PersonalitySkillsPane({ token }) {
   const [editDesc, setEditDesc] = useState('');
   const [editBody, setEditBody] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Creation Wizard State
+  const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -274,7 +278,16 @@ export default function PersonalitySkillsPane({ token }) {
 
       {/* Import Section */}
       <div style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', color: '#fff', fontWeight: 600 }}>Import from Markdown (.md)</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: '#fff', fontWeight: 600 }}>Import from Markdown (.md)</h3>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowWizard(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem' }}
+          >
+            <Wand2 size={16} /> Create with Wizard
+          </button>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           
           {/* Upload Box */}
@@ -646,6 +659,14 @@ export default function PersonalitySkillsPane({ token }) {
           </div>
         </div>
       )}
+
+      <SkillWizardModal
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
+        token={token}
+        onSaved={fetchData}
+        initialType={activeTab === 'personalities' ? 'personality' : 'skill'}
+      />
     </div>
   );
 }

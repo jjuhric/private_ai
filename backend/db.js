@@ -74,6 +74,9 @@ async function getDb() {
     if (!columns.some(col => col.name === 'interests')) {
       await dbConnection.run("ALTER TABLE users ADD COLUMN interests TEXT DEFAULT '[]'");
     }
+    if (!columns.some(col => col.name === 'favorite_teams')) {
+      await dbConnection.run("ALTER TABLE users ADD COLUMN favorite_teams TEXT DEFAULT '[]'");
+    }
     if (!columns.some(col => col.name === 'timezone')) {
       await dbConnection.run("ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'America/Chicago'");
     }

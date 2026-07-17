@@ -1152,14 +1152,31 @@ If no changes are required and you can proceed without executing the code, then 
 
       if (commTurn && commTurn.params) {
         if (commTurn.params.requested_action === 'clarification_needed') {
-          const choicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
-            question: commTurn.params.question || "Need clarification",
-            choices: commTurn.params.choices || ["Yes", "No"]
-          })}`;
-          onContent(choicesPayload);
-          return;
+          // Deterministic guard: read-only info lookups (sports, weather, news)
+          // never need HITL approval, but the local model sometimes asks anyway
+          // when the request has multiple parts. Override and route directly -
+          // unless the message contains mutation verbs, in which case the HITL
+          // confirmation must stand (never bypass approval for write actions).
+          const mentionsMutation = /\b(delete|remove|create|add|cancel|update|modify|run|execute|write|install|restart|schedule a|set up)\b/i.test(userMessage);
+          const readOnlyLookup = !mentionsMutation && /\b(score|scores|game|games|schedule|watch|sports|weather|forecast|news|headlines)\b/i.test(userMessage);
+          if (readOnlyLookup) {
+            onThought('[System] Clarification skipped: read-only lookup detected. Routing directly to Supervisor.\n');
+            projectIdea = JSON.stringify({
+              requested_action: /\b(score|scores|game|games|schedule|watch|team|teams)\b/i.test(userMessage) ? 'sports'
+                : (/\b(weather|forecast|temperature)\b/i.test(userMessage) ? 'weather' : 'news'),
+              data_needed: userMessage
+            });
+          } else {
+            const choicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
+              question: commTurn.params.question || "Need clarification",
+              choices: commTurn.params.choices || ["Yes", "No"]
+            })}`;
+            onContent(choicesPayload);
+            return;
+          }
+        } else {
+          projectIdea = JSON.stringify(commTurn.params);
         }
-        projectIdea = JSON.stringify(commTurn.params);
       } else if (commTurn && commTurn.thought) {
         projectIdea = commTurn.thought;
       } else if (commTurn && typeof commTurn === 'string') {

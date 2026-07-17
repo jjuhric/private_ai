@@ -30,5 +30,6 @@ backend/tokens.json
 # Local TTS cache
 backend/public/tts/
 
-# Local database data
-data/
+# Local database data (repo-root only - do not use a bare "data/" pattern,
+# it would also match frontend/src/data/ and silently exclude source files)
+/data/

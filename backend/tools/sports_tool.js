@@ -1,15 +1,48 @@
 const cheerio = require('cheerio');
 
-async function handleSportsTool(db, userId, action, params) {
-  if (action !== 'get_news') {
-    return JSON.stringify({ error: `Unknown action: ${action}` });
-  }
+// Cap multi-team composed lookups so a long favorites list can't fan out into
+// a dozen sequential web searches per chat turn.
+const MAX_FAVORITE_TEAMS_PER_LOOKUP = 3;
 
-  const { team } = params;
-  if (!team) {
-    return JSON.stringify({ error: 'Team name is required' });
+/**
+ * Reads the user's stored favorite teams (users.favorite_teams JSON array).
+ * Mirrors how news_tool reads users.interests directly in-tool.
+ */
+async function resolveFavoriteTeams(db, userId) {
+  if (!db || !userId) return [];
+  try {
+    const row = await db.get('SELECT favorite_teams FROM users WHERE id = ?', [userId]);
+    const parsed = JSON.parse((row && row.favorite_teams) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(t => typeof t === 'string' && t.trim()) : [];
+  } catch (e) {
+    return [];
   }
+}
 
+/**
+ * Resolves which team(s) an action should run against: the explicitly passed
+ * team, or the user's stored favorites when the team param is omitted.
+ * Returns { teams, error } where error is a ready-to-return message string.
+ */
+async function resolveTargetTeams(db, userId, params = {}) {
+  const team = params.team && String(params.team).trim();
+  if (team) return { teams: [team] };
+
+  const favorites = await resolveFavoriteTeams(db, userId);
+  if (favorites.length === 0) {
+    return {
+      teams: [],
+      error: 'No team was specified and no favorite teams are saved. Ask the user which team they mean, and suggest adding favorite teams in their Profile so PATTI remembers them.'
+    };
+  }
+  return { teams: favorites.slice(0, MAX_FAVORITE_TEAMS_PER_LOOKUP) };
+}
+
+/**
+ * Scrapes Bleacher Report news for a single team. Returns the same JSON string
+ * shapes the sports agent already understands (status: success | all_seen | error).
+ */
+async function getTeamNews(db, userId, team) {
   try {
     // Generate team slug (lowercase, replace spaces/special chars with hyphens)
     const teamSlug = team
@@ -109,8 +142,8 @@ async function handleSportsTool(db, userId, action, params) {
       let seenToday = [];
       if (db && userId) {
         seenToday = await db.all(
-          `SELECT article_link AS link, title, 'bleacherreport.com' AS source 
-           FROM shown_articles 
+          `SELECT article_link AS link, title, 'bleacherreport.com' AS source
+           FROM shown_articles
            WHERE user_id = ? AND date(seen_at, 'localtime') = date('now', 'localtime')`,
           [userId]
         );
@@ -149,8 +182,94 @@ async function handleSportsTool(db, userId, action, params) {
       }))
     });
   } catch (err) {
-    return JSON.stringify({ error: `Failed to retrieve sports news: ${err.message}` });
+    // Bleacher Report scrape failed - fall back to a Google News lookup so the
+    // user still gets current articles instead of a dead end.
+    try {
+      const { handleGoogleNewsTool } = require('./google_news_tool');
+      const newsResult = await handleGoogleNewsTool(`${team} news`);
+      return JSON.stringify({
+        source: `Google News (${team})`,
+        status: 'fallback',
+        message: `Bleacher Report was unreachable (${err.message}); showing Google News results instead.`,
+        results: newsResult
+      });
+    } catch (fallbackErr) {
+      return JSON.stringify({ error: `Failed to retrieve sports news: ${err.message}` });
+    }
   }
+}
+
+async function handleSportsTool(db, userId, action, params = {}) {
+  if (action === 'get_favorite_teams') {
+    const favorites = await resolveFavoriteTeams(db, userId);
+    if (favorites.length === 0) {
+      return 'The user has no favorite teams saved yet. Suggest adding them in the Profile settings under "Favorite Teams".';
+    }
+    return `### ⭐ The user's favorite teams:\n${favorites.map(t => `- ${t}`).join('\n')}`;
+  }
+
+  if (action === 'get_news') {
+    const { teams, error } = await resolveTargetTeams(db, userId, params);
+    if (error) return error;
+
+    if (teams.length === 1) {
+      return getTeamNews(db, userId, teams[0]);
+    }
+    const sections = [];
+    for (const team of teams) {
+      const result = await getTeamNews(db, userId, team);
+      sections.push(`## 🏟️ ${team}\n${result}`);
+    }
+    return sections.join('\n\n');
+  }
+
+  if (action === 'get_schedule') {
+    const { teams, error } = await resolveTargetTeams(db, userId, params);
+    if (error) return error;
+
+    const { handleWebSearchTool } = require('./web_search_tool');
+    // Note: query wording deliberately avoids the word "news" - web_search_tool
+    // reroutes news-matching queries to Google News, which is wrong for schedules.
+    const sections = await Promise.all(
+      teams.map(async (team) => {
+        try {
+          const result = await handleWebSearchTool(db, userId, `${team} upcoming game schedule this week`);
+          return `## 📅 Schedule: ${team}\n${result}`;
+        } catch (err) {
+          return `## 📅 Schedule: ${team}\nError retrieving schedule: ${err.message}`;
+        }
+      })
+    );
+    return sections.join('\n\n');
+  }
+
+  if (action === 'get_live_game') {
+    const { teams, error } = await resolveTargetTeams(db, userId, params);
+    if (error) return error;
+
+    const { handleWebSearchTool } = require('./web_search_tool');
+    const sections = await Promise.all(
+      teams.map(async (team) => {
+        try {
+          const [liveInfo, watchInfo] = await Promise.all([
+            handleWebSearchTool(db, userId, `${team} game today live score`),
+            handleWebSearchTool(db, userId, `where to watch ${team} game today TV channel streaming`)
+          ]);
+          return [
+            `## 🔴 Live Game Check: ${team}`,
+            `### Current Game / Score Info\n${liveInfo}`,
+            `### Where to Watch\n${watchInfo}`,
+            `### Track the Live Score\n- [ESPN Scoreboard](https://www.espn.com/search/results?q=${encodeURIComponent(team)})\n- [Google Live Score](https://www.google.com/search?q=${encodeURIComponent(team + ' score')})`
+          ].join('\n\n');
+        } catch (err) {
+          return `## 🔴 Live Game Check: ${team}\nError retrieving live game info: ${err.message}`;
+        }
+      })
+    );
+    return sections.join('\n\n');
+  }
+
+  return JSON.stringify({ error: `Unknown action: ${action}` });
 }
 
 module.exports = { handleSportsTool };

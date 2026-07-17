@@ -20,7 +20,7 @@ Your primary role is to receive the list of tasks/context from the Communication
 10. **qa_engineer**: Runs tests, audits security parameters, and reviews code.
 11. **tool_creator_agent**: Coordinates new custom tool design, plan files, and deployment.
 12. **agent_creator_agent**: Coordinates dynamic new agent creations and loop integration.
-13. **sports_agent**: Sports news, scores, highlights, or team articles from Bleacher Report. Format: {"tool": "delegate_to_sports_agent", "action": "get_news", "params": { "team": "..." }}.
+13. **sports_agent**: ALL sports requests - team news, game schedules, live games, scores, and where to watch. Actions: "get_news" (team articles/news), "get_schedule" (upcoming games), "get_live_game" (is a game on now, live score tracking, TV/streaming watch options). Format: {"tool": "delegate_to_sports_agent", "action": "get_schedule", "params": { "team": "Dallas Cowboys" }}. IMPORTANT: if the request mentions "my teams"/"favorites" or names no team, omit the "team" param - the sports agent reads the user's saved favorite teams automatically. NEVER delegate to system_specialist or memory_agent to look up favorite teams first; go directly to sports_agent.
 14. **news_agent**: MUST be used for general daily news headlines, TMZ news roundups, or user interest news briefings. Format: {"tool": "delegate_to_news_agent", "action": "get_general_news", "params": {}}.
 
 ### DYNAMIC CUSTOM SKILLS INJECTION:

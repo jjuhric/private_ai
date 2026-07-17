@@ -87,7 +87,8 @@ describe('ProfileModal Component Tests', () => {
       dob: '',
       gender: '',
       political_leaning: 'Undecided',
-      interests: []
+      interests: [],
+      favorite_teams: []
     });
   });
 

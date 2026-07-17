@@ -21,7 +21,8 @@ export default function ProfileModal({
     dob: '',
     gender: '',
     political_leaning: 'Undecided',
-    interests: []
+    interests: [],
+    favorite_teams: []
   });
   const [formSettings, setFormSettings] = useState({
     preferred_local_model: '',
@@ -29,6 +30,7 @@ export default function ProfileModal({
   });
   const [showApiKey, setShowApiKey] = useState(false);
   const [newInterest, setNewInterest] = useState('');
+  const [newTeam, setNewTeam] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -41,7 +43,8 @@ export default function ProfileModal({
         dob: profile.dob || '',
         gender: profile.gender || '',
         political_leaning: profile.political_leaning || 'Undecided',
-        interests: Array.isArray(profile.interests) ? profile.interests : []
+        interests: Array.isArray(profile.interests) ? profile.interests : [],
+        favorite_teams: Array.isArray(profile.favorite_teams) ? profile.favorite_teams : []
       });
     }
     if (settings) {
@@ -92,6 +95,27 @@ export default function ProfileModal({
     setFormData(prev => ({
       ...prev,
       interests: prev.interests.filter(item => item !== interestToRemove)
+    }));
+  };
+
+  const handleAddTeam = (e) => {
+    e.preventDefault();
+    if (!newTeam.trim()) return;
+    if (formData.favorite_teams.includes(newTeam.trim())) {
+      setNewTeam('');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      favorite_teams: [...prev.favorite_teams, newTeam.trim()]
+    }));
+    setNewTeam('');
+  };
+
+  const handleRemoveTeam = (teamToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      favorite_teams: prev.favorite_teams.filter(item => item !== teamToRemove)
     }));
   };
 
@@ -375,6 +399,67 @@ export default function ProfileModal({
                   ) : (
                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                       No interests added yet. Add some to get personalized news digests!
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label>Favorite Sports Teams</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Add a team (e.g. Dallas Cowboys)"
+                    value={newTeam}
+                    onChange={e => setNewTeam(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddTeam(e)}
+                  />
+                  <button type="button" className="btn btn-primary" onClick={handleAddTeam} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px' }}>
+                    <Plus size={18} />
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  {formData.favorite_teams.length > 0 ? (
+                    formData.favorite_teams.map((team, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '16px',
+                          padding: '4px 10px',
+                          fontSize: '0.8rem',
+                          color: '#fff',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {team}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTeam(team)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontSize: '0.9rem',
+                            lineHeight: 1
+                          }}
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      No favorite teams yet. Add teams so PATTI can track their schedules, news, and live games for you!
                     </span>
                   )}
                 </div>

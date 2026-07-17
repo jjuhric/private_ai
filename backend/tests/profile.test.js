@@ -83,7 +83,8 @@ describe('Profile Router Tests', () => {
       dob: null,
       gender: null,
       political_leaning: 'Undecided',
-      interests: []
+      interests: [],
+      favorite_teams: []
     });
   });
 
@@ -97,7 +98,8 @@ describe('Profile Router Tests', () => {
       dob: '1990-01-01',
       gender: 'Male',
       political_leaning: 'Democrat',
-      interests: ['Artificial Intelligence', 'Cycling']
+      interests: ['Artificial Intelligence', 'Cycling'],
+      favorite_teams: ['Dallas Cowboys', 'Texas Rangers']
     };
 
     const res = await request(app)
@@ -123,6 +125,7 @@ describe('Profile Router Tests', () => {
     expect(getRes.body.gender).toBe(payload.gender);
     expect(getRes.body.political_leaning).toBe(payload.political_leaning);
     expect(getRes.body.interests).toEqual(payload.interests);
+    expect(getRes.body.favorite_teams).toEqual(payload.favorite_teams);
   });
 
   test('PUT /api/profile - preserves existing key when masked key is submitted', async () => {
