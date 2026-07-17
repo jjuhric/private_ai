@@ -4,7 +4,7 @@
   <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
 </p>
 
-[![Wiki](https://img.shields.io/badge/wiki-available-brightgreen)](https://github.com/jjuhric/private_ai/wiki)
+[![Wiki](https://img.shields.io/badge/wiki-available-brightgreen)](https://github.com/[USER]/private_ai/wiki)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-success)](README.md)
 
@@ -58,7 +58,7 @@ graph TB
 
 ## ⚙️ Device Setup & Deployment
 
-PATTI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/jjuhric/private_ai/wiki/Installation).
+PATTI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/[USER]/private_ai/wiki/Installation).
 
 ### 🔍 Core Setup Requirements
 - **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
@@ -79,7 +79,7 @@ The Windows PC acts as the central brain. It runs the local LLM integration, coo
 2. **Install & Setup**:
    Open PowerShell as Admin and run:
    ```powershell
-   git clone https://github.com/jjuhric/private_ai.git
+   git clone https://github.com/[USER]/private_ai.git
    cd private_ai
    Set-ExecutionPolicy Bypass -Scope Process -Force
    .\setup.ps1
@@ -99,7 +99,7 @@ Raspberry Pi nodes run lightweight backend endpoints to read telemetry (CPU temp
 #### Setup Steps:
 1. **Prepare Node environment**:
    ```bash
-   git clone https://github.com/jjuhric/private_ai.git
+   git clone https://github.com/[USER]/private_ai.git
    cd private_ai
    chmod +x setup.sh
    ./setup.sh
@@ -164,4 +164,4 @@ To run the full suite:
 npm test
 ```
 * **Unit & Integration Tests**: Covers routers, DB migrations, RAG vault tools, agent routing, and remote bridge payloads.
-* **Coverage Requirements**: Strict enforcement of **90% statement and line coverage** via Jest (backend) and Vitest (frontend).
+* **Coverage Requirements**: Strict enforcement of **70% statement and line coverage** via Jest (backend) and Vitest (frontend).

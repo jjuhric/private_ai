@@ -231,7 +231,7 @@ async function handleWeatherTool(db, userId, action, params) {
           const alertsUrl = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
           const alertsRes = await fetch(alertsUrl, {
             headers: {
-              'User-Agent': 'PrivateAI/1.0 (jjuhr@privateai.com)'
+              'User-Agent': 'PrivateAI/1.0 ([USER]@privateai.com)'
             }
           });
           if (alertsRes.ok) {

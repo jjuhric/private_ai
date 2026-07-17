@@ -346,7 +346,7 @@ process.on('SIGINT', gracefulShutdown);
  * Rule 8: 4-Hour Tool Ingestion Engine with Active Request Postponement Fallbacks
  */
 function initializeCentralizedToolSynchronizationDaemon(db, systemMachineName) {
-  const TOOLS_REPO_URL = process.env.TOOL_REGISTRY_REPO || 'https://github.com/jjuhric/private_ai_tools.git';
+  const TOOLS_REPO_URL = process.env.TOOL_REGISTRY_REPO || 'https://github.com/[USER]/private_ai_tools.git';
   const registryLocalPath = process.env.TOOL_REGISTRY_LOCAL_PATH || './tool_registry';
   const PRODUCTION_REGISTRY_DIR = path.resolve(registryLocalPath);
   const LOCAL_STAGING_DIR = path.join(PRODUCTION_REGISTRY_DIR, 'staging');

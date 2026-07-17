@@ -1405,7 +1405,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                       <li>Open a terminal on your Raspberry Pi.</li>
                       <li>Clone the project repository:<br />
                         <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#38bdf8' }}>
-                          git clone https://github.com/jjuhric/private_ai.git
+                          git clone https://github.com/[USER]/private_ai.git
                         </code>
                       </li>
                       <li>Run the setup script:<br />
@@ -1442,7 +1442,7 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                     <ol style={{ paddingLeft: '20px', margin: '0 0 10px 0' }}>
                       <li>Clone the project repository in PowerShell:<br />
                         <code style={{ background: '#0f172a', padding: '2px 6px', borderRadius: '4px', display: 'block', margin: '4px 0', color: '#38bdf8' }}>
-                          git clone https://github.com/jjuhric/private_ai.git
+                          git clone https://github.com/[USER]/private_ai.git
                         </code>
                       </li>
                       <li>Navigate to the folder and execute setup:<br />

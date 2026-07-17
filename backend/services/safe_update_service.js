@@ -9,7 +9,7 @@ class SafeUpdateService {
   constructor() {
     this.activeDir = path.resolve(__dirname, '../..');
     this.stagingDir = path.resolve(this.activeDir, '../private_ai_staging');
-    this.repoUrl = 'https://github.com/jjuhric/private_ai.git';
+    this.repoUrl = 'https://github.com/[USER]/private_ai.git';
     this.daemonInterval = null;
   }
 
