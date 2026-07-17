@@ -1532,7 +1532,16 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
                     </tr>
                   </thead>
                   <tbody>
-                    {nodes.map(node => {
+                    {[...nodes].sort((a, b) => {
+                      const aOnline = !!(nodeHealthMap[a.id] ? nodeHealthMap[a.id].status === 'online' : a.is_online);
+                      const bOnline = !!(nodeHealthMap[b.id] ? nodeHealthMap[b.id].status === 'online' : b.is_online);
+                      if (aOnline !== bOnline) return aOnline ? -1 : 1;
+
+                      // Within the same online/offline group, sort by IP address numerically (octet by octet)
+                      const ipToNumber = (ip) => (ip || '0.0.0.0').split('.')
+                        .reduce((acc, octet) => acc * 256 + (parseInt(octet, 10) || 0), 0);
+                      return ipToNumber(a.ip_address) - ipToNumber(b.ip_address);
+                    }).map(node => {
                       const health = nodeHealthMap[node.id];
                       const isOnline = health ? health.status === 'online' : node.is_online;
                       return (

@@ -73,7 +73,7 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, on
             {scanning ? 'Scanning Subnet...' : 'Scan Network'}
           </button>
           <a
-            href="/monitor"
+            href={`/monitor/?token=${encodeURIComponent(token)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
