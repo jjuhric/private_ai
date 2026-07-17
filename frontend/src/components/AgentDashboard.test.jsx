@@ -6,7 +6,7 @@ import AgentDashboard from './AgentDashboard';
 describe('AgentDashboard Component Tests', () => {
   test('renders nodes list correctly', () => {
     const mockNodes = [
-      { id: 1, node_name: 'Pi Node 1', device_type: 'RPi', ip_address: '192.168.1.100', port: 3000 }
+      { id: 1, node_name: 'Pi Node 1', device_type: 'RPi', ip_address: '192.168.1.100', port: 3000, is_online: 1 }
     ];
 
     render(
