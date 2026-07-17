@@ -107,7 +107,7 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, ac
                 <th>Node Name</th>
                 <th>Device Signature</th>
                 <th>Network IP Address</th>
-                <th>Subsystems Infrastructure Badges (Rule 6)</th>
+                <th>Health Status</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
@@ -124,6 +124,15 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, ac
                   const health = nodeHealthMap[node.id];
                   const isOnline = health?.status === 'online' || node.is_online === 1;
                   
+                  // Determine if the node is fully healthy
+                  const isHealthy = isOnline && (
+                    !health?.dependencies || (
+                      health.dependencies.llm_provider === 'stable' &&
+                      health.dependencies.database === 'stable' &&
+                      health.dependencies.mqtt_broker === 'stable'
+                    )
+                  );
+                  
                   return (
                     <tr key={node.id} className="border-b border-base-300">
                       <td>
@@ -133,18 +142,10 @@ export default function AgentDashboard({ nodes = [], token, handleDeleteNode, ac
                     <td>{node.device_type}</td>
                     <td>{node.ip_address}:{node.port}</td>
                     <td>
-                      {health?.dependencies ? (
-                        <div className="flex gap-2 text-xs">
-                          <span className={`px-2 py-1 rounded text-white font-semibold ${health.dependencies.llm_provider === 'stable' ? 'bg-success' : 'bg-error'}`}>
-                            LLM: {health.dependencies.llm_provider === 'stable' ? 'OK' : 'ERR'}
-                          </span>
-                          <span className={`px-2 py-1 rounded text-white font-semibold ${health.dependencies.database === 'stable' ? 'bg-success' : 'bg-error'}`}>
-                            DB: {health.dependencies.database === 'stable' ? 'OK' : 'ERR'}
-                          </span>
-                          <span className={`px-2 py-1 rounded text-white font-semibold ${health.dependencies.mqtt_broker === 'stable' ? 'bg-success' : 'bg-error'}`}>
-                            MQTT: {health.dependencies.mqtt_broker === 'stable' ? 'OK' : 'ERR'}
-                          </span>
-                        </div>
+                      {health ? (
+                        <span className={`px-2 py-1 rounded text-white font-semibold ${isHealthy ? 'bg-success' : 'bg-error'}`}>
+                          {isHealthy ? 'Healthy' : 'Not Healthy'}
+                        </span>
                       ) : (
                         <span className="text-neutral-content italic text-xs">Awaiting diagnostic sync...</span>
                       )}

@@ -152,15 +152,17 @@ router.post('/scan', authenticateToken, async (req, res) => {
                 let isEsp = false;
                 try {
                   const controller = new AbortController();
-                  const tId = setTimeout(() => controller.abort(), 350);
-                  const testRes = await fetch(`http://${ip}/message`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: '' }),
+                  const tId = setTimeout(() => controller.abort(), 1000);
+                  const testRes = await fetch(`http://${ip}/health`, {
                     signal: controller.signal
                   });
                   clearTimeout(tId);
-                  isEsp = true;
+                  if (testRes.ok) {
+                    const data = await testRes.json();
+                    if (data && data.deviceReachable) {
+                      isEsp = true;
+                    }
+                  }
                 } catch (e) {}
                 
                 if (isEsp) {
