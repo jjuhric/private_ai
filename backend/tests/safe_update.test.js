@@ -39,6 +39,8 @@ describe('Safe Update Service Tests', () => {
         return { stdout: 'local_sha_123\n', stderr: '' };
       } else if (cmd.includes('rev-parse FETCH_HEAD')) {
         return { stdout: 'remote_sha_456\n', stderr: '' };
+      } else if (cmd.includes('rev-list HEAD..FETCH_HEAD')) {
+        return { stdout: '3\n', stderr: '' };
       }
       return { stdout: '', stderr: '' };
     });
@@ -56,9 +58,30 @@ describe('Safe Update Service Tests', () => {
     expect(info.hasUpdate).toBe(false);
   });
 
+  test('should return false if local is ahead of remote (no remote-only commits)', async () => {
+    mockExecPromise.mockImplementation(async (cmd) => {
+      if (cmd.includes('rev-parse HEAD')) {
+        return { stdout: 'local_sha_ahead\n', stderr: '' };
+      } else if (cmd.includes('rev-parse FETCH_HEAD')) {
+        return { stdout: 'remote_sha_old\n', stderr: '' };
+      } else if (cmd.includes('rev-list HEAD..FETCH_HEAD')) {
+        return { stdout: '0\n', stderr: '' };
+      }
+      return { stdout: '', stderr: '' };
+    });
+
+    const info = await safeUpdateService.checkForUpdates();
+    expect(info.hasUpdate).toBe(false);
+  });
+
   test('should execute full staging pull and test runner workflow', async () => {
     fs.existsSync.mockReturnValue(true); // staging folder exists
-    mockExecPromise.mockResolvedValue({ stdout: 'success stdout', stderr: '' });
+    mockExecPromise.mockImplementation(async (cmd) => {
+      if (cmd.includes('remote get-url origin')) {
+        return { stdout: 'https://github.com/jjuhric/private_ai.git\n', stderr: '' };
+      }
+      return { stdout: 'success stdout', stderr: '' };
+    });
 
     // Mock restart trigger
     jest.useFakeTimers();

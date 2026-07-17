@@ -408,10 +408,9 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
           } else if (data && data.type === 'agent_status') {
             setLocalActiveAgent(data.agent);
           } else if (data && data.type === 'tool_call') {
-            setLocalToolLogs(prev => {
-              if (data.toolCall && prev.some(log => log.id === data.toolCall.id)) return prev;
-              return [...prev, data.toolCall];
-            });
+            // Note: backend tool_call payloads don't carry a unique id, so this always
+            // appends rather than trying (and failing) to dedupe on `.id`.
+            setLocalToolLogs(prev => (data.toolCall ? [...prev, data.toolCall] : prev));
           } else if (data && data.type === 'node_status_change') {
             setNodeHealthMap(prev => ({
               ...prev,

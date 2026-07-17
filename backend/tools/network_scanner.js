@@ -20,6 +20,21 @@ function getLocalSubnet() {
   return '192.168.1';
 }
 
+// Get all local IPv4 addresses of this machine, so the scanner doesn't discover and
+// register itself as a remote field node.
+function getLocalIps() {
+  const ips = new Set(['127.0.0.1', 'localhost']);
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const netObj of interfaces[name]) {
+      if (netObj.family === 'IPv4') {
+        ips.add(netObj.address);
+      }
+    }
+  }
+  return ips;
+}
+
 // Fetch all resolved ARP devices
 async function getArpDevices() {
   const devices = [];
@@ -130,10 +145,13 @@ async function handleNetworkScanner(action, params = {}) {
     }
   }
 
-  // 4. Perform TCP Subnet Sweep
+  // 4. Perform TCP Subnet Sweep (skip the gateway and this machine's own addresses)
+  const localIps = getLocalIps();
   const ipList = [];
   for (let i = 1; i <= 254; i++) {
-    ipList.push(`${subnet}.${i}`);
+    const ip = `${subnet}.${i}`;
+    if (ip === `${subnet}.1` || localIps.has(ip)) continue;
+    ipList.push(ip);
   }
 
   const activeDevices = [];
@@ -171,7 +189,7 @@ async function handleNetworkScanner(action, params = {}) {
                 signal: controller.signal
               });
               clearTimeout(tId);
-              isEsp = true;
+              isEsp = testRes.ok;
             } catch (e) {}
 
             if (isEsp) {
@@ -203,20 +221,33 @@ async function handleNetworkScanner(action, params = {}) {
     const { getDb } = require('../db');
     const db = await getDb();
     for (const dev of activeDevices) {
+      const isUnidentified = dev.deviceType === 'Generic Node';
       const portVal = dev.ports.includes('8009') ? 8009 : (dev.ports.includes('3000') ? 3000 : 80);
       const exist = await db.get(
-        'SELECT id FROM network_nodes WHERE ip_address = ?',
+        'SELECT id, device_type FROM network_nodes WHERE ip_address = ?',
         [dev.ip]
       );
       if (!exist) {
+        // Don't clutter the Field Nodes list with devices we can't actually identify or act on
+        // (e.g. phones, printers, or other LAN devices that merely have some port open).
+        if (isUnidentified) continue;
         await db.run(
           'INSERT INTO network_nodes (user_id, node_name, device_type, ip_address, port, is_online, last_seen) VALUES (1, ?, ?, ?, ?, 1, datetime("now"))',
           [dev.name, dev.deviceType, dev.ip, portVal]
         );
-      } else {
+      } else if (isUnidentified) {
+        // Don't downgrade a previously-identified device (e.g. a Google Nest speaker) to
+        // "Unknown Device" just because this pass couldn't re-confirm its signature -
+        // mDNS cast discovery in particular is timing-sensitive and can miss a device.
         await db.run(
-          'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ? WHERE id = ?',
-          [dev.name, exist.id]
+          'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now") WHERE id = ?',
+          [exist.id]
+        );
+      } else {
+        const finalDeviceType = exist.device_type === 'google_home' ? 'google_home' : dev.deviceType;
+        await db.run(
+          'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ?, device_type = ? WHERE id = ?',
+          [dev.name, finalDeviceType, exist.id]
         );
       }
     }

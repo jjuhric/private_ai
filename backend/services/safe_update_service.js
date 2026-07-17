@@ -9,11 +9,27 @@ class SafeUpdateService {
   constructor() {
     this.activeDir = path.resolve(__dirname, '../..');
     this.stagingDir = path.resolve(this.activeDir, '../private_ai_staging');
-    this.repoUrl = 'https://github.com/[USER]/private_ai.git';
     this.daemonInterval = null;
   }
 
+  /**
+   * Resolves the origin repo URL from the local git remote rather than a
+   * hardcoded placeholder, so this works regardless of which GitHub account
+   * the repo was cloned from.
+   */
+  async getRepoUrl() {
+    try {
+      const { stdout } = await execPromise('git remote get-url origin', { cwd: this.activeDir });
+      const url = stdout.trim();
+      if (url) return url;
+    } catch (err) {
+      // fall through to default below
+    }
+    return 'https://github.com/jjuhric/private_ai.git';
+  }
+
   async getAuthenticatedRepoUrl() {
+    const repoUrl = await this.getRepoUrl();
     let token = process.env.GITHUB_TOKEN || '';
     try {
       const { getDb } = require('../db');
@@ -29,10 +45,10 @@ class SafeUpdateService {
     } catch (err) {
       // DB not ready or not initialized
     }
-    if (token && this.repoUrl.startsWith('https://')) {
-      return this.repoUrl.replace('https://', `https://${token}@`);
+    if (token && repoUrl.startsWith('https://')) {
+      return repoUrl.replace('https://', `https://${token}@`);
     }
-    return this.repoUrl;
+    return repoUrl;
   }
 
   async checkForUpdates() {
@@ -55,8 +71,12 @@ class SafeUpdateService {
       await execFilePromise('git', ['fetch', authUrl, 'main'], { cwd: this.activeDir });
       const { stdout: localHead } = await execFilePromise('git', ['rev-parse', 'HEAD'], { cwd: this.activeDir });
       const { stdout: remoteHead } = await execFilePromise('git', ['rev-parse', 'FETCH_HEAD'], { cwd: this.activeDir });
-      
-      const hasUpdate = localHead.trim() !== remoteHead.trim();
+
+      // Only treat this as an update if the remote is actually ahead of local - a plain SHA
+      // inequality also fires when the active directory has local/uncommitted-ahead commits,
+      // which would otherwise trigger `git reset --hard` and discard local work below.
+      const { stdout: aheadCount } = await execFilePromise('git', ['rev-list', 'HEAD..FETCH_HEAD', '--count'], { cwd: this.activeDir });
+      const hasUpdate = parseInt(aheadCount.trim(), 10) > 0;
       logger.info(`[Safe Update] Has update: ${hasUpdate} (Local: ${localHead.trim().substring(0, 7)} vs Remote: ${remoteHead.trim().substring(0, 7)})`);
       return {
         hasUpdate,

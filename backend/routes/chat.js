@@ -46,8 +46,18 @@ function startIdleUnloadTimer() {
       for (const m of availableModels) {
         if (m.isLoaded && m.instanceId) {
           logger.info(`[Idle Model Unloader] Unloading model instance: ${m.instanceId} (${m.id})`);
-          await unloadLocalModel(localBaseUrl, localApiKey, m.instanceId);
-          unloadedAny = true;
+          try {
+            await unloadLocalModel(localBaseUrl, localApiKey, m.instanceId);
+            unloadedAny = true;
+          } catch (unloadErr) {
+            // A 404 here means the model was already unloaded (e.g. by LM Studio's own
+            // idle timeout) between listing and unloading - not a real failure.
+            if (unloadErr.message && unloadErr.message.includes('404')) {
+              logger.info(`[Idle Model Unloader] Model instance ${m.instanceId} was already unloaded.`);
+            } else {
+              logger.error(`[Idle Model Unloader] Failed to unload model instance ${m.instanceId}:`, unloadErr);
+            }
+          }
         }
       }
       if (unloadedAny) {

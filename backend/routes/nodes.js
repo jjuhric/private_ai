@@ -184,10 +184,15 @@ router.post('/scan', authenticateToken, async (req, res) => {
                   [req.user.id, name, deviceType, ip, targetPort]
                 );
               } else {
-                const finalDeviceType = exist.device_type === 'google_home' ? 'google_home' : deviceType;
-                const finalName = (exist.node_name && !exist.node_name.startsWith('Google Cast Device') && !exist.node_name.startsWith('Google Assistant Speaker'))
-                  ? exist.node_name
-                  : name;
+                // Keep node_name and device_type paired together: if we're preserving the
+                // existing (already-identified) name, preserve its device_type too rather
+                // than letting this scan's classification overwrite just the type and leave
+                // a stale name/type combination (e.g. "Web Server / Router" tagged as ESP32).
+                const keepExisting = exist.node_name && !exist.node_name.startsWith('Google Cast Device') && !exist.node_name.startsWith('Google Assistant Speaker');
+                const finalName = keepExisting ? exist.node_name : name;
+                const finalDeviceType = exist.device_type === 'google_home'
+                  ? 'google_home'
+                  : (keepExisting ? exist.device_type : deviceType);
 
                 await db.run(
                   'UPDATE network_nodes SET is_online = 1, last_seen = datetime("now"), node_name = ?, device_type = ?, port = ? WHERE id = ?',
