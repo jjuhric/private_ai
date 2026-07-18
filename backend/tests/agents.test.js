@@ -587,7 +587,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       expect(result).toContain('Error: Unknown coding/QA tool action');
     });
 
-    test('runWorkerAgent routes other tools (calendar, github, search_web, google_news)', async () => {
+    test('runWorkerAgent routes other tools (calendar, search_web, google_news)', async () => {
       const globalFetch = global.fetch;
       let calls = 0;
       global.fetch = jest.fn().mockImplementation((url) => {
@@ -605,21 +605,15 @@ describe('Multi-Agent System & Tools Tests', () => {
             return Promise.resolve({
               ok: true,
               headers: { get: () => 'application/json' },
-              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Calling github', tool: 'github', action: 'list_repos', params: {} }) } }] })
+              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Searching web', tool: 'search_web', params: { query: 'test' } }) } }] })
             });
           } else if (calls === 3) {
             return Promise.resolve({
               ok: true,
               headers: { get: () => 'application/json' },
-              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Searching web', tool: 'search_web', params: { query: 'test' } }) } }] })
-            });
-          } else if (calls === 4) {
-            return Promise.resolve({
-              ok: true,
-              headers: { get: () => 'application/json' },
               json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Checking news', tool: 'google_news', params: { query: 'test' } }) } }] })
             });
-          } else if (calls === 5) {
+          } else if (calls === 4) {
             return Promise.resolve({
               ok: true,
               headers: { get: () => 'application/json' },
@@ -647,7 +641,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         get: jest.fn().mockResolvedValue(null)
       };
 
-      const result = await runWorkerAgent('calendar_handler', { provider: 'openai', modelName: 'gpt-4' }, 'Manage calendar', mockDb, 1, 'token');
+      const result = await runWorkerAgent('calendar_handler', { provider: 'openai', modelName: 'gpt-4' }, 'Manage calendar', mockDb, 1);
       expect(result).toContain('Combined report');
       global.fetch = globalFetch;
     });
@@ -824,7 +818,7 @@ describe('Multi-Agent System & Tools Tests', () => {
       global.fetch = globalFetch;
     });
 
-    test('runWorkerAgent routes specific actions (github create/pr, calendar create/update/delete)', async () => {
+    test('runWorkerAgent routes specific actions (calendar create/update/delete)', async () => {
       const globalFetch = global.fetch;
       let calls = 0;
       global.fetch = jest.fn().mockImplementation((url) => {
@@ -835,27 +829,15 @@ describe('Multi-Agent System & Tools Tests', () => {
             return Promise.resolve({
               ok: true,
               headers: { get: () => 'application/json' },
-              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Github actions', tool: 'github', action: 'create_issue', params: { title: 'Bug' } }) } }] })
+              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Calendar actions', tool: 'calendar', action: 'create', params: { title: 'Meeting' } }) } }] })
             });
           } else if (calls === 2) {
             return Promise.resolve({
               ok: true,
               headers: { get: () => 'application/json' },
-              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Github pr', tool: 'github', action: 'create_pr', params: { title: 'PR' } }) } }] })
-            });
-          } else if (calls === 3) {
-            return Promise.resolve({
-              ok: true,
-              headers: { get: () => 'application/json' },
-              json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Calendar actions', tool: 'calendar', action: 'create', params: { title: 'Meeting' } }) } }] })
-            });
-          } else if (calls === 4) {
-            return Promise.resolve({
-              ok: true,
-              headers: { get: () => 'application/json' },
               json: async () => ({ choices: [{ message: { content: JSON.stringify({ thought: 'Calendar update', tool: 'calendar', action: 'update', params: { id: 1 } }) } }] })
             });
-          } else if (calls === 5) {
+          } else if (calls === 3) {
             return Promise.resolve({
               ok: true,
               headers: { get: () => 'application/json' },
@@ -882,7 +864,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         run: jest.fn().mockResolvedValue({ lastID: 1, changes: 1 })
       };
 
-      const result = await runWorkerAgent('calendar_handler', { provider: 'openai', modelName: 'gpt-4' }, 'Manage calendar actions', mockDb, 1, 'token');
+      const result = await runWorkerAgent('calendar_handler', { provider: 'openai', modelName: 'gpt-4' }, 'Manage calendar actions', mockDb, 1);
       expect(result).toContain('Combined report');
       global.fetch = globalFetch;
     });
@@ -1084,7 +1066,7 @@ describe('Multi-Agent System & Tools Tests', () => {
         get: jest.fn().mockResolvedValue(null)
       };
 
-      const result = await runWorkerAgent('memory_agent', { provider: 'openai', modelName: 'gpt-4' }, 'Manage memories', mockDb, 1, 'token');
+      const result = await runWorkerAgent('memory_agent', { provider: 'openai', modelName: 'gpt-4' }, 'Manage memories', mockDb, 1);
       expect(result).toBeDefined();
       global.fetch = globalFetch;
     });

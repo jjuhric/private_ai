@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Github, Search, Send, Square, Cpu, CloudSun, Newspaper, FileText, Volume2, VolumeX } from 'lucide-react';
+import { Calendar, Search, Send, Square, Cpu, CloudSun, Newspaper, FileText, Volume2, VolumeX } from 'lucide-react';
 import { marked } from 'marked';
 import ExpandableThoughts from './ExpandableThoughts';
 
@@ -434,8 +434,6 @@ export default function ChatPane({
                 <div key={idx} className="tool-call-log">
                   {log.tool === 'calendar' ? (
                     <Calendar size={14} />
-                  ) : log.tool === 'github' ? (
-                    <Github size={14} />
                   ) : (
                     <Search size={14} />
                   )}

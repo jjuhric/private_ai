@@ -9,7 +9,6 @@ const AGENTS_LIST = [
   'calendar_handler',
   'web_searcher',
   'document_vault',
-  'github_agent',
   'developer_agent',
   'qa_engineer',
   'tool_creator_agent',

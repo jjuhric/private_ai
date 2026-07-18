@@ -47,7 +47,7 @@ describe('ChatPane Component Tests', () => {
   test('renders streaming state with tool logs', () => {
     const logs = [
       { tool: 'calendar', action: 'list', params: {} },
-      { tool: 'github', action: 'list_repos', params: {} },
+      { tool: 'weather', action: 'get_forecast', params: {} },
       { tool: 'search_web', action: 'search', params: {} }
     ];
 
@@ -68,7 +68,7 @@ describe('ChatPane Component Tests', () => {
     expect(screen.getByText('thinking...')).toBeInTheDocument();
     expect(screen.getByText('still writing')).toBeInTheDocument();
     expect(screen.getByText('Running tool action: list ({})')).toBeInTheDocument();
-    expect(screen.getByText('Running tool action: list_repos ({})')).toBeInTheDocument();
+    expect(screen.getByText('Running tool action: get_forecast ({})')).toBeInTheDocument();
     expect(screen.getByText('Running tool action: search ({})')).toBeInTheDocument();
   });
 

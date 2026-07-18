@@ -20,7 +20,6 @@ jest.mock('@google/generative-ai', () => {
 jest.mock('../tools/weather_tool', () => ({ handleWeatherTool: jest.fn(() => 'weather-ok') }));
 jest.mock('../tools/host_machine_tool', () => ({ handleHostMachineTool: jest.fn(() => 'host-ok') }));
 jest.mock('../tools/coder_tools', () => ({ handleCoderTool: jest.fn(() => 'coder-ok') }));
-jest.mock('../tools/github_tool', () => ({ handleGitHubTool: jest.fn(() => 'github-ok') }));
 jest.mock('../tools/calendar_tool', () => ({ handleCalendarTool: jest.fn(() => 'calendar-ok') }));
 jest.mock('../tools/web_search_tool', () => ({ handleWebSearchTool: jest.fn(() => 'search-ok') }));
 jest.mock('../tools/google_news_tool', () => ({ handleGoogleNewsTool: jest.fn(() => 'news-ok') }));
@@ -55,7 +54,6 @@ describe('Agents Coverage Extender Tests', () => {
       { tool: 'weather', action: 'get_forecast' },
       { tool: 'host_machine', action: 'get_specifications' },
       { tool: 'read_file', action: 'read' },
-      { tool: 'github', action: 'list' },
       { tool: 'calendar', action: 'list' },
       { tool: 'search_web', action: 'query' },
       { tool: 'google_news', action: 'query' },
@@ -89,11 +87,11 @@ describe('Agents Coverage Extender Tests', () => {
       };
     });
 
-    const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
+    const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1);
     expect(result).toBeDefined();
 
     // Call again to hit the rest of the tools (maxTurns = 5 per call)
-    const result2 = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
+    const result2 = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1);
     expect(result2).toBeDefined();
   });
 
@@ -121,7 +119,6 @@ describe('Agents Coverage Extender Tests', () => {
       userMessage: 'Hello',
       db: {},
       userId: 1,
-      githubToken: 'git',
       provider: 'online',
       onlineProvider: 'anthropic',
       onlineKey: 'sk-ant-123',
@@ -146,7 +143,6 @@ describe('Agents Coverage Extender Tests', () => {
       userMessage: 'Hello',
       db: {},
       userId: 1,
-      githubToken: 'git',
       provider: 'online',
       onlineProvider: 'openai',
       onlineKey: 'sk-123',
@@ -214,7 +210,7 @@ describe('Agents Coverage Extender Tests', () => {
       };
     });
 
-    const result = await runWorkerAgent('document_vault', settings, 'Query vault', {}, 1, 'token');
+    const result = await runWorkerAgent('document_vault', settings, 'Query vault', {}, 1);
     expect(result).toBeDefined();
   });
 
@@ -237,7 +233,7 @@ describe('Agents Coverage Extender Tests', () => {
       };
     });
 
-    const result = await runWorkerAgent('supervisor', settings, 'Query unknown', {}, 1, 'token');
+    const result = await runWorkerAgent('supervisor', settings, 'Query unknown', {}, 1);
     expect(result).toBeDefined();
   });
 
@@ -252,7 +248,6 @@ describe('Agents Coverage Extender Tests', () => {
       { tool: 'weather', action: 'get_forecast', params: { zipcode: '32421' } },
       { tool: 'host_machine', action: 'get_specifications' },
       { tool: 'delegate_to_remote_node', params: { nodeId: 1, command: 'status' } },
-      { tool: 'github', action: 'list' },
       { tool: 'search_web', action: 'query' },
       { tool: 'google_news', action: 'query' },
       { tool: 'time', action: 'get_current_time' },
@@ -280,7 +275,6 @@ describe('Agents Coverage Extender Tests', () => {
       userMessage: 'Test supervisor tools',
       db: mockDb,
       userId: 1,
-      githubToken: 'git',
       provider: 'online',
       onlineProvider: 'openai',
       onlineKey: 'key',
@@ -386,7 +380,7 @@ describe('Agents Coverage Extender Tests', () => {
       };
     });
 
-    const res = await runWorkerAgent('weather_expert', settings, 'Test abort', {}, 1, 'token');
+    const res = await runWorkerAgent('weather_expert', settings, 'Test abort', {}, 1);
     expect(res).toBe('{"status":"success","summary":"","data":{}}');
 
     const badSettings = {
@@ -402,7 +396,7 @@ describe('Agents Coverage Extender Tests', () => {
       text: async () => 'Service Unavailable'
     });
 
-    await expect(runWorkerAgent('weather_expert', badSettings, 'Test fail', {}, 1, 'token')).rejects.toThrow('LLM Error: 503');
+    await expect(runWorkerAgent('weather_expert', badSettings, 'Test fail', {}, 1)).rejects.toThrow('LLM Error: 503');
   });
 
   test('runWorkerAgent new options: status streaming, command approval, prompt interception', async () => {
@@ -455,7 +449,7 @@ describe('Agents Coverage Extender Tests', () => {
     const mockCoder = require('../tools/coder_tools');
     mockCoder.handleCoderTool.mockResolvedValueOnce('INPUT_REQUIRED_FROM_USER: What is the city?');
 
-    const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1, 'token');
+    const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1);
     expect(result).toBeDefined();
     expect(onIntermediateStatusUpdate).toHaveBeenCalled();
     expect(onStatusUpdate).toHaveBeenCalled();
@@ -479,7 +473,7 @@ describe('Agents Coverage Extender Tests', () => {
       })
     });
 
-    const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1, 'token');
+    const result = await runWorkerAgent('coder', settings, 'Write file', {}, 1);
     expect(result).toContain('Pipeline Interrupted');
     expect(onCommandApprovalRequired).toHaveBeenCalled();
   });
@@ -509,7 +503,7 @@ describe('Agents Coverage Extender Tests', () => {
         }
       });
 
-    const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1, 'token');
+    const result = await runWorkerAgent('weather_expert', settings, 'What is the weather?', {}, 1);
     expect(result).toBe('{"status":"success","summary":"This is the final response summary","data":{}}');
     expect(mockAgentsGenerateContent).toHaveBeenCalledTimes(2);
   });

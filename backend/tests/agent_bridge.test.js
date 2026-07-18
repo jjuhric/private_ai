@@ -31,14 +31,6 @@ jest.mock('../tools/host_machine_tool', () => ({
   handleHostMachineTool: (...args) => mockHandleHostMachineTool(...args)
 }));
 
-// Mock safe update service
-const mockRunUpdatePipeline = jest.fn(() => Promise.resolve({ success: true }));
-const mockCheckForUpdates = jest.fn(() => Promise.resolve({ hasUpdate: false }));
-jest.mock('../services/safe_update_service', () => ({
-  runUpdatePipeline: () => mockRunUpdatePipeline(),
-  checkForUpdates: () => mockCheckForUpdates()
-}));
-
 // Mock tool manager
 const mockInstallTool = jest.fn(() => Promise.resolve({ version: '1.0.0' }));
 const mockUninstallTool = jest.fn(() => Promise.resolve());
@@ -244,28 +236,8 @@ describe('agent_bridge.js API Endpoint Tests', () => {
     );
   });
 
-  test('POST /execute: triggers update_node safe update pipeline', async () => {
-    mockDb.get.mockResolvedValueOnce({ is_main_host: 0 });
-
-    const res = await request(app)
-      .post('/api/bridge/execute')
-      .set('Authorization', `Bearer ${testToken}`)
-      .send({ action: 'update_node' });
-
-    expect(res.status).toBe(200);
-    expect(res.body.output).toContain('Safe self-update pipeline initiated');
-    expect(mockRunUpdatePipeline).toHaveBeenCalled();
-  });
-
-  test('POST /execute: triggers install_tool, uninstall_tool, check_updates', async () => {
+  test('POST /execute: triggers install_tool, uninstall_tool', async () => {
     mockDb.get.mockResolvedValue({ is_main_host: 0 });
-
-    // Test check_updates
-    const checkRes = await request(app)
-      .post('/api/bridge/execute')
-      .set('Authorization', `Bearer ${testToken}`)
-      .send({ action: 'check_updates' });
-    expect(checkRes.status).toBe(200);
 
     // Test install_tool
     const installRes = await request(app)
@@ -427,8 +399,7 @@ describe('agent_bridge.js API Endpoint Tests', () => {
         'what is the weather in Seattle?',
         expect.any(Object),
         expect.any(Object),
-        1,
-        undefined
+        1
       );
       expect(res.body.success).toBe(true);
       expect(res.body.supervisor_decision.intent).toBe('search');

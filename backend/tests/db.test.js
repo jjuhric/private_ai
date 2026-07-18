@@ -54,7 +54,7 @@ describe('Database Migration Tests', () => {
     // PK to match the real schema definition.
     await db.exec(`
       CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT);
-      CREATE TABLE user_settings (user_id INTEGER PRIMARY KEY, provider TEXT, model_name TEXT, github_token TEXT, gemini_key TEXT);
+      CREATE TABLE user_settings (user_id INTEGER PRIMARY KEY, provider TEXT, model_name TEXT, gemini_key TEXT);
       CREATE TABLE memories (id INTEGER PRIMARY KEY, user_id INTEGER, content TEXT, level TEXT, expires_at DATETIME);
     `);
     await db.close();

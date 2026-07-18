@@ -268,7 +268,6 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
       }
 
       const { decrypt } = require('../utils/crypto');
-      const decryptedGithub = decrypt(settings.github_token);
       const decryptedLocalKey = decrypt(settings.local_key);
       const decryptedOnlineKey = decrypt(settings.online_key);
       const decryptedGeminiKey = decrypt(settings.gemini_key);
@@ -347,7 +346,6 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
             supervisorModel: actualModel,
             userMessage: message,
             history,
-            githubToken: decryptedGithub || process.env.GITHUB_TOKEN || '',
             localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
             localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
             localApiStyle: settings.local_api_style || 'openai',

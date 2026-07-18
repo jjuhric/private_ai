@@ -149,15 +149,6 @@ global.fetch = jest.fn().mockImplementation((url, options) => {
     });
   }
 
-  // 4. GitHub API
-  if (urlStr.includes('api.github.com')) {
-    return Promise.resolve({
-      ok: true,
-      headers: { get: () => 'application/json' },
-      json: async () => []
-    });
-  }
-
   // 5. DuckDuckGo Search Scraper
   if (urlStr.includes('duckduckgo.com')) {
     return Promise.resolve({
@@ -314,7 +305,7 @@ describe('Agent Loop & LLM Stream Unit Tests', () => {
 
   test('runAgentLoop - executes multi-tool routing turns and markdown code blocks', async () => {
     routerDecisions = [
-      '```json\n{\n  "thought": "I will check git repositories",\n  "tool": "github",\n  "action": "list_repos",\n  "params": {}\n}\n```',
+      '```json\n{\n  "thought": "I will check the time",\n  "tool": "time",\n  "action": "get_current_time",\n  "params": {}\n}\n```',
       {
         thought: 'I will check calendar',
         tool: 'calendar',
@@ -347,7 +338,7 @@ describe('Agent Loop & LLM Stream Unit Tests', () => {
       userId,
       provider: 'local',
       modelName: 'gemma',
-      userMessage: 'Git and calendar news',
+      userMessage: 'Time and calendar news',
       history: [],
       onThought: jest.fn(),
       onContent: (c) => contents.push(c),

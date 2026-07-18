@@ -26,13 +26,12 @@ If the user asks for a list of all agents, sub-agents, tools, or capabilities in
   5. **calendar_handler**: Handles scheduling, editing, or deleting calendar events (uses \`calendar_tool\`).
   6. **web_searcher**: Performs general web queries and news scraping (uses \`web_search_tool\` and \`google_news_tool\`).
   7. **document_vault**: Queries and manages indexed files in the user's private vector RAG vault (uses \`vault_tool\`).
-  8. **github_agent**: Performs repository commits, branches, issues, and PR management (uses \`github_tool\`).
-  9. **developer_agent**: Writes, views, and modifies project code files natively (uses \`coder_tools\` and \`dev_pipeline_tool\`).
-  10. **qa_engineer**: Audits code security, checks errors, and runs project tests (uses \`coder_tools\` and \`dev_pipeline_tool\`).
-  11. **tool_creator_agent**: Coordinates technical design plans and dynamic registry reloading for new custom tools (uses \`tool_manager_tool\` and \`dev_pipeline_tool\`).
-  12. **agent_creator_agent**: Designs, programs, and loops in new dynamic agent prompts (uses \`dev_pipeline_tool\`).
-  13. **sports_agent**: Retrieves live articles, news, and match outcomes from Bleacher Report (uses \`sports_tool\`).
-  14. **news_agent**: Retrieves general breaking news and customizable user interest headlines (uses \`news_tool\`).
+  8. **developer_agent**: Writes, views, and modifies project code files natively (uses \`coder_tools\` and \`dev_pipeline_tool\`).
+  9. **qa_engineer**: Audits code security, checks errors, and runs project tests (uses \`coder_tools\` and \`dev_pipeline_tool\`).
+  10. **tool_creator_agent**: Coordinates technical design plans and dynamic registry reloading for new custom tools (uses \`tool_manager_tool\` and \`dev_pipeline_tool\`).
+  11. **agent_creator_agent**: Designs, programs, and loops in new dynamic agent prompts (uses \`dev_pipeline_tool\`).
+  12. **sports_agent**: Retrieves live articles, news, and match outcomes from Bleacher Report (uses \`sports_tool\`).
+  13. **news_agent**: Retrieves general breaking news and customizable user interest headlines (uses \`news_tool\`).
 
 - **Core Tools**:
   - \`weather_tool\`: Hourly/daily weather forecast fetcher.
@@ -42,7 +41,6 @@ If the user asks for a list of all agents, sub-agents, tools, or capabilities in
   - \`calendar_tool\`: Calendar database editor.
   - \`web_search_tool\` & \`google_news_tool\`: DuckDuckGo web scraper and Google News rss decoder.
   - \`vault_tool\`: Vector DB file chunk indexer.
-  - \`github_tool\`: Git version control API client.
   - \`coder_tools\`: Code editor.
   - \`dev_pipeline_tool\`: Developer loop state manager.
   - \`tool_manager_tool\`: Dynamic npm/registry tool installer/uninstall manager.

@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS user_settings (
   user_id INTEGER PRIMARY KEY,
   provider TEXT DEFAULT 'local', -- 'local' or 'gemini' (or 'openai', 'anthropic')
   model_name TEXT DEFAULT 'qwen2.5-coder-7b-instruct',
-  github_token TEXT,
   gemini_key TEXT, -- legacy, replaced by online_key
   local_key TEXT,
   local_url TEXT DEFAULT 'http://192.168.1.42:1234/v1',

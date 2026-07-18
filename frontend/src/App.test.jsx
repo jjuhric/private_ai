@@ -47,7 +47,6 @@ global.fetch = vi.fn().mockImplementation((url, options) => {
         user_id: 1,
         provider: 'local',
         model_name: 'qwen3-8b',
-        github_token: '',
         local_key: '',
         local_url: 'http://localhost:1234/v1',
         local_api_style: 'openai',

@@ -162,7 +162,7 @@ router.post('/execute', authenticateBridge, async (req, res) => {
         console.warn(`[Security Alert] Blocked incoming bridge command from remote node: target node is Main Host.`);
         return res.status(403).json({ error: 'Access denied: Commands cannot be routed to the Parent Node (machine running the LLM). Access Denied: Peripheral node endpoints are unauthorized to mutate files on the Main Host machine.' });
       }
-      const blockedActions = ['update_node', 'apply_update', 'install_tool', 'write_file'];
+      const blockedActions = ['install_tool', 'write_file'];
       if (blockedActions.includes(action)) {
         return res.status(403).json({ 
           error: 'Access Denied: Peripheral node endpoints are unauthorized to mutate files on the Main Host machine. Access denied: Commands cannot be routed to the Parent Node (machine running the LLM).' 
@@ -202,14 +202,6 @@ router.post('/execute', authenticateBridge, async (req, res) => {
         userId: req.user.id
         // We omit onCommandApprovalRequired so it executes directly without asking the local console (since approval was done on caller node)
       });
-    } else if (action === 'update_node' || action === 'apply_update') {
-      const safeUpdateService = require('../services/safe_update_service');
-      safeUpdateService.runUpdatePipeline().then((result) => {
-        console.log(`[Safe Update] Pipeline finished: ${JSON.stringify(result)}`);
-      }).catch((err) => {
-        console.error(`[Safe Update] Pipeline failed: ${err.message}`);
-      });
-      output = 'Safe self-update pipeline initiated in the background. The node will fetch, pull to staging, run validation tests, apply changes, and hot-reload.';
     } else if (action === 'install_tool') {
       const toolManager = require('../services/tool_manager');
       const manifest = await toolManager.installTool(params.toolName);
@@ -218,10 +210,6 @@ router.post('/execute', authenticateBridge, async (req, res) => {
       const toolManager = require('../services/tool_manager');
       await toolManager.uninstallTool(params.toolName);
       output = `Successfully uninstalled tool "${params.toolName}" from this node.`;
-    } else if (action === 'check_updates') {
-      const safeUpdateService = require('../services/safe_update_service');
-      const updateInfo = await safeUpdateService.checkForUpdates();
-      output = JSON.stringify(updateInfo);
     } else if ([
       'get_specifications', 
       'get_power', 
@@ -282,7 +270,7 @@ router.post('/execute', authenticateBridge, async (req, res) => {
 
 // POST /supervisor-handoff
 router.post('/supervisor-handoff', authenticateBridge, async (req, res) => {
-  const { userPrompt, settings = {}, githubToken } = req.body;
+  const { userPrompt, settings = {} } = req.body;
   if (!userPrompt) {
     return res.status(400).json({ error: 'userPrompt is required' });
   }
@@ -313,7 +301,7 @@ router.post('/supervisor-handoff', authenticateBridge, async (req, res) => {
     const result = await enqueue(
       (onThought) => {
         onThought(`Running supervisor handoff`);
-        return runSupervisorHandoff(userPrompt, fullSettings, db, req.user.id, githubToken);
+        return runSupervisorHandoff(userPrompt, fullSettings, db, req.user.id);
       },
       { nodeId: req.user.id ? `node-${req.user.id}` : 'supervisor-bridge', name: 'Remote Supervisor Handoff' }
     );

@@ -47,7 +47,6 @@ router.get('/', authenticateToken, async (req, res) => {
     const defaultWorkingDir = path.resolve(path.join(__dirname, '../..'));
     const responseSettings = {
       ...settings,
-      github_token: settings.github_token ? maskKey(settings.github_token) : (process.env.GITHUB_TOKEN ? maskKey(process.env.GITHUB_TOKEN) : ''),
       gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
       online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
@@ -66,7 +65,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 router.put('/', authenticateToken, async (req, res) => {
-  const { provider, model_name, github_token, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory, google_home_enabled, google_home_ip, google_home_name } = req.body;
+  const { provider, model_name, gemini_key, local_key, local_url, local_api_style, online_url, online_key, online_provider, preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory, google_home_enabled, google_home_ip, google_home_name } = req.body;
   try {
     const db = await getDb();
     const { encrypt, decrypt } = require('../utils/crypto');
@@ -74,7 +73,6 @@ router.put('/', authenticateToken, async (req, res) => {
     const existing = await db.get('SELECT * FROM user_settings WHERE user_id = ?', [req.user.id]) || {};
     const isMasked = (val) => val && val.includes('••');
 
-    const finalGithub = isMasked(github_token) ? existing.github_token : (github_token ? encrypt(github_token) : null);
     const finalGemini = isMasked(gemini_key) ? existing.gemini_key : (gemini_key ? encrypt(gemini_key) : null);
     const finalLocal = isMasked(local_key) ? existing.local_key : (local_key ? encrypt(local_key) : null);
     const finalOnline = isMasked(online_key) ? existing.online_key : (online_key ? encrypt(online_key) : null);
@@ -100,16 +98,15 @@ router.put('/', authenticateToken, async (req, res) => {
 
     await db.run(
       `INSERT INTO user_settings (
-         user_id, provider, model_name, github_token, gemini_key, local_key, 
+         user_id, provider, model_name, gemini_key, local_key,
          local_url, local_api_style, online_url, online_key, online_provider,
          preferred_local_model, preferred_online_model, supervisor_model, device_type, is_main_host, working_directory,
          google_home_enabled, google_home_ip, google_home_name
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id) DO UPDATE SET
          provider = excluded.provider,
          model_name = excluded.model_name,
-         github_token = excluded.github_token,
          gemini_key = excluded.gemini_key,
          local_key = excluded.local_key,
          local_url = COALESCE(excluded.local_url, local_url),
@@ -127,7 +124,7 @@ router.put('/', authenticateToken, async (req, res) => {
          google_home_ip = excluded.google_home_ip,
          google_home_name = excluded.google_home_name`,
       [
-        req.user.id, finalProvider, finalModelName, finalGithub, finalGemini, finalLocal,
+        req.user.id, finalProvider, finalModelName, finalGemini, finalLocal,
         resolvedUrl, resolvedStyle, online_url, finalOnline, online_provider || 'gemini',
         finalPreferredLocal, preferred_online_model || 'gemini-2.0-flash', finalSupervisorModel,
         device_type || 'windows', (is_main_host === 1 || is_main_host === '1' || is_main_host === true || is_main_host === 'true') ? 1 : 0, resolvedWorkingDir,

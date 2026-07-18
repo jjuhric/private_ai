@@ -7,7 +7,6 @@ describe('SettingsModal Component Tests', () => {
   const defaultSettings = {
     provider: 'local',
     model_name: 'qwen2.5-coder-7b-instruct',
-    github_token: 'git_token',
     local_key: 'local_pwd',
     local_url: 'http://localhost:1234/v1',
     local_api_style: 'openai',
@@ -27,9 +26,7 @@ describe('SettingsModal Component Tests', () => {
     showLocalKey: false,
     setShowLocalKey: vi.fn(),
     showOnlineKey: false,
-    setShowOnlineKey: vi.fn(),
-    showGithubToken: false,
-    setShowGithubToken: vi.fn()
+    setShowOnlineKey: vi.fn()
   };
 
   test('does not render when closed', () => {

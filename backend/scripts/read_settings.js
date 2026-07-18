@@ -28,8 +28,7 @@ async function main() {
       local_url: settings ? settings.local_url : 'http://192.168.1.42:1234/v1',
       local_key: (settings && settings.local_key) ? decrypt(settings.local_key) : '',
       online_provider: settings ? settings.online_provider : 'gemini',
-      online_key: (settings && settings.online_key) ? decrypt(settings.online_key) : '',
-      github_token: (settings && settings.github_token) ? decrypt(settings.github_token) : ''
+      online_key: (settings && settings.online_key) ? decrypt(settings.online_key) : ''
     };
     
     console.log(JSON.stringify(result));

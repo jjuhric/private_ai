@@ -53,8 +53,7 @@ describe('seed_settings.js Tests', () => {
       '--local_url=http://localhost:1234/v1',
       '--local_key=my-local-key',
       '--online_provider=openai',
-      '--online_key=my-online-key',
-      '--github_token=my-github-token'
+      '--online_key=my-online-key'
     ];
 
     mockDb.get.mockResolvedValueOnce(null); // User does not exist

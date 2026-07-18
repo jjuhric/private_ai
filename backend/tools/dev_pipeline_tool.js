@@ -7,7 +7,6 @@ const logger = require('../utils/logger');
 async function handleDevPipelineTool(action, params, options = {}) {
   const db = await getDb();
   const userId = options.userId || 1;
-  const githubToken = process.env.GITHUB_TOKEN;
 
   // Build standard settings object for sub-agents
   const settings = {
@@ -63,7 +62,7 @@ Instructions:
 
         let devAgentOutput = '';
         try {
-          devAgentOutput = await runWorkerAgent('developer_agent', settings, devTask, db, userId, githubToken);
+          devAgentOutput = await runWorkerAgent('developer_agent', settings, devTask, db, userId);
         } catch (err) {
           logger.error(`[Dev Pipeline] Developer agent failed: ${err.message}`);
           await db.run('UPDATE dev_pipeline SET status = "failed" WHERE request_id = ?', [requestId]);
@@ -110,7 +109,7 @@ If the tool is safe, fully complete, and ready for production, end your review w
 
         let qaAgentOutput = '';
         try {
-          qaAgentOutput = await runWorkerAgent('qa_engineer', settings, qaTask, db, userId, githubToken);
+          qaAgentOutput = await runWorkerAgent('qa_engineer', settings, qaTask, db, userId);
         } catch (err) {
           logger.error(`[Dev Pipeline] QA agent failed: ${err.message}`);
           await db.run('UPDATE dev_pipeline SET status = "failed" WHERE request_id = ?', [requestId]);

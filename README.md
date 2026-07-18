@@ -58,11 +58,10 @@ graph TB
 
 ## ⚙️ Device Setup & Deployment
 
-PATTI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, GitHub Personal Access Tokens, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/[USER]/private_ai/wiki/Installation).
+PATTI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/[USER]/private_ai/wiki/Installation).
 
 ### 🔍 Core Setup Requirements
 - **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
-- **GitHub Personal Access Token (PAT)**: **(REQUIRED)** Required to fetch tool repository components and download code updates.
 - **Local LLM (LM Studio / Ollama)**: **(REQUIRED)** The system defaults entirely to your Local LLM. Online API keys (e.g. Gemini) are optional fallbacks.
 - **Working Directory**: **(REQUIRED)** The absolute local directory path where code files are saved and compiled. Dynamically resolved on startup and configurable in Settings.
 
@@ -84,7 +83,7 @@ The Windows PC acts as the central brain. It runs the local LLM integration, coo
    Set-ExecutionPolicy Bypass -Scope Process -Force
    .\setup.ps1
    ```
-   Follow the setup prompts to input your name, zipcode, local LLM URL, and GitHub token.
+   Follow the setup prompts to input your name, zipcode, and local LLM URL.
 3. **Launch Development Servers**:
    ```powershell
    npm run dev

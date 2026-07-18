@@ -171,7 +171,6 @@ DEFAULT_LOCAL_URL="http://localhost:1234/v1"
 DEFAULT_LOCAL_KEY=""
 DEFAULT_ONLINE_KEY=""
 DEFAULT_ONLINE_PROVIDER="gemini"
-DEFAULT_GITHUB_TOKEN=""
 DEFAULT_BUILD_FE="y"
 DEFAULT_PORT="3000"
 DEFAULT_MAIN_HOST_IP="uhrick-home.local"
@@ -180,7 +179,6 @@ DEFAULT_MQTT_BROKER_URL="mqtt://localhost:1883"
 DEFAULT_MQTT_NODE_ID="windows-main"
 DEFAULT_MQTT_USERNAME=""
 DEFAULT_MQTT_PASSWORD=""
-DEFAULT_TOOL_REGISTRY_REPO="https://github.com/[USER]/private_ai_tools.git"
 DEFAULT_TOOL_REGISTRY_LOCAL_PATH="./tool_registry"
 DEFAULT_USER_NAME=""
 DEFAULT_USER_ZIPCODE=""
@@ -192,7 +190,6 @@ if [ -f ".env" ]; then
     DEFAULT_LOCAL_URL=$(grep -E "^LOCAL_LLM_URL=" .env | cut -d'=' -f2 || echo "http://localhost:1234/v1")
     DEFAULT_LOCAL_KEY=$(grep -E "^LOCAL_LLM_KEY=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_ONLINE_KEY=$(grep -E "^GEMINI_API_KEY=" .env | cut -d'=' -f2 || echo "")
-    DEFAULT_GITHUB_TOKEN=$(grep -E "^GITHUB_TOKEN=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_ONLINE_PROVIDER=$(grep -E "^ONLINE_PROVIDER=" .env | cut -d'=' -f2 || echo "gemini")
     DEFAULT_WEATHER_KEY=$(grep -E "^WEATHER_API_KEY=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_MAIN_HOST_IP=$(grep -E "^MAIN_HOST_IP=" .env | cut -d'=' -f2 || echo "uhrick-home.local")
@@ -201,7 +198,6 @@ if [ -f ".env" ]; then
     DEFAULT_MQTT_NODE_ID=$(grep -E "^MQTT_NODE_ID=" .env | cut -d'=' -f2 || echo "windows-main")
     DEFAULT_MQTT_USERNAME=$(grep -E "^MQTT_USERNAME=" .env | cut -d'=' -f2 || echo "")
     DEFAULT_MQTT_PASSWORD=$(grep -E "^MQTT_PASSWORD=" .env | cut -d'=' -f2 || echo "")
-    DEFAULT_TOOL_REGISTRY_REPO=$(grep -E "^TOOL_REGISTRY_REPO=" .env | cut -d'=' -f2 || echo "https://github.com/[USER]/private_ai_tools.git")
     DEFAULT_TOOL_REGISTRY_LOCAL_PATH=$(grep -E "^TOOL_REGISTRY_LOCAL_PATH=" .env | cut -d'=' -f2 || echo "./tool_registry")
     DEFAULT_IS_HOST=$(grep -E "^IS_HOST=" .env | cut -d'=' -f2 || echo "true")
     
@@ -221,7 +217,6 @@ if [ -f ".env" ]; then
             DEFAULT_LOCAL_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.local_key || '$DEFAULT_LOCAL_KEY'); } catch(e) { console.log('$DEFAULT_LOCAL_KEY'); }")
             DEFAULT_ONLINE_PROVIDER=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_provider || '$DEFAULT_ONLINE_PROVIDER'); } catch(e) { console.log('$DEFAULT_ONLINE_PROVIDER'); }")
             DEFAULT_ONLINE_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.online_key || '$DEFAULT_ONLINE_KEY'); } catch(e) { console.log('$DEFAULT_ONLINE_KEY'); }")
-            DEFAULT_GITHUB_TOKEN=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.github_token || '$DEFAULT_GITHUB_TOKEN'); } catch(e) { console.log('$DEFAULT_GITHUB_TOKEN'); }")
             DEFAULT_USER_NAME=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.name || ''); } catch(e) { console.log(''); }")
             DEFAULT_USER_ZIPCODE=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.zipcode || ''); } catch(e) { console.log(''); }")
             DEFAULT_WEATHER_KEY=$(echo "$db_settings" | node -e "const fs = require('fs'); try { const d = JSON.parse(fs.readFileSync(0, 'utf-8')); console.log(d.weather_api_key || ''); } catch(e) { console.log(''); }")
@@ -245,7 +240,6 @@ if [ "$NON_INTERACTIVE" = true ]; then
     LOCAL_URL="$DEFAULT_LOCAL_URL"
     LOCAL_KEY="$DEFAULT_LOCAL_KEY"
     ONLINE_KEY="$DEFAULT_ONLINE_KEY"
-    GITHUB_TOKEN="$DEFAULT_GITHUB_TOKEN"
     USER_NAME="$DEFAULT_USER_NAME"
     USER_ZIPCODE="$DEFAULT_USER_ZIPCODE"
     WEATHER_KEY="$DEFAULT_WEATHER_KEY"
@@ -335,16 +329,6 @@ else
         read -p "Enter Online Gemini API Key (optional) [${DEFAULT_ONLINE_KEY}]: " ONLINE_KEY
         ONLINE_KEY=${ONLINE_KEY:-$DEFAULT_ONLINE_KEY}
 
-        # GitHub Access Token (REQUIRED for updates & tools)
-        while true; do
-            read -p "Enter GitHub Access Token (REQUIRED for updates/tools) [${DEFAULT_GITHUB_TOKEN}]: " GITHUB_TOKEN
-            GITHUB_TOKEN=${GITHUB_TOKEN:-$DEFAULT_GITHUB_TOKEN}
-            if [ ! -z "$GITHUB_TOKEN" ]; then
-                break
-            fi
-            echo "❌ Error: GitHub Access Token is required to download updates and sync custom tools."
-        done
-
         # Deployment mode / Frontend compilation check
         read -p "Build React Frontend on this node? (y/n) [y]: " BUILD_FE_YN
         BUILD_FE_YN=${BUILD_FE_YN:-y}
@@ -387,7 +371,6 @@ write_env_var "LOCAL_LLM_URL" "${LOCAL_URL}"
 write_env_var "LOCAL_LLM_KEY" "${LOCAL_KEY}"
 write_env_var "GEMINI_API_KEY" "${ONLINE_KEY}"
 write_env_var "WEATHER_API_KEY" "${WEATHER_KEY}"
-write_env_var "GITHUB_TOKEN" "${GITHUB_TOKEN}"
 write_env_var "PREFERRED_LOCAL_MODEL" "qwen2.5-coder-7b-instruct"
 write_env_var "PREFERRED_ONLINE_MODEL" "qwen2.5-coder-7b-instruct"
 write_env_var "SUPERVISOR_MODEL" "qwen2.5-coder-7b-instruct"
@@ -460,7 +443,6 @@ if [ "$IS_HOST" = "true" ]; then
         --local_url="$LOCAL_URL" \
         --local_key="$LOCAL_KEY" \
         --online_key="$ONLINE_KEY" \
-        --github_token="$GITHUB_TOKEN" \
         --online_provider="$DEFAULT_ONLINE_PROVIDER" \
         --name="$USER_NAME" \
         --zipcode="$USER_ZIPCODE" \
@@ -583,17 +565,6 @@ EOF
             nohup node node_client/client.js > /dev/null 2>&1 &
         fi
         log_success "Successfully started the background application process."
-    fi
-
-    # Setup daily cron job for autoupdate (Host Only)
-    if [ "$IS_HOST" = "true" ]; then
-        log "Configuring daily autoupdate task via cron..."
-        if command -v crontab &> /dev/null; then
-            (crontab -l 2>/dev/null | grep -v "setup.sh --non-interactive"; echo "0 3 * * * cd $TARGET_DIR && ./setup.sh --non-interactive > /dev/null 2>&1") | crontab -
-            log_success "Successfully registered daily autoupdate cron job at 3:00 AM."
-        else
-            log "crontab utility not found. Skipped registering daily autoupdate cron job."
-        fi
     fi
 fi
 

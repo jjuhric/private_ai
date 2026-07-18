@@ -78,7 +78,6 @@ State management coordinates settings adjustments:
 - **LLM Settings (`SettingsModal.jsx`)**:
    - Selects the active model provider (Local, Gemini, OpenAI, etc.).
    - Dynamically toggles required API keys, local base endpoints, and active model names.
-   - Manages developer tokens like the `github_token`.
    - Protects keys using secure toggles (eye/eye-closed toggles).
 - **User Profile (`ProfileModal.jsx`)**:
    - Updates geographic credentials (zipcode and country code) to resolve regional weather forecasts.

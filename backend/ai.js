@@ -1,7 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { callLMStudio } = require('./utils/lmstudio');
 const { handleCalendarTool } = require('./tools/calendar_tool');
-const { handleGitHubTool } = require('./tools/github_tool');
 const { handleWebSearchTool } = require('./tools/web_search_tool');
 const { handleGoogleNewsTool } = require('./tools/google_news_tool');
 const { handleWeatherTool } = require('./tools/weather_tool');
@@ -297,7 +296,6 @@ async function runAgentLoop({
   supervisorModel,
   userMessage,
   history,
-  githubToken,
   geminiKey, // legacy, fallback to onlineKey
   localBaseUrl,
   localApiKey,
@@ -852,7 +850,7 @@ ${toolOutput}
 
     let toolOutput = '';
     try {
-      toolOutput = await runWorkerAgent(targetAgent, settings, JSON.stringify({ task: userMessage }), db, userId, githubToken);
+      toolOutput = await runWorkerAgent(targetAgent, settings, JSON.stringify({ task: userMessage }), db, userId);
     } catch (err) {
       toolOutput = `Error getting information: ${err.message}`;
     }
@@ -1232,7 +1230,6 @@ If no changes are required and you can proceed without executing the code, then 
       'document_vault',
       'developer_agent',
       'node_agent',
-      'github_agent',
       'tool_creator_agent',
       'agent_creator_agent'
     ];
@@ -1243,8 +1240,6 @@ If no changes are required and you can proceed without executing the code, then 
       toolName = 'delegate_to_system_specialist';
     } else if (toolName === 'developer' || toolName === 'delegate_to_developer') {
       toolName = 'delegate_to_developer_agent';
-    } else if (toolName === 'github' || toolName === 'delegate_to_github') {
-      toolName = 'delegate_to_github_agent';
     } else if (toolName === 'tool_creator' || toolName === 'delegate_to_tool_creator') {
       toolName = 'delegate_to_tool_creator_agent';
     } else if (toolName === 'agent_creator' || toolName === 'delegate_to_agent_creator') {
@@ -1338,7 +1333,7 @@ If no changes are required and you can proceed without executing the code, then 
       onThought(`Delegating sub-task to Agent "${agentName}": "${subTask}"...\n`);
       if (onAgentStatus) onAgentStatus({ agent: agentName, status: 'active' });
       try {
-        toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId, githubToken);
+        toolOutput = await runWorkerAgent(agentName, settings, subTask, db, userId);
       } catch (err) {
         try {
           const { broadcastAlert } = require('./routes/alerts');
@@ -1398,8 +1393,6 @@ If no changes are required and you can proceed without executing the code, then 
       // Execute direct fallback tools of supervisor
       if (decision.tool === 'calendar') {
         toolOutput = await handleCalendarTool(db, userId, decision.action, decision.params);
-      } else if (decision.tool === 'github') {
-        toolOutput = await handleGitHubTool(githubToken, decision.action, decision.params);
       } else if (decision.tool === 'search_web') {
         const q = decision.params?.query || userMessage;
         toolOutput = await handleWebSearchTool(db, userId, q);

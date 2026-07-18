@@ -140,7 +140,6 @@ $defaultLocalUrl = "http://localhost:1234/v1"
 $defaultLocalKey = ""
 $defaultOnlineKey = ""
 $defaultOnlineProvider = "gemini"
-$defaultGithubToken = ""
 $defaultBuildFe = "y"
 $defaultPort = "3000"
 $defaultMainHostIp = "uhrick-home.local"
@@ -149,7 +148,6 @@ $defaultMqttBrokerUrl = "mqtt://localhost:1883"
 $defaultMqttNodeId = "windows-main"
 $defaultMqttUsername = ""
 $defaultMqttPassword = ""
-$defaultToolRegistryRepo = "https://github.com/[USER]/private_ai_tools.git"
 $defaultToolRegistryLocalPath = "./tool_registry"
 $defaultUserName = ""
 $defaultUserZipcode = ""
@@ -165,7 +163,6 @@ if (Test-Path ".env") {
         if ($line -match "^LOCAL_LLM_KEY=(.*)") { $defaultLocalKey = $Matches[1].Trim() }
         if ($line -match "^GEMINI_API_KEY=(.*)") { $defaultOnlineKey = $Matches[1].Trim() }
         if ($line -match "^WEATHER_API_KEY=(.*)") { $defaultWeatherKey = $Matches[1].Trim() }
-        if ($line -match "^GITHUB_TOKEN=(.*)") { $defaultGithubToken = $Matches[1].Trim() }
         if ($line -match "^ONLINE_PROVIDER=(.*)") { $defaultOnlineProvider = $Matches[1].Trim() }
         if ($line -match "^MAIN_HOST_IP=(.*)") { $defaultMainHostIp = $Matches[1].Trim() }
         if ($line -match "^DB_PATH=(.*)") { $defaultDbPath = $Matches[1].Trim() }
@@ -173,7 +170,6 @@ if (Test-Path ".env") {
         if ($line -match "^MQTT_NODE_ID=(.*)") { $defaultMqttNodeId = $Matches[1].Trim() }
         if ($line -match "^MQTT_USERNAME=(.*)") { $defaultMqttUsername = $Matches[1].Trim() }
         if ($line -match "^MQTT_PASSWORD=(.*)") { $defaultMqttPassword = $Matches[1].Trim() }
-        if ($line -match "^TOOL_REGISTRY_REPO=(.*)") { $defaultToolRegistryRepo = $Matches[1].Trim() }
         if ($line -match "^TOOL_REGISTRY_LOCAL_PATH=(.*)") { $defaultToolRegistryLocalPath = $Matches[1].Trim() }
     }
     
@@ -189,7 +185,6 @@ if (Test-Path ".env") {
                 if ($dbSettings.local_key) { $defaultLocalKey = $dbSettings.local_key }
                 if ($dbSettings.online_provider) { $defaultOnlineProvider = $dbSettings.online_provider }
                 if ($dbSettings.online_key) { $defaultOnlineKey = $dbSettings.online_key }
-                if ($dbSettings.github_token) { $defaultGithubToken = $dbSettings.github_token }
                 if ($dbSettings.name) { $defaultUserName = $dbSettings.name }
                 if ($dbSettings.zipcode) { $defaultUserZipcode = $dbSettings.zipcode }
                 if ($dbSettings.weather_api_key) { $defaultWeatherKey = $dbSettings.weather_api_key }
@@ -210,7 +205,6 @@ if ($NonInteractive) {
     $localUrl = $defaultLocalUrl
     $localKey = $defaultLocalKey
     $onlineKey = $defaultOnlineKey
-    $githubToken = $defaultGithubToken
     $userName = $defaultUserName
     $userZipcode = $defaultUserZipcode
     $weatherKey = $defaultWeatherKey
@@ -274,14 +268,6 @@ if ($NonInteractive) {
         $onlineKey = Read-Host "Enter Online Gemini API Key (optional) [$defaultOnlineKey]"
         if ([string]::IsNullOrWhiteSpace($onlineKey)) { $onlineKey = $defaultOnlineKey }
 
-        # GitHub Access Token (REQUIRED for updates & tools)
-        while ($true) {
-            $githubToken = Read-Host "Enter GitHub Access Token (REQUIRED for updates/tools) [$defaultGithubToken]"
-            if ([string]::IsNullOrWhiteSpace($githubToken)) { $githubToken = $defaultGithubToken }
-            if (-not [string]::IsNullOrWhiteSpace($githubToken)) { break }
-            Write-Host "❌ Error: GitHub Access Token is required to download updates and sync custom tools." -ForegroundColor Red
-        }
-
         $buildFeYN = Read-Host "Build React Frontend on this node? (y/n) [y]"
         if ([string]::IsNullOrWhiteSpace($buildFeYN)) { $buildFeYN = "y" }
 
@@ -334,7 +320,6 @@ Write-EnvVar "LOCAL_LLM_URL" $localUrl
 Write-EnvVar "LOCAL_LLM_KEY" $localKey
 Write-EnvVar "GEMINI_API_KEY" $onlineKey
 Write-EnvVar "WEATHER_API_KEY" $weatherKey
-Write-EnvVar "GITHUB_TOKEN" $githubToken
 Write-EnvVar "PREFERRED_LOCAL_MODEL" "qwen2.5-coder-7b-instruct"
 Write-EnvVar "PREFERRED_ONLINE_MODEL" "qwen2.5-coder-7b-instruct"
 Write-EnvVar "SUPERVISOR_MODEL" "qwen2.5-coder-7b-instruct"
@@ -419,7 +404,6 @@ if ($isHost -eq "true") {
         --local_url="$localUrl" `
         --local_key="$localKey" `
         --online_key="$onlineKey" `
-        --github_token="$githubToken" `
         --online_provider="$defaultOnlineProvider" `
         --name="$userName" `
         --zipcode="$userZipcode" `
@@ -463,13 +447,11 @@ if ($isHost -eq "true") {
 Write-Log "Configuring Windows background service..."
 $scriptRoot = Resolve-Path "."
 $taskName = "PrivateAI-Assistant"
-$updateTaskName = "PrivateAI-Updater"
 $taskStarted = $false
 
 try {
-    # Stop existing scheduled tasks if running
+    # Stop existing scheduled task if running
     Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    Stop-ScheduledTask -TaskName $updateTaskName -ErrorAction SilentlyContinue
 
     $nodePath = (Get-Command node).Source
     $targetScript = if ($isHost -eq "true") { "backend/server.js" } else { "node_client/client.js" }
@@ -511,17 +493,6 @@ Loop
     Start-ScheduledTask -TaskName $taskName -ErrorAction Stop
     Write-Log "Successfully started the background scheduled task '$taskName'." "Green"
     $taskStarted = $true
-
-    if ($isHost -eq "true") {
-        # Register Daily Autoupdate Task (Host Only)
-        Write-Log "Configuring daily autoupdate task..."
-        $updateAction = New-ScheduledTaskAction -Execute "wscript.exe" -Argument "`"$scriptRoot\run-updater.vbs`""
-        $updateTrigger = New-ScheduledTaskTrigger -Daily -At "3:00AM"
-        $updateSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-        
-        Register-ScheduledTask -TaskName $updateTaskName -Action $updateAction -Trigger $updateTrigger -Settings $updateSettings -Description "Private AI Assistant Daily Autoupdate" -Force | Out-Null
-        Write-Log "Successfully registered/updated background scheduled task '$updateTaskName' to run daily at 3:00 AM." "Green"
-    }
 
 } catch {
     Write-Log "Failed to register or start Scheduled Tasks: $_" "Yellow"

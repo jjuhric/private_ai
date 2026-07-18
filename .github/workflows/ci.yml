@@ -57,25 +57,3 @@ jobs:
         run: npm run build
       - name: Run Playwright E2E Tests
         run: npm run test:e2e
-
-  deploy:
-    needs: [backend-tests, frontend-tests, e2e-tests]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Connect to Tailscale Network
-        uses: tailscale/github-action@v2
-        with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-      - name: Trigger Pi Auto-Update Webhook
-        run: |
-          if [ -z "${{ secrets.PI_WEBHOOK_URL }}" ]; then
-            echo "PI_WEBHOOK_URL secret is not configured. Skipping webhook trigger."
-            exit 0
-          fi
-          PAYLOAD='{"ref":"${{ github.sha }}"}'
-          SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "${{ secrets.UPDATE_WEBHOOK_SECRET }}" | awk '{print "sha256="$2}')
-          curl -X POST "${{ secrets.PI_WEBHOOK_URL }}/api/update" \
-            -H "Content-Type: application/json" \
-            -H "X-Hub-Signature-256: $SIG" \
-            -d "$PAYLOAD"

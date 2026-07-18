@@ -81,7 +81,6 @@ function App() {
   const [settings, setSettings] = useState({
     provider: 'local',
     model_name: 'qwen2.5-coder-7b-instruct',
-    github_token: '',
     local_key: '',
     local_url: 'http://192.168.1.42:1234/v1',
     local_api_style: 'openai',
@@ -96,7 +95,6 @@ function App() {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showLocalKey, setShowLocalKey] = useState(false);
   const [showOnlineKey, setShowOnlineKey] = useState(false);
-  const [showGithubToken, setShowGithubToken] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profile, setProfile] = useState({ name: '', zipcode: '', country: 'US', temp_unit: 'imperial', weather_api_key: '', dob: '', gender: '', political_leaning: 'Undecided', interests: [] });
   const [liveModel, setLiveModel] = useState('');
@@ -477,7 +475,6 @@ function App() {
         const loadedSettings = {
           provider: data.provider || 'local',
           model_name: data.model_name || 'qwen2.5-coder-7b-instruct',
-          github_token: data.github_token || '',
           gemini_key: data.gemini_key || '',
           local_key: data.local_key || '',
           local_url: data.local_url || 'http://192.168.1.42:1234/v1',
@@ -1127,8 +1124,6 @@ function App() {
         setShowLocalKey={setShowLocalKey}
         showOnlineKey={showOnlineKey}
         setShowOnlineKey={setShowOnlineKey}
-        showGithubToken={showGithubToken}
-        setShowGithubToken={setShowGithubToken}
         onFetchLocalModels={fetchLocalModels}
         currentUser={user}
         token={token}

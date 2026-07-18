@@ -13,8 +13,6 @@ export default function SettingsModal({
   setShowLocalKey,
   showOnlineKey,
   setShowOnlineKey,
-  showGithubToken,
-  setShowGithubToken,
   onFetchLocalModels,
   currentUser,
   token
@@ -299,42 +297,6 @@ export default function SettingsModal({
               </div>
             </div>
           )}
-
-          <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
-            <h4 style={{ marginBottom: 12, fontSize: '0.95rem' }}>GitHub Integration</h4>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label>GitHub Personal Access Token (PAT)</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showGithubToken ? 'text' : 'password'}
-                  className="form-control"
-                  style={{ paddingRight: '40px' }}
-                  placeholder="ghp_..."
-                  value={settings.github_token}
-                  onChange={e => setSettings(prev => ({ ...prev, github_token: e.target.value }))}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowGithubToken(!showGithubToken)}
-                  style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: 0
-                  }}
-                >
-                  {showGithubToken ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-          </div>
 
           <div style={{ borderTop: '1px solid var(--border-glass)', padding: '16px 0 0 0', marginTop: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

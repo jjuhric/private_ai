@@ -467,7 +467,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
   }
 }
 
-async function runWorkerAgent(agentName, settings, task, db, userId, githubToken) {
+async function runWorkerAgent(agentName, settings, task, db, userId) {
   global.activeAgentOps = (global.activeAgentOps || 0) + 1;
   try {
     let targetAgent = agentName;
@@ -481,7 +481,7 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     const workingDirectory = settings.workingDirectory || path.resolve(path.join(__dirname, '../..'));
     
     // Selectively append workspace context
-    const needsWorkspace = ['developer_agent', 'qa_engineer', 'tool_creator_agent', 'agent_creator_agent', 'coder', 'github_agent'].includes(targetAgent);
+    const needsWorkspace = ['developer_agent', 'qa_engineer', 'tool_creator_agent', 'agent_creator_agent', 'coder'].includes(targetAgent);
     if (needsWorkspace) {
       const workspaceContext = `\n\n### Workspace System Directories:
 - Root Working Directory: ${workingDirectory}
@@ -575,9 +575,9 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
     }
 
     // Rule 1 & 8: Intercept write actions or tool generation cycles
-    const isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) || 
+    const isMutationAction = ['write_file', 'execute_command'].includes(decision.tool) ||
                              (decision.tool === 'dev_pipeline' && decision.action === 'create_tool') ||
-                             (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command', 'update_node'].includes(decision.action));
+                             (decision.tool === 'remote_node_bridge' && ['write_file', 'run_command'].includes(decision.action));
 
     if (isMutationAction && settings.onCommandApprovalRequired) {
       const approved = await settings.onCommandApprovalRequired({
@@ -611,9 +611,6 @@ async function runWorkerAgent(agentName, settings, task, db, userId, githubToken
         settings,
         agentName
       });
-    } else if (decision.tool === 'github') {
-      const { handleGitHubTool } = require('../tools/github_tool');
-      output = await handleGitHubTool(githubToken, decision.action, decision.params);
     } else if (decision.tool === 'calendar') {
       const { handleCalendarTool } = require('../tools/calendar_tool');
       output = await handleCalendarTool(db, userId, decision.action, decision.params);
@@ -905,7 +902,7 @@ async function runSupervisorTurn(systemPrompt, settings, userMessage) {
   return JSON.parse(respText);
 }
 
-async function runSupervisorHandoff(userPrompt, settings = {}, db = null, userId = null, githubToken = null) {
+async function runSupervisorHandoff(userPrompt, settings = {}, db = null, userId = null) {
   const supervisorPrompt = AGENT_PROMPTS.supervisor;
   if (!supervisorPrompt) throw new Error('Supervisor agent prompt not found.');
 
@@ -924,7 +921,7 @@ async function runSupervisorHandoff(userPrompt, settings = {}, db = null, userId
     ? decision.refined_data
     : JSON.stringify(decision.refined_data || {});
 
-  const output = await runWorkerAgent(workerName, settings, refinedContext, db, userId, githubToken);
+  const output = await runWorkerAgent(workerName, settings, refinedContext, db, userId);
   return {
     supervisor_decision: decision,
     worker_output: output

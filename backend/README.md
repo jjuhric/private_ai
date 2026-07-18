@@ -107,8 +107,7 @@ sequenceDiagram
 - **QA Engineer**: Audits source code and runs the test suites.
 - **Weather Expert**: Connects to OpenWeatherMap to retrieve detailed forecasts.
 - **System Agent**: Reads system hardware configurations, battery status, CPU temperatures, and executes local system tasks.
-- **GitHub Agent**: Manages branches, commits changes, and generates pull requests on GitHub, with strict constraints blocking repository creation or direct changes to `main`/`master` branches.
-- **Tool Creation Agent**: Designs and coordinates new tool additions. It creates a Tool Plan, prompts the user via the supervisor for a `yes`/`no` approval, and coordinates with Developer/QA nodes to implement and test the new tool. Local betterment tools are kept private via `.gitignore`, while shared tools are pushed to GitHub.
+- **Tool Creation Agent**: Designs and coordinates new tool additions. It creates a Tool Plan, prompts the user via the supervisor for a `yes`/`no` approval, and coordinates with Developer/QA nodes to implement and test the new tool locally.
 - **Agent Creation Agent**: Designs and coordinates new agent creations or edits. It compiles an Agent Plan, requests user approval via the supervisor UAC dialog, and automates prompt additions and coordinator registrations.
 
 ---
@@ -168,7 +167,6 @@ erDiagram
         int user_id PK, FK
         string provider
         string model_name
-        string github_token
         string gemini_key
         string local_key
         string local_url

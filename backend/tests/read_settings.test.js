@@ -57,8 +57,7 @@ describe('read_settings.js Tests', () => {
       local_url: 'http://192.168.1.50:1234/v1',
       local_key: 'local_secret',
       online_provider: 'gemini',
-      online_key: 'gemini_secret',
-      github_token: 'github_secret'
+      online_key: 'gemini_secret'
     });
 
     await main();

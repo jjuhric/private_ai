@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, GitBranch, Code, Shield, Wrench, UserPlus, Calendar, ChevronLeft, ChevronRight, Trophy, Newspaper } from 'lucide-react';
+import { Network, FileText, Upload, Trash2, Cpu, Eye, CheckCircle, RefreshCw, Layers, Plus, Server, Monitor, Search, BookOpen, X, BarChart2, Cloud, Code, Shield, Wrench, UserPlus, Calendar, ChevronLeft, ChevronRight, Trophy, Newspaper } from 'lucide-react';
 import TokenCountView from './TokenCountView';
 import RpiTerminalModal from './RpiTerminalModal';
 import LMStudioLogsView from './LMStudioLogsView';
@@ -59,12 +59,6 @@ const agents = [
     name: 'Document Vault Agent',
     icon: FileText,
     desc: 'Performs semantic vector search over uploaded private documents using cosine similarity.'
-  },
-  {
-    type: 'github',
-    name: 'GitHub Agent',
-    icon: GitBranch,
-    desc: 'Performs GitHub operations: branching, committing, PRs. Cannot push to main/master or create repos.'
   },
   {
     type: 'qa',
@@ -635,7 +629,6 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
       if (agentType === 'calendar' && (thought.includes('calendar_handler') || thought.includes('calendar expert') || thought.includes('calendar'))) return 'Active';
       if (agentType === 'crawler' && (thought.includes('web_searcher') || thought.includes('search_web') || thought.includes('web searcher'))) return 'Active';
       if (agentType === 'rag' && (thought.includes('document_vault') || thought.includes('document vault') || thought.includes('rag'))) return 'Active';
-      if (agentType === 'github' && (thought.includes('github_agent') || thought.includes('github expert') || thought.includes('github'))) return 'Active';
       if (agentType === 'qa' && (thought.includes('qa_engineer') || thought.includes('qa engineer') || thought.includes('qa_agent'))) return 'Active';
       if (agentType === 'tool_creator' && (thought.includes('tool_creator') || thought.includes('tool creation'))) return 'Active';
       if (agentType === 'agent_creator' && (thought.includes('agent_creator') || thought.includes('agent creation'))) return 'Active';
@@ -658,7 +651,6 @@ export default function App({ toolLogs: propToolLogs, activeAgent: propActiveAge
     if (agentType === 'crawler' && (currentAgent === 'web_searcher' || currentAgent === 'search_web' || currentAgent === 'google_news')) return 'Active';
     if (agentType === 'rag' && (currentAgent === 'document_vault' || currentAgent === 'query_vault')) return 'Active';
     if (agentType === 'dev' && (currentAgent === 'coder' || currentAgent === 'read_file' || currentAgent === 'write_file' || currentAgent === 'execute_command')) return 'Active';
-    if (agentType === 'github' && (currentAgent === 'github_agent' || currentAgent === 'github')) return 'Active';
     if (agentType === 'tool_creator' && (currentAgent === 'tool_creator_agent' || currentAgent === 'tool_creator' || currentAgent === 'dev_pipeline')) return 'Active';
     if (agentType === 'agent_creator' && (currentAgent === 'agent_creator_agent' || currentAgent === 'agent_creator')) return 'Active';
     if (agentType === 'qa' && currentAgent === 'qa_engineer') return 'Active';

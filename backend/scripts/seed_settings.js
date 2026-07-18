@@ -27,7 +27,6 @@ async function main(argv = process.argv) {
   const localKey = args.local_key || process.env.LOCAL_LLM_KEY || null;
   const onlineProvider = args.online_provider || process.env.ONLINE_PROVIDER || 'gemini';
   const onlineKey = args.online_key || process.env.GEMINI_API_KEY || null;
-  const githubToken = args.github_token || process.env.GITHUB_TOKEN || null;
 
   if (username.length === 0) {
     console.error('Error: Username cannot be empty.');
@@ -75,7 +74,6 @@ async function main(argv = process.argv) {
     // Encrypt keys
     const encryptedLocalKey = localKey ? encrypt(localKey) : null;
     const encryptedOnlineKey = onlineKey ? encrypt(onlineKey) : null;
-    const encryptedGithubToken = githubToken ? encrypt(githubToken) : null;
 
     // Determine default provider (Rule: always default to local LLM first unless explicitly changed in settings)
     const provider = 'local';
@@ -87,16 +85,15 @@ async function main(argv = process.argv) {
 
     await db.run(`
       INSERT INTO user_settings (
-        user_id, provider, model_name, github_token, local_key, 
+        user_id, provider, model_name, local_key,
         local_url, local_api_style, online_key, online_provider,
         preferred_local_model, preferred_online_model, supervisor_model,
         device_type, is_main_host, working_directory
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         provider = excluded.provider,
         model_name = excluded.model_name,
-        github_token = COALESCE(excluded.github_token, github_token),
         local_key = COALESCE(excluded.local_key, local_key),
         local_url = COALESCE(excluded.local_url, local_url),
         local_api_style = COALESCE(excluded.local_api_style, local_api_style),
@@ -112,7 +109,6 @@ async function main(argv = process.argv) {
       userId,
       provider,
       modelName,
-      encryptedGithubToken,
       encryptedLocalKey,
       localUrl,
       args.local_api_style || 'openai',

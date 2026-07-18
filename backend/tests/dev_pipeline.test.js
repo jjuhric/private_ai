@@ -9,11 +9,6 @@ jest.mock('../utils/agents', () => ({
   runWorkerAgent: jest.fn()
 }));
 
-// Mock GitHub Tool
-jest.mock('../tools/github_tool', () => ({
-  handleGitHubTool: jest.fn()
-}));
-
 describe('Development Pipeline Tool Tests', () => {
   const testDbPath = path.join(__dirname, 'dev_pipeline_test.db');
   let db;
@@ -56,7 +51,6 @@ describe('Development Pipeline Tool Tests', () => {
 
   test('should successfully develop, test, QA, and commit a tool', async () => {
     const { runWorkerAgent } = require('../utils/agents');
-    const { handleGitHubTool } = require('../tools/github_tool');
 
     // Mock Developer Agent output
     runWorkerAgent.mockImplementation(async (agentName) => {
@@ -92,9 +86,6 @@ describe('Development Pipeline Tool Tests', () => {
       }
       return '';
     });
-
-    // Mock GitHub responses
-    handleGitHubTool.mockResolvedValue(JSON.stringify({ success: true, url: 'https://github.com/pr/1' }));
 
     const res = await handleDevPipelineTool('create_tool', {
       toolName: 'email_sender',
