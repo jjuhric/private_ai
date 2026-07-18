@@ -13,7 +13,14 @@ async function executeViaAssistantSDK(command) {
     return { success: false, reason: 'missing_credentials' };
   }
 
-  const GoogleAssistant = require('google-assistant');
+  let GoogleAssistant;
+  try {
+    GoogleAssistant = require('google-assistant');
+  } catch (e) {
+    logger.error(`[Google Assistant SDK] Failed to load module: ${e.message}`);
+    return { success: false, error: `Assistant SDK module failed to load: ${e.message}` };
+  }
+
   const config = {
     auth: {
       keyFilePath: credentialsPath,
