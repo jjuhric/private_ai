@@ -281,9 +281,8 @@ describe('Settings Router Tests', () => {
     expect(resCustom.body).toContain('custom-model-id');
   });
 
-  test('GET /api/settings/online-models - anthropic fallback path', async () => {
-    // Set provider to anthropic (which has no online API fetch, returns defaults directly)
-    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic" WHERE user_id = ?', [userId]);
+  test('GET /api/settings/online-models - anthropic fallback path (no key)', async () => {
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic", online_key = NULL WHERE user_id = ?', [userId]);
 
     const res = await request(app)
       .get('/api/settings/online-models')
@@ -291,6 +290,60 @@ describe('Settings Router Tests', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('claude-3-5-sonnet-latest');
+  });
+
+  test('GET /api/settings/online-models - anthropic live fetch success path', async () => {
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic", online_key = "anthropic_key" WHERE user_id = ?', [userId]);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: 'claude-3-7-sonnet-latest' }, { id: 'claude-3-5-haiku-latest' }]
+      })
+    });
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(['claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest']);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.anthropic.com/v1/models',
+      expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'anthropic_key', 'anthropic-version': '2023-06-01' }) })
+    );
+  });
+
+  test('GET /api/settings/online-models - anthropic live fetch failure falls back to defaults', async () => {
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic", online_key = "anthropic_key" WHERE user_id = ?', [userId]);
+
+    global.fetch.mockResolvedValueOnce({ ok: false, statusText: 'Unauthorized' });
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('claude-3-5-sonnet-latest');
+  });
+
+  test('GET /api/settings/online-models - openai fetches from the OpenAI base URL, not LOCAL_LLM_URL', async () => {
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "openai", online_key = "op_key", online_url = NULL WHERE user_id = ?', [userId]);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: [{ id: 'gpt-4o' }] })
+    });
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('api.openai.com'),
+      expect.anything()
+    );
   });
 
   test('GET /api/settings/online-models - fallback when API fails', async () => {
@@ -409,6 +462,33 @@ describe('Settings Router Tests', () => {
       .post('/api/settings/test-connection')
       .set('Authorization', `Bearer ${token}`)
       .send({ provider: 'online', onlineProvider: 'openai', onlineKey: 'invalid', onlineUrl: 'https://api.openai.com/v1' });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('POST /api/settings/test-connection - online anthropic success and fail', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+    let res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'anthropic', onlineKey: 'sk-ant-test' });
+    expect(res.statusCode).toBe(200);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.anthropic.com/v1/models',
+      expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'sk-ant-test', 'anthropic-version': '2023-06-01' }) })
+    );
+
+    // Missing key error
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'anthropic' });
+    expect(res.statusCode).toBe(400);
+
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    res = await request(app)
+      .post('/api/settings/test-connection')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'online', onlineProvider: 'anthropic', onlineKey: 'invalid' });
     expect(res.statusCode).toBe(400);
   });
 

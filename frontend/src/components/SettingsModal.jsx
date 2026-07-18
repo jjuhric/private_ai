@@ -245,7 +245,7 @@ export default function SettingsModal({
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. https://api.openai.com/v1"
+                    placeholder={settings.online_provider === 'anthropic' ? 'e.g. https://api.anthropic.com' : 'e.g. https://api.openai.com/v1'}
                     value={settings.online_url || ''}
                     onChange={e => setSettings(prev => ({ ...prev, online_url: e.target.value }))}
                   />
@@ -294,6 +294,12 @@ export default function SettingsModal({
                     {showOnlineKey ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                <p style={{ margin: '6px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  {settings.online_provider === 'anthropic' && 'Get an API key at console.anthropic.com (Settings → API Keys). Note: this is separate from a Claude.ai Pro/subscription plan — API usage is billed separately.'}
+                  {settings.online_provider === 'openai' && 'Get an API key at platform.openai.com (API keys page). This is separate from a ChatGPT Plus subscription.'}
+                  {settings.online_provider === 'gemini' && 'Get a free API key at aistudio.google.com/apikey.'}
+                  {' '}This is entirely optional — PATTI defaults to your local LLM and only calls an online provider if you enable this fallback.
+                </p>
               </div>
             </div>
           )}

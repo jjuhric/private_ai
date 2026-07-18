@@ -8,6 +8,14 @@ const { getEmbedding } = require('../utils/embeddings');
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
 
+// Provider-aware env var fallback: lets a user configure an online key purely
+// via environment variables without touching Settings UI.
+function envKeyForProvider(provider) {
+  if (provider === 'anthropic') return process.env.ANTHROPIC_API_KEY || '';
+  if (provider === 'openai') return process.env.OPENAI_API_KEY || '';
+  return process.env.GEMINI_API_KEY || '';
+}
+
 let idleUnloadTimer = null;
 
 function resetIdleUnloadTimer() {
@@ -278,7 +286,7 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
         provider: settings.provider,
         modelName: actualModel,
         onlineProvider: settings.online_provider || 'gemini',
-        onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+        onlineKey: decryptedOnlineKey || decryptedGeminiKey || envKeyForProvider(settings.online_provider || 'gemini'),
         geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
         localBaseUrl: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
         localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
@@ -350,7 +358,7 @@ router.post('/chat/stream', authenticateToken, streamLimiter, checkQuota, async 
             localApiKey: decryptedLocalKey || process.env.LOCAL_LLM_KEY || '',
             localApiStyle: settings.local_api_style || 'openai',
             onlineUrl: settings.online_url,
-            onlineKey: decryptedOnlineKey || decryptedGeminiKey || process.env.GEMINI_API_KEY || '',
+            onlineKey: decryptedOnlineKey || decryptedGeminiKey || envKeyForProvider(settings.online_provider || 'gemini'),
             geminiKey: decryptedGeminiKey || decryptedOnlineKey || process.env.GEMINI_API_KEY || '',
             onlineProvider: settings.online_provider || 'gemini',
             isAborted: () => streamAbortController.signal.aborted,

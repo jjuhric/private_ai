@@ -8,6 +8,11 @@ const { handleMemoryTool } = require('./tools/memory_tool');
 const { handleTimeTool } = require('./tools/time_tool');
 const logger = require('./utils/logger');
 
+// Anthropic doesn't share OpenAI's base URL, so give it its own default.
+function defaultOnlineBaseUrl(onlineProvider) {
+  return onlineProvider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1';
+}
+
 // Helper to call Local LLM (supporting openai, lm-studio, and anthropic API styles)
 async function callLocalLLMStream(baseUrl, apiKey, modelName, messages, apiStyle, onChunk, abortSignal, db, userId, provider) {
   const localStyle = apiStyle || 'openai';
@@ -660,7 +665,7 @@ ${toolOutput}
         targetKey = localApiKey;
         targetStyle = localApiStyle || 'openai';
       } else {
-        targetUrl = onlineUrl || 'https://api.openai.com/v1';
+        targetUrl = onlineUrl || defaultOnlineBaseUrl(onlineProvider);
         targetKey = onlineKey;
         targetStyle = onlineProvider || 'openai';
       }
@@ -912,7 +917,7 @@ ${profileDetailsText ? `Here is the user profile details context:\n${profileDeta
         targetKey = localApiKey;
         targetStyle = localApiStyle || 'openai';
       } else {
-        targetUrl = onlineUrl || 'https://api.openai.com/v1';
+        targetUrl = onlineUrl || defaultOnlineBaseUrl(onlineProvider);
         targetKey = onlineKey;
         targetStyle = onlineProvider || 'openai';
       }
@@ -1535,7 +1540,7 @@ ${accumulatedToolOutputs.length > 0 ? `Here are the gathered report/action resul
       targetKey = localApiKey;
       targetStyle = localApiStyle || 'openai';
     } else {
-      targetUrl = onlineUrl || 'https://api.openai.com/v1';
+      targetUrl = onlineUrl || defaultOnlineBaseUrl(onlineProvider);
       targetKey = onlineKey;
       targetStyle = onlineProvider || 'openai';
     }

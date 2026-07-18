@@ -1034,9 +1034,11 @@ function App() {
 
 
             <div className="model-config-badge">
-              <span className={`connection-dot ${settings.provider === 'gemini' ? 'online' : 'local'}`}></span>
+              <span className={`connection-dot ${settings.provider === 'online' ? 'online' : 'local'}`}></span>
               <span style={{ fontSize: '0.85rem', fontWeight: 550 }}>
-                {settings.provider === 'gemini' ? 'Online: Gemini' : 'Local AI'} ({liveModel ? liveModel.split('/').pop() : settings.model_name.split('/').pop()})
+                {settings.provider === 'online'
+                  ? `Online: ${{ gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Claude', custom: 'Custom' }[settings.online_provider] || settings.online_provider}`
+                  : 'Local AI'} ({liveModel ? liveModel.split('/').pop() : settings.model_name.split('/').pop()})
               </span>
             </div>
           </div>

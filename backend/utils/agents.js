@@ -48,6 +48,11 @@ const AGENT_PROMPTS = new Proxy({}, {
   }
 });
 
+// Anthropic doesn't share OpenAI's base URL, so give it its own default.
+function defaultOnlineBaseUrl(onlineProvider) {
+  return onlineProvider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1';
+}
+
 // Reusable function to execute a single LLM decision turn
 async function runAgentTurn(agentName, systemPrompt, settings, userMessage, history) {
   const {
@@ -110,7 +115,7 @@ History Context: ${JSON.stringify(history.slice(-5))}`;
   } else {
     let targetUrl = provider === 'local' 
       ? (localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1') 
-      : (onlineUrl || 'https://api.openai.com/v1');
+      : (onlineUrl || defaultOnlineBaseUrl(onlineProvider));
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
 
@@ -332,7 +337,7 @@ Do NOT include any other text, markdown wrapper, or conversational filler outsid
   } else {
     let targetUrl = provider === 'local' 
       ? (localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1') 
-      : (onlineUrl || 'https://api.openai.com/v1');
+      : (onlineUrl || defaultOnlineBaseUrl(onlineProvider));
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
 
@@ -799,7 +804,7 @@ async function runSupervisorTurn(systemPrompt, settings, userMessage) {
   } else {
     let targetUrl = provider === 'local' 
       ? (localBaseUrl || process.env.LOCAL_LLM_URL || 'http://localhost:1234/v1') 
-      : (onlineUrl || 'https://api.openai.com/v1');
+      : (onlineUrl || defaultOnlineBaseUrl(onlineProvider));
     let targetKey = provider === 'local' ? localApiKey : onlineKey;
     let targetStyle = provider === 'local' ? (localApiStyle || 'openai') : (onlineProvider || 'openai');
 

@@ -3,6 +3,19 @@ const router = express.Router();
 const { getDb } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
+// Anthropic doesn't share OpenAI's base URL, so give it its own default.
+function defaultOnlineBaseUrl(provider) {
+  return provider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1';
+}
+
+// Provider-aware env var fallback: lets a user configure a key purely via
+// environment variables (e.g. on first boot) without touching Settings UI.
+function envKeyForProvider(provider) {
+  if (provider === 'anthropic') return process.env.ANTHROPIC_API_KEY || '';
+  if (provider === 'openai') return process.env.OPENAI_API_KEY || '';
+  return process.env.GEMINI_API_KEY || '';
+}
+
 function resolveLlmModelsUrl(baseUrl, apiStyle = 'openai') {
   let url = (baseUrl || '').trim();
   if (!url) return '';
@@ -36,7 +49,8 @@ router.get('/', authenticateToken, async (req, res) => {
       return dec.substring(0, 4) + '••••••••' + dec.substring(dec.length - 4);
     };
 
-    const decOnlineKey = settings.online_key ? decrypt(settings.online_key) : (process.env.GEMINI_API_KEY || '');
+    const envOnlineKey = envKeyForProvider(settings.online_provider || 'gemini');
+    const decOnlineKey = settings.online_key ? decrypt(settings.online_key) : envOnlineKey;
     const isSetupComplete = !!(
       (settings.local_url && settings.local_url.startsWith('http')) ||
       process.env.LOCAL_LLM_URL ||
@@ -49,7 +63,7 @@ router.get('/', authenticateToken, async (req, res) => {
       ...settings,
       gemini_key: settings.gemini_key ? maskKey(settings.gemini_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
       local_key: settings.local_key ? maskKey(settings.local_key) : (process.env.LOCAL_LLM_KEY ? maskKey(process.env.LOCAL_LLM_KEY) : ''),
-      online_key: settings.online_key ? maskKey(settings.online_key) : (process.env.GEMINI_API_KEY ? maskKey(process.env.GEMINI_API_KEY) : ''),
+      online_key: settings.online_key ? maskKey(settings.online_key) : (envOnlineKey ? maskKey(envOnlineKey) : ''),
       local_url: settings.local_url || process.env.LOCAL_LLM_URL || 'http://192.168.1.42:1234/v1',
       preferred_local_model: settings.preferred_local_model || process.env.PREFERRED_LOCAL_MODEL || 'qwen2.5-coder-7b-instruct',
       preferred_online_model: settings.preferred_online_model || process.env.PREFERRED_ONLINE_MODEL || 'gemini-2.0-flash',
@@ -218,13 +232,21 @@ router.get('/online-models', authenticateToken, async (req, res) => {
     const url = settings?.online_url;
 
     const { decrypt } = require('../utils/crypto');
-    const key = decrypt(settings?.online_key) || process.env.GEMINI_API_KEY;
+    const key = decrypt(settings?.online_key) || envKeyForProvider(provider);
 
     if (!key) {
       return res.json(getDefaultOnlineModels(provider));
     }
 
-    if (provider === 'gemini') {
+    if (provider === 'anthropic') {
+      const response = await fetch('https://api.anthropic.com/v1/models', {
+        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' }
+      });
+      if (!response.ok) throw new Error(`Anthropic API error: ${response.statusText}`);
+      const data = await response.json();
+      const models = data.data ? data.data.map(m => m.id) : [];
+      return res.json(models.length > 0 ? models : getDefaultOnlineModels('anthropic'));
+    } else if (provider === 'gemini') {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
       if (!response.ok) throw new Error(`Gemini API error: ${response.statusText}`);
       const data = await response.json();
@@ -244,7 +266,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
         : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('gemini'));
     } else if (provider === 'openai') {
-      const endpoint = resolveLlmModelsUrl(process.env.LOCAL_LLM_URL);
+      const endpoint = resolveLlmModelsUrl(url || defaultOnlineBaseUrl('openai'));
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${key}` }
       });
@@ -326,8 +348,26 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
         } else {
           return res.status(400).json({ error: `Gemini verification failed with status ${testRes.status}` });
         }
+      } else if (activeProvider === 'anthropic') {
+        const key = onlineKey;
+        if (!key) return res.status(400).json({ error: 'API key is required' });
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        const testRes = await fetch('https://api.anthropic.com/v1/models', {
+          headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (testRes.ok) {
+          return res.json({ success: true, message: 'Anthropic connection successful' });
+        } else {
+          return res.status(400).json({ error: `Anthropic verification failed with status ${testRes.status}` });
+        }
       } else {
-        const baseUrl = onlineUrl || 'https://api.openai.com/v1';
+        const baseUrl = onlineUrl || defaultOnlineBaseUrl(activeProvider);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
 

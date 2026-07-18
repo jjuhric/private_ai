@@ -561,10 +561,10 @@ export default function SetupWizard({ token, onComplete }) {
                   {llmForm.online_provider !== 'gemini' && (
                     <div className="form-group" style={{ margin: 0 }}>
                       <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: '6px' }}>Online API Base URL</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="form-control"
-                        placeholder="e.g. https://api.openai.com/v1"
+                        placeholder={llmForm.online_provider === 'anthropic' ? 'e.g. https://api.anthropic.com' : 'e.g. https://api.openai.com/v1'}
                         value={llmForm.online_url || ''}
                         onChange={e => setLlmForm(prev => ({ ...prev, online_url: e.target.value }))}
                       />
