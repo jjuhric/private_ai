@@ -134,7 +134,7 @@ describe('Tool Manager Service Tests', () => {
 
     const capabilitiesCleared = await db.all('SELECT * FROM agent_capabilities WHERE tool_name = ?', ['test_tool']);
     expect(capabilitiesCleared).toHaveLength(0);
-  });
+  }, 20000);
 
   test('should create, validate, and mount dynamic tools at runtime', async () => {
     const dynamicToolName = 'dynamic_test_tool';

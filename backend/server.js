@@ -137,9 +137,6 @@ getDb().then(async (db) => {
       const safeUpdateService = require('./services/safe_update_service');
       safeUpdateService.startDaemon();
 
-      const hostAutoUpdate = require('./services/host_auto_update');
-      hostAutoUpdate.startHostAutoUpdater();
-
       const googleNestDiscovery = require('./services/google_nest_discovery');
       googleNestDiscovery.startGoogleNestDiscovery();
 
