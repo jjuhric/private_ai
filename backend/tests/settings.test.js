@@ -244,6 +244,44 @@ describe('Settings Router Tests', () => {
     expect(res.body).toEqual(['gemini-2.5-flash']);
   });
 
+  test('GET /api/settings/online-models - gemini filters out image/tts/audio/agent-preview models', async () => {
+    // Mirrors the real /v1beta/models catalog shape: chat models mixed in with
+    // image (Imagen/"nano-banana"), video (Veo), music (Lyria), TTS,
+    // embedding, and narrow agent-preview families that also expose
+    // generateContent. Only real chat models should survive the filter.
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        models: [
+          { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-2.5-pro', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-2.0-flash-001', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-flash-latest', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-1.0-pro', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-pro-vision', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-2.5-flash-preview-tts', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-2.5-flash-image', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-3-pro-image-preview', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/nano-banana-pro-preview', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/lyria-3-pro-preview', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-robotics-er-1.5-preview', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-2.5-computer-use-preview-10-2025', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/deep-research-preview-04-2026', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemma-4-31b-it', supportedGenerationMethods: ['generateContent'] },
+          { name: 'models/gemini-embedding-001', supportedGenerationMethods: ['embedContent'] },
+          { name: 'models/aqa', supportedGenerationMethods: ['generateAnswer'] }
+        ]
+      })
+    });
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-flash-latest']);
+  });
+
   test('GET /api/settings/online-models - openai and custom success paths', async () => {
     // OpenAI success path
     global.fetch.mockResolvedValueOnce({
@@ -312,6 +350,30 @@ describe('Settings Router Tests', () => {
       'https://api.anthropic.com/v1/models',
       expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'anthropic_key', 'anthropic-version': '2023-06-01' }) })
     );
+  });
+
+  test('GET /api/settings/online-models - anthropic filters out retired pre-Claude-3 models', async () => {
+    await mockTestDb.run('UPDATE user_settings SET online_provider = "anthropic", online_key = "anthropic_key" WHERE user_id = ?', [userId]);
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [
+          { id: 'claude-3-7-sonnet-latest' },
+          { id: 'claude-3-5-haiku-latest' },
+          { id: 'claude-2.1' },
+          { id: 'claude-2.0' },
+          { id: 'claude-instant-1.2' }
+        ]
+      })
+    });
+
+    const res = await request(app)
+      .get('/api/settings/online-models')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(['claude-3-7-sonnet-latest', 'claude-3-5-haiku-latest']);
   });
 
   test('GET /api/settings/online-models - anthropic live fetch failure falls back to defaults', async () => {

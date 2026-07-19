@@ -3,6 +3,28 @@ const router = express.Router();
 const { getDb } = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
+// Google's model catalog mixes real chat models in with image (Imagen,
+// "nano-banana"), video (Veo), music (Lyria), TTS, embedding, and narrow
+// agent-preview models (robotics, computer-use, deep-research) that all
+// happen to expose generateContent too. Rather than blacklist each new
+// non-chat family Google ships, only allow names that match the actual
+// chat-model naming shape: gemini-<version>-(flash|pro)[-lite][-latest|-preview],
+// or the version-less gemini-(flash|pro)[-lite]-latest aliases.
+const USABLE_GEMINI_PATTERN = /^gemini-(\d+(\.\d+)?-(flash|pro)(-lite)?(-latest|-preview)?|(flash|pro)(-lite)?-latest)$/;
+
+function isUsableGeminiModel(name) {
+  if (!USABLE_GEMINI_PATTERN.test(name)) return false;
+  if (name.startsWith('gemini-1.0')) return false; // deprecated generation
+  return true;
+}
+
+// Anthropic's /v1/models endpoint is all text/chat models (no image, audio,
+// or embedding families mixed in like Gemini/OpenAI have), so the only thing
+// worth filtering out is the retired pre-Claude-3 legacy line.
+function isUsableAnthropicModel(id) {
+  return !/^claude-(1|2|instant)/.test(id);
+}
+
 // Anthropic doesn't share OpenAI's base URL, so give it its own default.
 function defaultOnlineBaseUrl(provider) {
   return provider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1';
@@ -244,7 +266,9 @@ router.get('/online-models', authenticateToken, async (req, res) => {
       });
       if (!response.ok) throw new Error(`Anthropic API error: ${response.statusText}`);
       const data = await response.json();
-      const models = data.data ? data.data.map(m => m.id) : [];
+      const models = data.data
+        ? data.data.map(m => m.id).filter(isUsableAnthropicModel)
+        : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('anthropic'));
     } else if (provider === 'gemini') {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
@@ -254,15 +278,7 @@ router.get('/online-models', authenticateToken, async (req, res) => {
         ? data.models
           .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
           .map(m => m.name.replace(/^models\//, ''))
-          .filter(name => {
-            // 1. Exclude checkpoint versions like -001, -002, -003
-            if (/-\d{3}$/.test(name)) return false;
-            // 2. Exclude tuning, embedding, specialized QA, or other non-chat models
-            if (name.includes('tuning') || name.includes('-ft') || name.includes('aqa') || name.includes('embedding') || name.includes('chat')) return false;
-            // 3. Exclude deprecated 1.0 models
-            if (name.startsWith('gemini-1.0') || name.startsWith('gemini-pro-vision')) return false;
-            return true;
-          })
+          .filter(isUsableGeminiModel)
         : [];
       return res.json(models.length > 0 ? models : getDefaultOnlineModels('gemini'));
     } else if (provider === 'openai') {
