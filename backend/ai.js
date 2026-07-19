@@ -325,6 +325,13 @@ async function runAgentLoop({
   if (process.env.NODE_ENV !== 'test') {
     cleanedHistory = [];
   }
+  // Kept separate from cleanedHistory (which is intentionally wiped above so
+  // the Supervisor/worker loop treats each turn independently). Approval and
+  // clarification continuation flows - "did the user approve this command?",
+  // "what were the tasks they just approved?" - need to see the immediately
+  // preceding assistant turn regardless, or they have no way to know what's
+  // being responded to and will fabricate an answer instead.
+  const rawRecentHistory = firstUserIdx !== -1 ? history.slice(firstUserIdx) : [];
 
   // --- Direct Send Message to Device Interceptor ---
   const cleanMsgForSend = userMessage.trim().toLowerCase();
@@ -965,7 +972,7 @@ ${profileDetailsText ? `Here is the user profile details context:\n${profileDeta
   const seenToolCalls = new Set();
 
   // Intercept chat-based approvals for code execution
-  const lastAssistantMsg = [...cleanedHistory].reverse().find(msg => msg.role === 'assistant');
+  const lastAssistantMsg = [...rawRecentHistory].reverse().find(msg => msg.role === 'assistant');
   let customSystemPromptContext = '';
 
   if (lastAssistantMsg) {
@@ -1071,7 +1078,7 @@ ${profileDetailsText ? `Here is the user profile details context:\n${profileDeta
     } else if (lastAssistantMsg.content.includes('Why did you choose not to go forward with this code?')) {
       // The user is responding with their reason for rejection.
       // Find the original proposal in history.
-      const originalProposal = [...cleanedHistory].reverse().find(msg => msg.role === 'assistant' && msg.content.includes('[Supervisor Approval Required]'));
+      const originalProposal = [...rawRecentHistory].reverse().find(msg => msg.role === 'assistant' && msg.content.includes('[Supervisor Approval Required]'));
       let rejectedCommandInfo = '';
       if (originalProposal) {
         let parsedCommand = null;
@@ -1124,7 +1131,7 @@ If no changes are required and you can proceed without executing the code, then 
         mode1SystemPrompt,
         commSpecialistSettings,
         `Translate this user request: "${userMessage}"\nMode: Create Project Idea`,
-        []
+        rawRecentHistory
       );
 
       // Handle tool call if requested by the Communication Specialist

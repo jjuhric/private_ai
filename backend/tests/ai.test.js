@@ -348,6 +348,60 @@ describe('Agent Loop & LLM Stream Unit Tests', () => {
     expect(contents.join('')).toBe('Hi responder output.');
   });
 
+  test('runAgentLoop - passes prior INPUT_REQUIRED_CHOICES turn to Communication Specialist so "Approve Tasks" isn\'t answered blind', async () => {
+    // Regression test: the Communication Specialist's "Create Project Idea"
+    // translation step used to always receive an empty history array in
+    // non-test environments, so when the user replied "Approve Tasks" to a
+    // prior clarification prompt, it had zero grounding for what was being
+    // approved and fabricated an unrelated response instead. NODE_ENV is
+    // flipped here specifically to exercise that production-only code path
+    // (it's skipped entirely under NODE_ENV=test) and restored afterward.
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      routerDecisions = [
+        {
+          thought: 'User approved the previously proposed task breakdown.',
+          tool: 'none',
+          action: 'translate',
+          params: { requested_action: 'sports', data_needed: 'Dallas Cowboys schedule' }
+        },
+        { thought: 'Nothing further to do.', tool: 'none', action: '', params: {} }
+      ];
+
+      const priorChoicesPayload = `INPUT_REQUIRED_CHOICES:${JSON.stringify({
+        question: 'Would you like me to proceed with these tasks?\n1. Add a new skill.\n2. Fetch the ESPN schedule.',
+        choices: ['Approve Tasks', 'Cancel']
+      })}`;
+
+      await runAgentLoop({
+        db,
+        userId,
+        provider: 'local',
+        modelName: 'gemma',
+        supervisorModel: 'gemma',
+        userMessage: 'Approve Tasks',
+        history: [
+          { role: 'user', content: 'Add a new skill for yourself to use to fetch the ESPN schedule.' },
+          { role: 'assistant', content: priorChoicesPayload }
+        ],
+        onThought: jest.fn(),
+        onContent: jest.fn(),
+        onToolCall: jest.fn()
+      });
+
+      // The first non-streaming LLM call is the Communication Specialist's
+      // translate-to-Project-Idea step - its request body must carry the
+      // prior turn, not an empty history array.
+      const firstCallBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+      const promptText = JSON.stringify(firstCallBody);
+      expect(promptText).toContain('INPUT_REQUIRED_CHOICES');
+      expect(promptText).toContain('Add a new skill');
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
   test('callLocalLLMStream - handles custom URL patterns and endpoint failures', async () => {
     forceResponderError = true;
     routerDecisions = [
