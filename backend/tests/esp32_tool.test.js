@@ -137,4 +137,36 @@ describe('ESP32 Tool Tests', () => {
     expect(result).toContain('Error: Failed to communicate with ESP32 at 192.168.1.117');
     expect(result).toContain('message exceeds max length 240 by 10 characters');
   });
+
+  test('toggles screen successfully via POST /screen with the expected body', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, screen: 'on' })
+    });
+
+    const result = await handleEsp32Tool('192.168.1.117', null, 'toggle_screen', {});
+
+    expect(global.fetch).toHaveBeenCalledWith('http://192.168.1.117:80/screen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle screen' })
+    });
+    expect(JSON.parse(result)).toEqual({ success: true, screen: 'on' });
+  });
+
+  test('handles /screen endpoint unreachable error', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('Network offline'));
+
+    const result = await handleEsp32Tool('192.168.1.117', null, 'toggle_screen', {});
+    expect(result).toContain('Failed to communicate with ESP32');
+    expect(result).toContain('Network offline');
+  });
+
+  test('handles /screen endpoint bad response status', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+    const result = await handleEsp32Tool('192.168.1.117', null, 'toggle_screen', {});
+    expect(result).toContain('Failed to communicate with ESP32');
+    expect(result).toContain('ESP32 responded with status: 500');
+  });
 });

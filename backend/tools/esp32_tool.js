@@ -31,7 +31,7 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
   }
 
   if (!portVal) {
-    portVal = (action === 'send_message') ? 80 : 3000;
+    portVal = (action === 'send_message' || action === 'toggle_screen') ? 80 : 3000;
   }
 
   try {
@@ -48,6 +48,10 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
       url = `http://${ip}:${portVal}/message`;
       headers['Content-Type'] = 'application/json';
       bodyPayload = JSON.stringify({ message: params.message });
+    } else if (action === 'toggle_screen') {
+      url = `http://${ip}:${portVal}/screen`;
+      headers['Content-Type'] = 'application/json';
+      bodyPayload = JSON.stringify({ action: 'toggle screen' });
     } else {
       url = `http://${ip}:${portVal}/api/gpio/${action}`;
       headers['Content-Type'] = 'application/json';

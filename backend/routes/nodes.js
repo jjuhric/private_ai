@@ -610,4 +610,36 @@ router.post('/send-message', authenticateToken, async (req, res) => {
   }
 });
 
+// Toggle the screen on an ESP32 device: POST http://{ip}:{port}/screen
+// with body { "action": "toggle screen" } (handleEsp32Tool builds this).
+router.post('/toggle-screen', authenticateToken, async (req, res) => {
+  const { ip_address } = req.body;
+
+  if (!ip_address) {
+    return res.status(400).json({ error: 'ip_address is required' });
+  }
+
+  try {
+    const { handleEsp32Tool } = require('../tools/esp32_tool');
+    const toolResult = await handleEsp32Tool(ip_address, null, 'toggle_screen', {});
+
+    if (toolResult.startsWith('Error:') || toolResult.startsWith('Failed to communicate')) {
+      return res.status(500).json({ ok: false, error: toolResult });
+    }
+
+    try {
+      const parsed = JSON.parse(toolResult);
+      if (parsed.ok !== false && parsed.success !== false) {
+        return res.json({ ok: true, data: parsed });
+      } else {
+        return res.status(500).json({ ok: false, error: parsed.error || toolResult });
+      }
+    } catch (e) {
+      return res.json({ ok: true, output: toolResult });
+    }
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

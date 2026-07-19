@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, Cpu } from 'lucide-react';
+import { X, Send, Cpu, MonitorX } from 'lucide-react';
 
 export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = [] }) {
   const [devices, setDevices] = useState([]);
@@ -8,6 +8,7 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [togglingScreen, setTogglingScreen] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -160,6 +161,45 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleScreen = async () => {
+    setError('');
+    setSuccess('');
+
+    if (!selectedIp) {
+      setError("Please select a valid device IP Address.");
+      return;
+    }
+
+    if (isHostIp(selectedIp)) {
+      setError("Cannot send commands to the host's own IP address.");
+      return;
+    }
+
+    setTogglingScreen(true);
+
+    try {
+      const res = await fetch('/api/nodes/toggle-screen', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ip_address: selectedIp })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to toggle screen');
+      }
+
+      setSuccess('Screen toggled successfully!');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setTogglingScreen(false);
     }
   };
 
@@ -327,33 +367,56 @@ export default function Esp32MessageModal({ isOpen, onClose, token, hostIps = []
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-              style={{ flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer' }}
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading || !message.trim()}
-              style={{
-                flex: 1,
-                padding: '10px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <Send size={16} />
-              <span>{loading ? 'Sending...' : 'Send Message'}</span>
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+            <div>
+              {deviceType === 'ESP32' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleToggleScreen}
+                  disabled={togglingScreen}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <MonitorX size={16} />
+                  <span>{togglingScreen ? 'Toggling...' : 'Toggle Screen'}</span>
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose}
+                style={{ padding: '10px 16px', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading || !message.trim()}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Send size={16} />
+                <span>{loading ? 'Sending...' : 'Send Message'}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

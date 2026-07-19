@@ -54,6 +54,10 @@ jest.mock('../db', () => {
   return { getDb: jest.fn(() => Promise.resolve(mDb)) };
 });
 
+jest.mock('../tools/esp32_tool', () => ({
+  handleEsp32Tool: jest.fn()
+}));
+
 const app = express();
 app.use(express.json());
 app.use('/api/nodes', nodesRouter);
@@ -228,5 +232,50 @@ describe('Nodes API', () => {
     const res = await request(app).post('/api/nodes/scan');
     expect(res.status).toBe(500);
     expect(res.body.error).toBe('OS network error');
+  });
+
+  describe('POST /api/nodes/toggle-screen', () => {
+    const { handleEsp32Tool } = require('../tools/esp32_tool');
+
+    test('returns 400 when ip_address is missing', async () => {
+      const res = await request(app).post('/api/nodes/toggle-screen').send({});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('ip_address is required');
+    });
+
+    test('toggles the screen successfully', async () => {
+      handleEsp32Tool.mockResolvedValueOnce(JSON.stringify({ success: true, screen: 'on' }));
+
+      const res = await request(app)
+        .post('/api/nodes/toggle-screen')
+        .send({ ip_address: '192.168.1.100' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, data: { success: true, screen: 'on' } });
+      expect(handleEsp32Tool).toHaveBeenCalledWith('192.168.1.100', null, 'toggle_screen', {});
+    });
+
+    test('returns 500 when the device is unreachable', async () => {
+      handleEsp32Tool.mockResolvedValueOnce('Failed to communicate with ESP32 at 192.168.1.100: connect ECONNREFUSED');
+
+      const res = await request(app)
+        .post('/api/nodes/toggle-screen')
+        .send({ ip_address: '192.168.1.100' });
+
+      expect(res.status).toBe(500);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toContain('Failed to communicate');
+    });
+
+    test('returns 500 when the device tool throws', async () => {
+      handleEsp32Tool.mockRejectedValueOnce(new Error('unexpected failure'));
+
+      const res = await request(app)
+        .post('/api/nodes/toggle-screen')
+        .send({ ip_address: '192.168.1.100' });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('unexpected failure');
+    });
   });
 });
