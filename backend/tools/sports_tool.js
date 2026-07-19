@@ -4,6 +4,126 @@ const cheerio = require('cheerio');
 // a dozen sequential web searches per chat turn.
 const MAX_FAVORITE_TEAMS_PER_LOOKUP = 3;
 
+// ESPN's schedule pages are keyed by team abbreviation, not name, and are a
+// real structured source (unlike generic web search, which returns nothing
+// useful for "upcoming games" during the offseason since there's no live
+// article discussing a future schedule).
+const NFL_TEAM_ESPN_ABBR = {
+  'arizona cardinals': 'ari', cardinals: 'ari',
+  'atlanta falcons': 'atl', falcons: 'atl',
+  'baltimore ravens': 'bal', ravens: 'bal',
+  'buffalo bills': 'buf', bills: 'buf',
+  'carolina panthers': 'car', panthers: 'car',
+  'chicago bears': 'chi', bears: 'chi',
+  'cincinnati bengals': 'cin', bengals: 'cin',
+  'cleveland browns': 'cle', browns: 'cle',
+  'dallas cowboys': 'dal', cowboys: 'dal',
+  'denver broncos': 'den', broncos: 'den',
+  'detroit lions': 'det', lions: 'det',
+  'green bay packers': 'gb', packers: 'gb',
+  'houston texans': 'hou', texans: 'hou',
+  'indianapolis colts': 'ind', colts: 'ind',
+  'jacksonville jaguars': 'jax', jaguars: 'jax',
+  'kansas city chiefs': 'kc', chiefs: 'kc',
+  'las vegas raiders': 'lv', raiders: 'lv',
+  'los angeles chargers': 'lac', chargers: 'lac',
+  'los angeles rams': 'lar', rams: 'lar',
+  'miami dolphins': 'mia', dolphins: 'mia',
+  'minnesota vikings': 'min', vikings: 'min',
+  'new england patriots': 'ne', patriots: 'ne',
+  'new orleans saints': 'no', saints: 'no',
+  'new york giants': 'nyg', giants: 'nyg',
+  'new york jets': 'nyj', jets: 'nyj',
+  'philadelphia eagles': 'phi', eagles: 'phi',
+  'pittsburgh steelers': 'pit', steelers: 'pit',
+  'san francisco 49ers': 'sf', '49ers': 'sf', niners: 'sf',
+  'seattle seahawks': 'sea', seahawks: 'sea',
+  'tampa bay buccaneers': 'tb', buccaneers: 'tb', bucs: 'tb',
+  'tennessee titans': 'ten', titans: 'ten',
+  'washington commanders': 'wsh', commanders: 'wsh'
+};
+
+function resolveEspnNflAbbreviation(team) {
+  const key = String(team || '').trim().toLowerCase();
+  if (NFL_TEAM_ESPN_ABBR[key]) return NFL_TEAM_ESPN_ABBR[key];
+  const lastWord = key.split(/\s+/).pop();
+  return NFL_TEAM_ESPN_ABBR[lastWord] || null;
+}
+
+/**
+ * Fetches a team's regular season schedule from ESPN's public, unauthenticated
+ * JSON API (site.api.espn.com) - a real structured source, unlike generic web
+ * search which returns nothing usable for "upcoming games" outside the season.
+ * Note: ESPN's HTML schedule pages (www.espn.com) sit behind an AWS WAF
+ * JavaScript challenge and cannot be scraped directly with a plain fetch;
+ * this JSON API is a separate, unprotected endpoint used by ESPN's own apps.
+ * Returns null (rather than throwing) when the team isn't a recognized NFL
+ * team, so the caller can fall back to web search for other sports.
+ */
+async function getTeamScheduleFromEspn(team) {
+  const abbr = resolveEspnNflAbbreviation(team);
+  if (!abbr) return null;
+
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${abbr}/schedule`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ESPN schedule API: status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const events = Array.isArray(data.events) ? data.events : [];
+  const teamAbbrUpper = abbr.toUpperCase();
+
+  const games = events.map(event => {
+    const competition = (event.competitions && event.competitions[0]) || {};
+    const competitors = competition.competitors || [];
+    const self = competitors.find(c => c.team && c.team.abbreviation === teamAbbrUpper);
+    const opponentEntry = competitors.find(c => c.team && c.team.abbreviation !== teamAbbrUpper);
+
+    const broadcasts = (competition.broadcasts || [])
+      .map(b => b.media && b.media.shortName)
+      .filter(Boolean);
+
+    return {
+      week: event.week ? event.week.number : null,
+      season_type: event.seasonType ? event.seasonType.name : null,
+      date_utc: event.date || null,
+      opponent: opponentEntry && opponentEntry.team ? opponentEntry.team.displayName : null,
+      home_or_away: self ? self.homeAway : null,
+      network: broadcasts.length > 0 ? broadcasts.join('/') : 'TBD'
+    };
+  }).filter(g => g.week !== null);
+
+  // ESPN's schedule API omits the bye week entirely rather than listing it,
+  // so detect the gap in week numbers within the regular season range.
+  const regSeasonWeeks = games.filter(g => g.season_type === 'Regular Season').map(g => g.week);
+  if (regSeasonWeeks.length > 0) {
+    const maxWeek = Math.max(...regSeasonWeeks);
+    for (let w = 1; w <= maxWeek; w++) {
+      if (!regSeasonWeeks.includes(w)) {
+        games.push({ week: w, season_type: 'Regular Season', date_utc: null, opponent: 'BYE WEEK', home_or_away: null, network: null });
+      }
+    }
+    games.sort((a, b) => a.week - b.week);
+  }
+
+  return { team, source: 'ESPN', games };
+}
+
 /**
  * Reads the user's stored favorite teams (users.favorite_teams JSON array).
  * Mirrors how news_tool reads users.interests directly in-tool.
@@ -228,10 +348,21 @@ async function handleSportsTool(db, userId, action, params = {}) {
     if (error) return error;
 
     const { handleWebSearchTool } = require('./web_search_tool');
-    // Note: query wording deliberately avoids the word "news" - web_search_tool
-    // reroutes news-matching queries to Google News, which is wrong for schedules.
+    // Note: web-search query wording deliberately avoids the word "news" -
+    // web_search_tool reroutes news-matching queries to Google News, which
+    // is wrong for schedules. It's only used as a fallback for non-NFL teams
+    // or if the ESPN API lookup below fails - generic web search returns
+    // nothing useful for "upcoming games" outside the season otherwise.
     const sections = await Promise.all(
       teams.map(async (team) => {
+        try {
+          const espnResult = await getTeamScheduleFromEspn(team);
+          if (espnResult && espnResult.games.length > 0) {
+            return `## 📅 Schedule: ${team}\n${JSON.stringify(espnResult)}`;
+          }
+        } catch (err) {
+          // Fall through to web search below.
+        }
         try {
           const result = await handleWebSearchTool(db, userId, `${team} upcoming game schedule this week`);
           return `## 📅 Schedule: ${team}\n${result}`;

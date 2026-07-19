@@ -56,8 +56,57 @@ describe('Sports Tool Tests', () => {
   });
 
   describe('get_schedule', () => {
-    test('uses the explicit team when provided and avoids the word "news" in the query', async () => {
+    function mockEspnScheduleResponse(games) {
+      global.fetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ events: games })
+      });
+    }
+
+    function espnEvent({ week, opponentAbbr = 'PHI', opponentName = 'Philadelphia Eagles', homeAway = 'home', network = 'FOX', date = '2026-09-14T00:20Z' }) {
+      return {
+        week: { number: week },
+        seasonType: { name: 'Regular Season' },
+        date,
+        competitions: [{
+          competitors: [
+            { team: { abbreviation: 'DAL' }, homeAway },
+            { team: { abbreviation: opponentAbbr, displayName: opponentName }, homeAway: homeAway === 'home' ? 'away' : 'home' }
+          ],
+          broadcasts: network ? [{ media: { shortName: network } }] : []
+        }]
+      };
+    }
+
+    test('recognized NFL team fetches the real schedule from ESPN\'s JSON API, not web search', async () => {
+      mockEspnScheduleResponse([espnEvent({ week: 1 })]);
+
+      const res = await handleSportsTool(makeMockDb(), 1, 'get_schedule', { team: 'Dallas Cowboys' });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/dal/schedule',
+        expect.anything()
+      );
+      expect(handleWebSearchTool).not.toHaveBeenCalled();
+      expect(res).toContain('Schedule: Dallas Cowboys');
+      expect(res).toContain('"source":"ESPN"');
+      expect(res).toContain('Philadelphia Eagles');
+    });
+
+    test('fills in the bye week by detecting the gap in week numbers', async () => {
+      mockEspnScheduleResponse([espnEvent({ week: 1 }), espnEvent({ week: 3 })]);
+
+      const res = await handleSportsTool(makeMockDb(), 1, 'get_schedule', { team: 'Dallas Cowboys' });
+      const parsed = JSON.parse(res.split('\n')[1]);
+
+      expect(parsed.games.map(g => g.week)).toEqual([1, 2, 3]);
+      expect(parsed.games.find(g => g.week === 2).opponent).toBe('BYE WEEK');
+    });
+
+    test('falls back to web search when the ESPN API is unavailable', async () => {
+      global.fetch.mockResolvedValue({ ok: false, status: 503 });
       handleWebSearchTool.mockResolvedValue('Cowboys play Eagles on Sunday 3:25 PM');
+
       const res = await handleSportsTool(makeMockDb(), 1, 'get_schedule', { team: 'Dallas Cowboys' });
 
       expect(handleWebSearchTool).toHaveBeenCalledTimes(1);
@@ -68,7 +117,17 @@ describe('Sports Tool Tests', () => {
       expect(res).toContain('Cowboys play Eagles on Sunday');
     });
 
+    test('non-NFL teams go straight to web search without attempting ESPN', async () => {
+      handleWebSearchTool.mockResolvedValue('some schedule results');
+      const res = await handleSportsTool(makeMockDb(), 1, 'get_schedule', { team: 'Texas Rangers' });
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(handleWebSearchTool).toHaveBeenCalledTimes(1);
+      expect(res).toContain('Schedule: Texas Rangers');
+    });
+
     test('falls back to stored favorites when team is omitted', async () => {
+      global.fetch.mockResolvedValue({ ok: false, status: 503 });
       handleWebSearchTool.mockResolvedValue('some schedule results');
       const res = await handleSportsTool(makeMockDb(), 1, 'get_schedule', {});
 
