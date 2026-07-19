@@ -1,22 +1,31 @@
-# PATTI — Enterprise Suite (v5.3.0)
+# PATTI — Private AI Assistant (v5.3.0)
 
 <p align="center">
-  <img src="assets/logo_text.jpg" alt="Tag & Type Studio Logo" width="380" />
+  <img src="assets/logo_text.jpg" alt="PATTI Logo" width="380" />
 </p>
 
 [![Wiki](https://img.shields.io/badge/wiki-available-brightgreen)](https://github.com/[USER]/private_ai/wiki)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-success)](README.md)
 
-A highly secure, private personal AI assistant dashboard built with React (Vite) and Node.js (Express). PATTI features a ReAct multi-agent orchestration coordinator, live deep web scraping, real-time Google News summaries, persistent SQLite memory storage, task scheduling, system telemetry, and a mobile-responsive layout.
+**PATTI** (Professional Artificial Text and Type Intelligence) is a local-first, multi-agent personal AI assistant. A **Supervisor Agent** reads each request and routes it to a specialized worker agent — weather, calendar, local system control, web search, your own document vault, code editing, and more — rather than handling everything in one giant, error-prone prompt. It runs primarily against a **local LLM** (LM Studio or Ollama) on your own hardware, with optional, explicitly opt-in fallback to an online provider (Gemini, OpenAI, or Anthropic Claude) if you choose to add a key in Settings.
 
-Version `5.3.0` introduces the **Hermes MQTT Node Mesh & Auto-Updater**, enabling a unified, local mesh network where a Windows main host automatically discovers and updates local network nodes (Raspberry Pi/ESP32) and coordinates smart speakers (Google Nest Mini) dynamically.
+New to the codebase or teaching from it? The **[Wiki](https://github.com/[USER]/private_ai/wiki)** is written as a full explainer — it covers not just how to run PATTI, but *why* it's built the way it is, in enough depth to learn from as a real-world example of a multi-agent system, a REST API, an auth flow, and a local vector search pipeline. This README is deliberately just the summary.
 
 ---
 
-## 🏗️ System-Wide Architecture
+## What it does
 
-The PATTI Assistant splits functionality into a React frontend client, a Node.js backend supervisor, and distributed remote field nodes. The database (SQLite) holds user preferences, calendar events, messages, memories, and registered network nodes.
+- **Multi-agent orchestration** — a Supervisor Agent classifies each request and delegates to the right specialist (weather, calendar, system control, developer/coder, memory, document vault, sports/news, and more).
+- **Local-first, cloud-optional** — defaults entirely to a local LLM; online providers are never used unless you explicitly enable them in Settings and supply your own API key.
+- **Human-in-the-loop safety** — before running a shell command or writing a file, the assistant pauses and asks for your explicit approval.
+- **Local semantic memory (RAG)** — uploaded documents and stored memories are embedded locally (no data leaves your machine) and retrieved by meaning, not just keyword match.
+- **Local device mesh** — a Windows/Linux main host coordinates lightweight Raspberry Pi and ESP32 field nodes over MQTT, and can discover and cast text-to-speech announcements to Google Nest/Cast speakers on the LAN.
+- **Dynamic tool registry** — new tools can be authored, tested, and mounted into the running agent system at runtime without a rebuild.
+
+---
+
+## Architecture at a glance
 
 ```mermaid
 graph TB
@@ -25,7 +34,7 @@ graph TB
         SSE_Conn["Server-Sent Events Reader"]
     end
 
-    subgraph MainHost ["Main Host (Windows PC)"]
+    subgraph MainHost ["Main Host (Windows/Linux)"]
         WebServer["Express HTTP Web Server (Port 3000)"]
         Database[("SQLite database.db")]
         Coord["ReAct Coordinator (ai.js)"]
@@ -54,113 +63,48 @@ graph TB
     Bridge -->|MicroPython REST API| ESP
 ```
 
----
-
-## ⚙️ Device Setup & Deployment
-
-PATTI operates in a distributed network. Setup instructions differ based on the device role. For a comprehensive walkthrough covering setting up LM Studio, Ollama, Windows background tasks, and Raspberry Pi systemd configurations, see the [Installation Guide Wiki Page](https://github.com/[USER]/private_ai/wiki/Installation).
-
-### 🔍 Core Setup Requirements
-- **Name & Zipcode**: Gained during initialization to personalize briefings and weather forecasts.
-- **Local LLM (LM Studio / Ollama)**: **(REQUIRED)** The system defaults entirely to your Local LLM. Online API keys (e.g. Gemini) are optional fallbacks.
-- **Working Directory**: **(REQUIRED)** The absolute local directory path where code files are saved and compiled. Dynamically resolved on startup and configurable in Settings.
+The React (Vite) frontend talks to a Node.js/Express backend over REST and Server-Sent Events. SQLite holds users, chats, memories, calendar events, and node registrations. Field nodes (Raspberry Pi, ESP32) announce themselves over MQTT and can be queried/controlled through a signed bridge API. See **[Architecture](https://github.com/[USER]/private_ai/wiki/Architecture)** in the Wiki for the full breakdown, including why each technology was chosen and how the agent delegation pipeline works end to end.
 
 ---
 
-### 1. Windows Main Host (Running LLMs)
-The Windows PC acts as the central brain. It runs the local LLM integration, coordinates multi-agent loops, and maintains the primary database.
+## Quick start (Windows main host)
 
-> [!WARNING]  
-> **Strict Approval Mode**: On Windows, all system modification tools (like running scripts, writing files, and executing commands) are locked down and require explicit Human-In-The-Loop (HITL) UAC approval before execution.
-
-#### Setup Steps:
-1. **Prerequisites**: Install Node.js (`v25.5.0` or higher), Git, and LM Studio/Ollama.
-2. **Install & Setup**:
-   Open PowerShell as Admin and run:
-   ```powershell
+1. Install [Node.js](https://nodejs.org/) v22+, [Git](https://git-scm.com/), and [LM Studio](https://lmstudio.ai/) or [Ollama](https://ollama.com/).
+2. Load a local model and start its server (LM Studio: **Local Server** tab → **Start Server**).
+3. ```powershell
    git clone https://github.com/[USER]/private_ai.git
    cd private_ai
    Set-ExecutionPolicy Bypass -Scope Process -Force
    .\setup.ps1
    ```
-   Follow the setup prompts to input your name, zipcode, and local LLM URL.
-3. **Launch Development Servers**:
-   ```powershell
-   npm run dev
-   ```
-4. **Setup Wizard**: Access `http://localhost:3000` to launch the Setup Wizard. Choose **Windows** as the device type during initialization.
+4. Open `http://localhost:3000` and complete the Setup Wizard.
+
+Raspberry Pi / ESP32 field nodes, MQTT mesh setup, and full environment variable reference: see **[Installation](https://github.com/[USER]/private_ai/wiki/Installation)**.
 
 ---
 
-### 2. Raspberry Pi Node (Zero 2W, 3, 4, or 5)
-Raspberry Pi nodes run lightweight backend endpoints to read telemetry (CPU temp, INA219 current/power draw), perform local GPIO manipulation, or run system-level shell scripts. They publish periodic heartbeats via MQTT to register themselves on the host database.
+## Testing
 
-#### Setup Steps:
-1. **Prepare Node environment**:
-   ```bash
-   git clone https://github.com/[USER]/private_ai.git
-   cd private_ai
-   chmod +x setup.sh
-   ./setup.sh
-   ```
-   Provide the IP address of your Windows Main Host when prompted, and select the Raspberry Pi model.
-2. **Configure MQTT Connection**:
-   Modify `node_client/.env` to point `MQTT_BROKER_URL` to your main host's MQTT broker IP (e.g. `mqtt://192.168.1.50:1883`).
-3. **Service Management**:
-   The script installs a systemd background service `private-ai.service` that starts client.js and announces heartbeats to `nodes/heartbeat` every 60 seconds.
-   - Check Status: `sudo systemctl status private-ai`
-   - Restart: `sudo systemctl restart private-ai`
-   - Logs: `journalctl -u private-ai -f`
-
----
-
-### 3. ESP32 Node (MicroPython)
-ESP32 microcontrollers serve as low-power, cheap sensor nodes or relay controls communicating over WiFi.
-
-#### Setup Steps:
-1. **Prepare MicroPython**: Flash MicroPython onto your ESP32 board.
-2. **Configure WiFi & Setup**:
-   Open `esp32_firmware/config.py` and input your local WiFi SSID, Password, and your main host's MQTT broker address:
-   ```python
-   WIFI_SSID = "Your_WiFi"
-   WIFI_PASSWORD = "Your_Password"
-   MQTT_BROKER = "192.168.1.50"
-   ```
-3. **Deploy Firmware**:
-   Copy `esp32_firmware/main.py` onto your ESP32 device as `main.py` using tools like Thonny, Adafruit-AMPY, or mpremote. When it boots, it will publish heartbeats to `nodes/heartbeat` and listen on port `80`.
-
----
-
-## 🚀 How to Interact with PATTI
-
-### 1. Dynamic Network Mesh Checking
-Go to **Agent Dashboard** -> **Field Nodes** tab to manage your smart home mesh:
-* **Auto-Discovery & Heartbeats**: Raspberry Pi and ESP32 nodes configured with the MQTT broker URL will automatically check in via heartbeats and populate. If a node ceases sending heartbeats, it is hidden from the dashboard to keep the view clean.
-* **Simplified Health Status**: Devices show a simplified **Healthy** or **Not Healthy** pill indicating their overall operational state.
-* **Device & Router Filtering**: The network scanner automatically filters out duplicate IP addresses and gateway router IPs (e.g. `192.168.1.1`), ensuring only actionable local devices are shown.
-* **Google Nest Speaker Priority**: Headless Google Nest/Cast devices are discovered via mDNS and prioritised as `google_home` node signatures.
-* **Scan Network & Polling**: The network is polled automatically every 15 minutes. You can trigger a live scan at any time using the **Scan Network** button.
-
-### 2. Speaking on Google Nest Speakers
-You can send TTS messages directly from the assistant. Simply say:
-- *"Say 'Good morning' on the Office Nest Mini"*
-- *"Tell the Living Room Speaker to announce dinner is ready"*
-The system automatically queries the `network_nodes` table to route the audio file to the correct target IP without hardcoded configurations.
-
-### 3. Background Auto-Updating
-The host daemon checks origin commits every hour. If updates exist, it pulls them, compiles dependencies for both frontend and backend, and exits safely. A system daemon configuration (e.g. PM2 or Systemd) should be set up to auto-restart `server.js` on exit:
 ```bash
-# Recommended host process command using PM2:
-pm2 start backend/server.js --name "patti-backend" --watch
+npm test              # backend (Jest) + frontend (Vitest)
+npm run test:e2e       # Playwright end-to-end
+npm run coverage        # coverage report, 70% statement/line threshold enforced
 ```
 
 ---
 
-## 🧪 Testing & Code Coverage
+## Learn more
 
-To run the full suite:
-```bash
-npm test
-```
-* **Unit & Integration Tests**: Covers routers, DB migrations, RAG vault tools, agent routing, and remote bridge payloads.
-* **Coverage Requirements**: Strict enforcement of **70% statement and line coverage** via Jest (backend) and Vitest (frontend).
+| Page | What it covers |
+| --- | --- |
+| **[Home](https://github.com/[USER]/private_ai/wiki)** | Project overview, what problem it solves, and how to use the wiki as a learning resource |
+| **[Architecture](https://github.com/[USER]/private_ai/wiki/Architecture)** | Full system topology, technology choices and why, agent delegation pipeline, security boundaries |
+| **[Installation](https://github.com/[USER]/private_ai/wiki/Installation)** | Step-by-step setup for every device role, full `.env` reference |
+| **[Usage](https://github.com/[USER]/private_ai/wiki/Usage)** | How to actually use the assistant day to day |
+| **[Codebase Documentation](https://github.com/[USER]/private_ai/wiki/Codebase-Documentation)** | What every folder and file does and why it's designed that way |
+| **[Contributing](https://github.com/[USER]/private_ai/wiki/Contributing)** | How to author and mount a custom tool |
+| **[FAQ](https://github.com/[USER]/private_ai/wiki/FAQ)** | Common setup and troubleshooting questions |
+
+## License
+
+MIT — see [LICENSE](LICENSE).
