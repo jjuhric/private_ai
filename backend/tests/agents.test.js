@@ -138,10 +138,32 @@ jest.mock('child_process', () => {
 const { handleHostMachineTool } = require('../tools/host_machine_tool');
 const { handleCoderTool } = require('../tools/coder_tools');
 const { handleWeatherTool } = require('../tools/weather_tool');
-const { runAgentTurn, runWorkerAgent, runSupervisorHandoff } = require('../utils/agents');
+const { runAgentTurn, runWorkerAgent, runSupervisorHandoff, AGENT_PROMPTS } = require('../utils/agents');
 const { runAgentLoop } = require('../ai');
 const fs = require('fs');
 const path = require('path');
+
+describe('Agent Prompt Files', () => {
+  // AGENT_PROMPTS lazily require()s each utils/agents/<name>.js file (they're
+  // just JS template-literal strings) and silently swallows any load error
+  // into `undefined` with only a console warning - so a typo like an
+  // unescaped backtick inside the template literal breaks that agent at
+  // runtime ("Unknown agent: X") without ever failing a build or test unless
+  // something explicitly checks every file loads. This does that.
+  const agentsDir = path.join(__dirname, '../utils/agents');
+  const agentFiles = fs.readdirSync(agentsDir).filter(f => f.endsWith('.js'));
+
+  test('directory is not empty (sanity check that the glob above actually ran)', () => {
+    expect(agentFiles.length).toBeGreaterThan(5);
+  });
+
+  test.each(agentFiles.map(f => f.replace(/\.js$/, '')))('%s loads as a non-empty prompt string', (agentName) => {
+    expect(() => require(path.join(agentsDir, `${agentName}.js`))).not.toThrow();
+    const prompt = AGENT_PROMPTS[agentName];
+    expect(typeof prompt).toBe('string');
+    expect(prompt.length).toBeGreaterThan(20);
+  });
+});
 
 describe('Multi-Agent System & Tools Tests', () => {
   beforeEach(() => {
