@@ -1,5 +1,57 @@
 // Use global fetch
 
+// Minimal embedded HTTP servers (like the ESP32's) don't reliably handle
+// fetch()'s request encoding - it can omit an explicit Content-Length in
+// favor of chunked transfer, which these devices don't parse, leaving them
+// seeing an empty/malformed body ("expected JSON body") even though a valid
+// JSON payload was sent. Node's raw http module with an explicit
+// Content-Length header avoids that.
+function postJsonRaw(ip, port, path, bodyPayload, extraHeaders = {}) {
+  const http = require('http');
+  return new Promise((resolve, reject) => {
+    let targetIp = ip;
+    let targetPort = port;
+    if (ip.includes(':')) {
+      const parts = ip.split(':');
+      targetIp = parts[0];
+      targetPort = parseInt(parts[1], 10);
+    }
+
+    const options = {
+      hostname: targetIp,
+      port: targetPort,
+      path,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyPayload),
+        ...extraHeaders
+      }
+    };
+
+    const req = http.request(options, (httpRes) => {
+      let responseBody = '';
+      httpRes.on('data', (chunk) => {
+        responseBody += chunk;
+      });
+      httpRes.on('end', () => {
+        resolve({
+          ok: httpRes.statusCode >= 200 && httpRes.statusCode < 300,
+          status: httpRes.statusCode,
+          body: responseBody
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.write(bodyPayload);
+    req.end();
+  });
+}
+
 /**
  * Sends a command to an ESP32 node via HTTP.
  * This can be used for GPIO writes or reads.
@@ -44,12 +96,15 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
     }
 
     let bodyPayload;
+    let devicePath;
     if (action === 'send_message') {
-      url = `http://${ip}:${portVal}/message`;
+      devicePath = '/message';
+      url = `http://${ip}:${portVal}${devicePath}`;
       headers['Content-Type'] = 'application/json';
       bodyPayload = JSON.stringify({ message: params.message });
     } else if (action === 'toggle_screen') {
-      url = `http://${ip}:${portVal}/screen`;
+      devicePath = '/screen';
+      url = `http://${ip}:${portVal}${devicePath}`;
       headers['Content-Type'] = 'application/json';
       bodyPayload = JSON.stringify({ action: 'toggle screen' });
     } else {
@@ -59,50 +114,8 @@ async function handleEsp32Tool(nodeIp, nodePort, action, params = {}, bridgeSecr
     }
 
     let data;
-    if (action === 'send_message') {
-      const http = require('http');
-      const res = await new Promise((resolve, reject) => {
-        let targetIp = ip;
-        let targetPort = portVal;
-        if (ip.includes(':')) {
-          const parts = ip.split(':');
-          targetIp = parts[0];
-          targetPort = parseInt(parts[1], 10);
-        }
-
-        const options = {
-          hostname: targetIp,
-          port: targetPort,
-          path: '/message',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(bodyPayload),
-            ...headers
-          }
-        };
-
-        const req = http.request(options, (httpRes) => {
-          let responseBody = '';
-          httpRes.on('data', (chunk) => {
-            responseBody += chunk;
-          });
-          httpRes.on('end', () => {
-            resolve({
-              ok: httpRes.statusCode >= 200 && httpRes.statusCode < 300,
-              status: httpRes.statusCode,
-              body: responseBody
-            });
-          });
-        });
-
-        req.on('error', (err) => {
-          reject(err);
-        });
-
-        req.write(bodyPayload);
-        req.end();
-      });
+    if (action === 'send_message' || action === 'toggle_screen') {
+      const res = await postJsonRaw(ip, portVal, devicePath, bodyPayload, headers);
 
       try {
         data = JSON.parse(res.body);
