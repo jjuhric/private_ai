@@ -208,24 +208,24 @@ export default function SkillWizardModal({ isOpen, onClose, token, onSaved, init
         </div>
 
         {/* Footer navigation */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px', marginTop: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px', marginTop: '12px', gap: '12px' }}>
           <button
             type="button"
             className="btn btn-secondary"
             onClick={() => setStep(prev => Math.max(1, prev - 1))}
             disabled={step === 1}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: step === 1 ? 0.4 : 1 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: step === 1 ? 0.4 : 1, width: 'auto', flexShrink: 0 }}
           >
             <ChevronLeft size={16} /> Back
           </button>
 
           {step === 3 && (
-            <button type="button" className="btn btn-primary" onClick={handleGoToPreview} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button type="button" className="btn btn-primary" onClick={handleGoToPreview} style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'auto', flexShrink: 0 }}>
               Preview <ChevronRight size={16} />
             </button>
           )}
           {step === 4 && (
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving || !previewText.trim()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving || !previewText.trim()} style={{ display: 'flex', alignItems: 'center', gap: '6px', width: 'auto', flexShrink: 0 }}>
               <CheckCircle size={16} /> {saving ? 'Saving...' : `Save ${wizardType === 'skill' ? 'Skill' : 'Personality'}`}
             </button>
           )}

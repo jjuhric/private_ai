@@ -8,6 +8,8 @@
     "dev:backend": "node backend/server.js",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "lan:https:start": "powershell -ExecutionPolicy Bypass -File .\\start-lan-https.ps1",
+    "lan:https:stop": "powershell -ExecutionPolicy Bypass -File .\\stop-lan-https.ps1",
     "build": "npm run build --prefix frontend",
     "start": "node backend/server.js",
     "logs": "node backend/scripts/show_logs.js",

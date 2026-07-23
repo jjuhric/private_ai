@@ -227,7 +227,7 @@ export default function PersonalitySkillsPane({ token }) {
 
   return (
     <div className="chat-pane" style={{ padding: '24px', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
             <Sliders className="text-accent-primary" size={28} /> Custom Personalities & Skills
@@ -288,7 +288,7 @@ export default function PersonalitySkillsPane({ token }) {
             <Wand2 size={16} /> Create with Wizard
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="grid-2col-responsive" style={{ gap: '20px' }}>
           
           {/* Upload Box */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '2px dashed var(--border-glass)', borderRadius: '12px', padding: '20px', cursor: 'pointer', background: 'rgba(255,255,255,0.01)', position: 'relative' }}>
@@ -305,20 +305,20 @@ export default function PersonalitySkillsPane({ token }) {
           {/* Paste URL Box */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Download from Raw GitHub or web URL</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               <input
                 type="text"
                 className="form-control"
                 placeholder="https://raw.githubusercontent.com/.../profile.md"
                 value={urlInput}
                 onChange={e => setUrlInput(e.target.value)}
-                style={{ flex: '1 1 auto', width: 'auto', minWidth: '200px', margin: 0 }}
+                style={{ flex: '1 1 160px', width: 'auto', minWidth: 0, margin: 0 }}
               />
               <button
                 className="btn btn-primary"
                 onClick={handleFetchUrl}
                 disabled={fetchingUrl || !urlInput.trim()}
-                style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: '1 1 auto', whiteSpace: 'nowrap' }}
               >
                 {fetchingUrl ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                 Fetch & Preview
@@ -501,7 +501,7 @@ export default function PersonalitySkillsPane({ token }) {
               Please review the raw Markdown contents below. Make sure you trust the source before importing this profile.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="grid-2col-responsive" style={{ gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Override Profile Name</label>
                 <input

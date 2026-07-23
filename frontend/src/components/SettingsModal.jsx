@@ -153,14 +153,41 @@ export default function SettingsModal({
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>
-              <label style={{ display: 'block', marginBottom: '6px' }}>Local Model Name</label>
-              <input
-                type="text"
-                className="form-control"
-                value="qwen2.5-coder-7b-instruct"
-                disabled
-                readOnly
-              />
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span>Local Model Name</span>
+                <button
+                  type="button"
+                  onClick={() => onFetchLocalModels(settings)}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.78rem', padding: 0 }}
+                >
+                  Rescan Models
+                </button>
+              </label>
+              {localModels && localModels.length > 0 ? (
+                <select
+                  className="form-control"
+                  value={settings.model_name || ''}
+                  onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
+                >
+                  {settings.model_name && !localModels.includes(settings.model_name) && (
+                    <option value={settings.model_name}>{settings.model_name} (current)</option>
+                  )}
+                  {localModels.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. qwen2.5-coder-7b-instruct"
+                  value={settings.model_name || ''}
+                  onChange={e => setSettings(prev => ({ ...prev, model_name: e.target.value }))}
+                />
+              )}
+              <p style={{ margin: '6px 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                The model PATTI will request from your local LLM server. Click "Rescan Models" to pull the list currently loaded at the URL above.
+              </p>
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>
@@ -438,17 +465,18 @@ export default function SettingsModal({
 
           <button
             className="btn-primary"
-            style={{ marginTop: 8 }}
+            style={{ marginTop: 8, width: '100%' }}
             onClick={() => {
               if (useOnline) {
                 setShowConfirmModal(true);
               } else {
+                const localModelName = settings.model_name || 'qwen2.5-coder-7b-instruct';
                 saveSettings({
                   ...settings,
                   provider: 'local',
-                  model_name: 'qwen2.5-coder-7b-instruct',
-                  preferred_local_model: 'qwen2.5-coder-7b-instruct',
-                  supervisor_model: 'qwen2.5-coder-7b-instruct'
+                  model_name: localModelName,
+                  preferred_local_model: localModelName,
+                  supervisor_model: localModelName
                 });
               }
             }}

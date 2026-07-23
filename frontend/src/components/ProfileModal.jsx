@@ -240,7 +240,7 @@ export default function ProfileModal({
                     style={{ paddingRight: '40px' }}
                     placeholder="Enter OpenWeatherMap API key"
                     value={formData.weather_api_key}
-                    onChange={e => setFormData(prev => ({ ...prev, weather_api_key: e.target.value }))}
+                    onChange={e => setFormData(prev => ({ ...prev, weather_api_key: e.target.value.trim() }))}
                   />
                   <button
                     type="button"

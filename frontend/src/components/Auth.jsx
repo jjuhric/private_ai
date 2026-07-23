@@ -75,7 +75,7 @@ export default function Auth({
               </button>
             </div>
           </div>
-          <button type="submit" className="btn-primary">
+          <button type="submit" className="btn-primary" style={{ width: '100%' }}>
             {isLogin ? 'Login' : 'Register'}
           </button>
         </form>

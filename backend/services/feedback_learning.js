@@ -12,7 +12,8 @@ const AGENTS_LIST = [
   'developer_agent',
   'qa_engineer',
   'tool_creator_agent',
-  'agent_creator_agent'
+  'agent_creator_agent',
+  'deep_research_agent'
 ];
 
 async function handleUserFeedback(db, userId, chatId, userMessage) {

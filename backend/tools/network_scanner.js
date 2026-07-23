@@ -67,7 +67,7 @@ async function getArpDevices() {
 }
 
 // Check ports in parallel on a given IP
-function checkIpPorts(ip, ports = [80, 22, 3000, 8009, 443, 445], timeout = 200) {
+function checkIpPorts(ip, ports = [80, 22, 3000, 8009, 443, 445], timeout = 600) {
   return new Promise(async (resolve) => {
     const activePorts = [];
     await Promise.all(
@@ -181,7 +181,7 @@ async function handleNetworkScanner(action, params = {}) {
             let isEsp = false;
             try {
               const controller = new AbortController();
-              const tId = setTimeout(() => controller.abort(), 350);
+              const tId = setTimeout(() => controller.abort(), 1000);
               const testRes = await fetch(`http://${ip}/message`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

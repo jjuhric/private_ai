@@ -128,7 +128,7 @@ router.post('/scan', authenticateToken, async (req, res) => {
           }
           
           for (const targetPort of portsToProbe) {
-            const isOpen = await checkIpPort(ip, targetPort, 200);
+            const isOpen = await checkIpPort(ip, targetPort, 600);
             if (isOpen) {
               let name = 'Unknown Device';
               let deviceType = 'Generic Node';
@@ -444,13 +444,13 @@ router.post('/sync', authenticateToken, async (req, res) => {
       await Promise.all(
         batch.map(async (ip) => {
           // Check port 80 (ESP32)
-          const hasPort80 = await checkIpPort(ip, 80, 250);
+          const hasPort80 = await checkIpPort(ip, 80, 600);
           if (hasPort80) {
             // Verify /message endpoint or general availability
             let hasMessageEndpoint = false;
             try {
               const controller = new AbortController();
-              const tId = setTimeout(() => controller.abort(), 350);
+              const tId = setTimeout(() => controller.abort(), 1000);
               const testRes = await fetch(`http://${ip}/message`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -472,7 +472,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
           }
 
           // Check port 3000 (Private AI node)
-          const hasPort3000 = await checkIpPort(ip, 3000, 250);
+          const hasPort3000 = await checkIpPort(ip, 3000, 600);
           if (hasPort3000) {
             const info = await getDiscoveryPayload(ip, 3000);
             if (info && info.success) {
@@ -487,7 +487,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
           }
 
           // Check port 8009 fallback (Google Cast speaker not found in MDNS)
-          const hasPort8009 = await checkIpPort(ip, 8009, 250);
+          const hasPort8009 = await checkIpPort(ip, 8009, 600);
           if (hasPort8009) {
             discoveredMap.set(ip, {
               node_name: 'Google Assistant Speaker',
@@ -517,7 +517,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
       } else {
         // Double check specifically to avoid false offline status
         const portToCheck = node.port || (node.device_type === 'Google Assistant' ? 8009 : 80);
-        const doubleCheck = await checkIpPort(node.ip_address, portToCheck, 300);
+        const doubleCheck = await checkIpPort(node.ip_address, portToCheck, 800);
         if (doubleCheck) {
           isOnline = 1;
         }

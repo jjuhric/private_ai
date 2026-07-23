@@ -20,8 +20,12 @@ coverage/
 **/coverage/
 test-results/
 
-# Logs
+# Logs (the *.log pattern alone misses rotated files like app-2026-07-19.log.1)
 *.log
+logs/*.log.*
+
+# Process ID files
+*.pid
 
 # Credentials / Secrets
 backend/credentials.json
@@ -33,3 +37,6 @@ backend/public/tts/
 # Local database data (repo-root only - do not use a bare "data/" pattern,
 # it would also match frontend/src/data/ and silently exclude source files)
 /data/
+
+# Runtime-generated documents (produced by document_generator_tool.js)
+generated_documents/

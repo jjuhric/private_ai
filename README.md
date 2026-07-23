@@ -81,6 +81,26 @@ The React (Vite) frontend talks to a Node.js/Express backend over REST and Serve
 
 Raspberry Pi / ESP32 field nodes, MQTT mesh setup, and full environment variable reference: see **[Installation](https://github.com/[USER]/private_ai/wiki/Installation)**.
 
+### LAN HTTPS (Android/PWA install)
+
+To run PATTI over HTTPS on your LAN (for better mobile install behavior):
+
+```powershell
+npm run lan:https:start
+```
+
+This starts the backend and a local Caddy reverse proxy at `https://192.168.1.42`.
+
+To stop both:
+
+```powershell
+npm run lan:https:stop
+```
+
+If this is your first run, install and trust Caddy's local root cert on your phone:
+
+`%APPDATA%\Caddy\pki\authorities\local\root.crt`
+
 ---
 
 ## Testing

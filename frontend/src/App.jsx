@@ -989,6 +989,13 @@ function App() {
         appVersion={appVersion}
       />
 
+      {isMobileSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Panel */}
       <main className="main-panel">
         <header className="panel-header">
@@ -1012,6 +1019,11 @@ function App() {
             >
                {activeTab === 'chat' ? (
                  <span className="patti-header-brand" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                   <img
+                     src="/patti_text.png"
+                     alt="PATTI"
+                     className="patti-logo-image header-patti-logo header-only-mobile"
+                   />
                    <span className="patti-fullname">
                      <span className="special-letter">P</span>
                      <span className="normal-text">rofessional&nbsp;</span>
@@ -1026,7 +1038,7 @@ function App() {
                      <span className="normal-text">ntelligence</span>
                    </span>
                  </span>
-               ) : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'academy' ? 'AI Coding Academy' : (activeTab === 'memory' ? 'AI Memory Vault' : 'Agent Dashboard')))}
+               ) : (activeTab === 'calendar' ? 'Schedule Manager' : (activeTab === 'academy' ? 'AI Coding Academy' : (activeTab === 'memory' ? 'AI Memory Vault' : (activeTab === 'personality-skills' ? 'Persona & Skills' : 'Agent Dashboard'))))}
              </h2>
           </div>
 
@@ -1035,7 +1047,7 @@ function App() {
 
             <div className="model-config-badge">
               <span className={`connection-dot ${settings.provider === 'online' ? 'online' : 'local'}`}></span>
-              <span style={{ fontSize: '0.85rem', fontWeight: 550 }}>
+              <span className="model-config-text" style={{ fontSize: '0.85rem', fontWeight: 550 }}>
                 {settings.provider === 'online'
                   ? `Online: ${{ gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Claude', custom: 'Custom' }[settings.online_provider] || settings.online_provider}`
                   : 'Local AI'} ({liveModel ? liveModel.split('/').pop() : settings.model_name.split('/').pop()})

@@ -128,6 +128,39 @@ describe('Profile Router Tests', () => {
     expect(getRes.body.favorite_teams).toEqual(payload.favorite_teams);
   });
 
+  test('PUT /api/profile - trims whitespace from a pasted API key before storing', async () => {
+    const payload = {
+      name: 'John Doe',
+      zipcode: '90210',
+      country: 'CA',
+      temp_unit: 'metric',
+      // Simulates a copy-paste artifact (trailing newline/spaces) -- an
+      // untrimmed key like this silently fails OpenWeatherMap auth later.
+      weather_api_key: '  apikey123  \n',
+      dob: '1990-01-01',
+      gender: 'Male',
+      political_leaning: 'Democrat',
+      interests: [],
+      favorite_teams: []
+    };
+
+    const res = await request(app)
+      .put('/api/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.statusCode).toBe(200);
+
+    const getRes = await request(app)
+      .get('/api/profile')
+      .set('Authorization', `Bearer ${token}`);
+
+    // The masked value reveals the first/last 4 characters of what's
+    // actually stored -- if it weren't trimmed, the trailing characters
+    // would be whitespace instead of "y123".
+    expect(getRes.body.weather_api_key).toBe('apik••••••••y123');
+  });
+
   test('PUT /api/profile - preserves existing key when masked key is submitted', async () => {
     const payload = {
       name: 'John Doe',

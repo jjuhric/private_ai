@@ -42,10 +42,15 @@ router.put('/', authenticateToken, async (req, res) => {
     const { encrypt } = require('../utils/crypto');
     const existing = await db.get('SELECT weather_api_key FROM users WHERE id = ?', [req.user.id]);
     const isMasked = (val) => val && val.includes('••');
-    
-    const finalWeatherKey = isMasked(weather_api_key) 
-      ? existing?.weather_api_key 
-      : (weather_api_key ? encrypt(weather_api_key) : null);
+    // Defense-in-depth against a pasted key with leading/trailing
+    // whitespace (a common copy-paste artifact) silently becoming an
+    // invalid key once encrypted -- the frontend already trims on input,
+    // but any other client (e.g. a direct API call) hits this too.
+    const trimmedWeatherKey = weather_api_key ? weather_api_key.trim() : weather_api_key;
+
+    const finalWeatherKey = isMasked(trimmedWeatherKey)
+      ? existing?.weather_api_key
+      : (trimmedWeatherKey ? encrypt(trimmedWeatherKey) : null);
 
     const interestsString = JSON.stringify(interests || []);
     const favoriteTeamsString = JSON.stringify(favorite_teams || []);

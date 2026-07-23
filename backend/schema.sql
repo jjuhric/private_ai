@@ -209,4 +209,29 @@ CREATE TABLE IF NOT EXISTS custom_skills (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS generated_documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  filename TEXT NOT NULL,
+  filepath TEXT UNIQUE NOT NULL,
+  doc_type TEXT NOT NULL, -- 'pdf' | 'docx' | 'xlsx' | 'pptx'
+  file_size INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS deep_research_jobs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_id TEXT UNIQUE NOT NULL,
+  user_id INTEGER NOT NULL,
+  topic TEXT NOT NULL,
+  mode TEXT NOT NULL DEFAULT 'research', -- 'research' | 'study_guide'
+  status TEXT NOT NULL DEFAULT 'running', -- 'running' | 'completed' | 'failed'
+  report_path TEXT,
+  error TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 

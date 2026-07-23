@@ -110,7 +110,7 @@ export default function CalendarPane({
                 onChange={e => setCalendarForm(p => ({ ...p, description: e.target.value }))}
               />
             </div>
-            <button type="submit" className="btn-primary">Add Event</button>
+            <button type="submit" className="btn-primary" style={{ width: '100%' }}>Add Event</button>
           </form>
         </div>
       </div>

@@ -32,6 +32,7 @@ const lmstudioRouter = require('./routes/lmstudio');
 const alertsRouter = require('./routes/alerts');
 const lmstudioSwitchRouter = require('./routes/lmstudio_switch');
 const personalitiesSkillsRouter = require('./routes/personalities_skills');
+const documentsRouter = require('./routes/documents');
 const mqttService = require('./services/mqtt_service');
 
 const helmet = require('helmet');
@@ -166,6 +167,7 @@ app.use('/api/personalities-skills', personalitiesSkillsRouter);
 app.use('/api/token-usage', tokenUsageRouter);
 app.use('/api/lmstudio', lmstudioRouter);
 app.use('/api/alerts', alertsRouter);
+app.use('/api/documents', documentsRouter);
 app.use('/api', chatRouter); // Routes handle their own prefixing (e.g. /chats, /chat/stream)
 
 // Root health check endpoint (unauthenticated, for node monitoring)

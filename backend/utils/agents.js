@@ -691,6 +691,15 @@ async function runWorkerAgent(agentName, settings, task, db, userId) {
     } else if (decision.tool === 'network_scanner') {
       const { handleNetworkScanner } = require('../tools/network_scanner');
       output = await handleNetworkScanner(decision.action, decision.params);
+    } else if (decision.tool === 'document_generator') {
+      const { handleDocumentGeneratorTool } = require('../tools/document_generator_tool');
+      output = await handleDocumentGeneratorTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'deep_research') {
+      const { handleDeepResearchTool } = require('../tools/deep_research_tool');
+      output = await handleDeepResearchTool(db, userId, decision.action, decision.params);
+    } else if (decision.tool === 'deep_research_pro') {
+      const { handleDeepResearchProTool } = require('../tools/deep_research_pro_tool');
+      output = await handleDeepResearchProTool(db, userId, decision.action, decision.params);
     } else {
       // Check if it is a dynamically installed custom tool
       try {

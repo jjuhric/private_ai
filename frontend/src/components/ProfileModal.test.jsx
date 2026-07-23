@@ -92,6 +92,34 @@ describe('ProfileModal Component Tests', () => {
     });
   });
 
+  test('trims leading/trailing whitespace from a pasted API key before saving', () => {
+    const mockSaveProfile = vi.fn();
+
+    const { container } = render(
+      <ProfileModal
+        isProfileOpen={true}
+        setIsProfileOpen={vi.fn()}
+        profile={defaultProfile}
+        saveProfile={mockSaveProfile}
+      />
+    );
+
+    const toggleBtn = container.querySelector('button[type="button"]');
+    fireEvent.click(toggleBtn);
+
+    const apiKeyInput = screen.getByPlaceholderText('Enter OpenWeatherMap API key');
+    // Simulates a paste that carried a trailing newline/space, a common
+    // copy-paste artifact that otherwise silently corrupts the key and
+    // produces a 401 from the weather API later.
+    fireEvent.change(apiKeyInput, { target: { value: '  abc123key  \n' } });
+    expect(apiKeyInput.value).toBe('abc123key');
+
+    fireEvent.click(screen.getByText('Save Profile'));
+    expect(mockSaveProfile).toHaveBeenCalledWith(expect.objectContaining({
+      weather_api_key: 'abc123key'
+    }));
+  });
+
   test('modal close triggers', () => {
     const mockSetIsProfileOpen = vi.fn();
     const { container } = render(

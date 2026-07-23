@@ -446,6 +446,134 @@ async function searchSystemDocs(query, limit = 5) {
   }
 }
 
+async function getResearchTable() {
+  if (process.env.NODE_ENV === 'test' && global.__mockResearchTable) {
+    return global.__mockResearchTable;
+  }
+  const db = await getLanceDb();
+  if (process.env.NODE_ENV === 'test') {
+    return await db.openTable('researched_knowledge');
+  }
+  const tableNames = await db.tableNames();
+  if (tableNames.includes('researched_knowledge')) {
+    return await db.openTable('researched_knowledge');
+  } else {
+    const dummyVector = new Array(384).fill(0);
+    const table = await db.createTable('researched_knowledge', [
+      {
+        vector: dummyVector,
+        text: 'dummy_init',
+        metadata: JSON.stringify({ init: true })
+      }
+    ]);
+    await table.delete('text = "dummy_init"');
+    return table;
+  }
+}
+
+// Cap on the shared knowledge base's row count. This is PATTI's first global
+// (not per-user-bounded) vector table, so unlike memory/learned_behaviors/system_docs
+// it needs an inline eviction guard rather than relying on per-user scope to bound growth.
+const MAX_RESEARCH_ROWS = 5000;
+
+/**
+ * Persists a distilled piece of research (already synthesized by the calling
+ * agent, not a raw scrape dump) to PATTI's shared, system-wide knowledge base.
+ * Evicts the lowest-value rows (least reused, then oldest) if over the cap.
+ *
+ * @param {string} text The synthesized knowledge content.
+ * @param {object} metadata e.g. { topic, source_urls, created_at, created_by_user_id, hit_count, last_hit_at }
+ */
+async function storeResearchedKnowledge(text, metadata = {}) {
+  try {
+    const vector = await getXenovaEmbedding(text);
+    const table = await getResearchTable();
+
+    try {
+      const rowCount = await table.countRows();
+      if (rowCount >= MAX_RESEARCH_ROWS) {
+        // hit_count/last_hit_at live inside the JSON `metadata` blob, not as
+        // native LanceDB columns, so scoring/sorting happens in JS and eviction
+        // deletes by exact `text` match (the one real top-level column besides vector/metadata).
+        const rows = await table.query().select(['text', 'metadata']).limit(rowCount).toArray();
+        const scored = rows
+          .map(r => {
+            let hitCount = 0;
+            let lastHit = '';
+            try {
+              const meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata;
+              hitCount = meta.hit_count || 0;
+              lastHit = meta.last_hit_at || meta.created_at || '';
+            } catch (e) { /* keep defaults */ }
+            return { text: r.text, hitCount, lastHit };
+          })
+          .sort((a, b) => (a.hitCount - b.hitCount) || (a.lastHit < b.lastHit ? -1 : 1));
+
+        const evictCount = Math.max(1, rowCount - MAX_RESEARCH_ROWS + 1);
+        for (const victim of scored.slice(0, evictCount)) {
+          const escaped = victim.text.replace(/'/g, "''");
+          await table.delete(`text = '${escaped}'`);
+        }
+      }
+    } catch (evictErr) {
+      console.warn('storeResearchedKnowledge: eviction check failed, proceeding with insert anyway:', evictErr.message);
+    }
+
+    await table.add([
+      {
+        vector,
+        text,
+        metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
+      }
+    ]);
+  } catch (err) {
+    console.error('storeResearchedKnowledge error:', err);
+    throw err;
+  }
+}
+
+/**
+ * Deletes a stored knowledge entry by its exact text content. Used to update
+ * an entry in place (delete-then-re-add via storeResearchedKnowledge), the
+ * same pattern already used for LanceDB dedup elsewhere (see memory_tool.js).
+ *
+ * @param {string} text Exact text of the entry to remove.
+ */
+async function deleteResearchedKnowledge(text) {
+  const table = await getResearchTable();
+  const escaped = text.replace(/'/g, "''");
+  await table.delete(`text = '${escaped}'`);
+}
+
+/**
+ * Searches PATTI's shared, system-wide knowledge base for prior research
+ * relevant to a topic/query.
+ *
+ * @param {string} query Search query/topic.
+ * @param {number} limit Max results to return.
+ * @returns {Promise<Array<{text: string, metadata: object, score: number}>>}
+ */
+async function searchResearchedKnowledge(query, limit = 5) {
+  try {
+    const vector = await getXenovaEmbedding(query);
+    const table = await getResearchTable();
+    const results = await table
+      .vectorSearch(vector)
+      .distanceType('cosine')
+      .limit(limit)
+      .toArray();
+
+    return results.map(r => ({
+      text: r.text,
+      metadata: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata,
+      score: 1 - r._distance
+    }));
+  } catch (err) {
+    console.error('searchResearchedKnowledge error:', err);
+    return [];
+  }
+}
+
 module.exports = {
   getEmbedding,
   cosineSimilarity,
@@ -456,5 +584,8 @@ module.exports = {
   storeLearnedBehavior,
   searchLearnedBehaviors,
   storeSystemDoc,
-  searchSystemDocs
+  searchSystemDocs,
+  storeResearchedKnowledge,
+  searchResearchedKnowledge,
+  deleteResearchedKnowledge
 };

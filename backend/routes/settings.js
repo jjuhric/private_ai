@@ -126,12 +126,6 @@ router.put('/', authenticateToken, async (req, res) => {
     let finalPreferredLocal = preferred_local_model || 'qwen2.5-coder-7b-instruct';
     let finalSupervisorModel = supervisor_model || 'qwen2.5-coder-7b-instruct';
 
-    if (finalProvider === 'local') {
-      finalModelName = 'qwen2.5-coder-7b-instruct';
-      finalPreferredLocal = 'qwen2.5-coder-7b-instruct';
-      finalSupervisorModel = 'qwen2.5-coder-7b-instruct';
-    }
-
     await db.run(
       `INSERT INTO user_settings (
          user_id, provider, model_name, gemini_key, local_key,
